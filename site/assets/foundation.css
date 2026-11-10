@@ -1,9 +1,7 @@
-/* Foundation tokens of Ricardo's Night design. Sobreiro's copy leaves out the other projects'
-   tile colours; the rest is unchanged. Dark is the default; light
-   is data-theme="light" on <html>, or the system preference when the reader has not chosen.
-   Every text colour clears 4.5:1 on its ground (checked 2026-11-08): light --mute and --red on
-   white, white on the Sobreiro tile in dark. The button's hover text is --bg, since
-   white on the dark red does not. */
+/* Foundation tokens. Dark is the default; light is
+   data-theme="light" on <html>, or the system preference when the reader has not chosen.
+   Every text colour clears 4.5:1 on its ground. The button's hover text is --on-accent, the
+   ground colour, since white on the dark red does not clear it. */
 
 :root {
   /* Ground and text */
@@ -13,15 +11,12 @@
   --mute: #8d8d8d;      /* labels, counts, the footer */
   --line: #262626;      /* hairlines between rows, and the header's once scrolled */
   --surface: #161616;   /* a panel a shade off the ground */
-  --red: #ff2d35;       /* the rule, the mark, Now, hover, and the button's fill */
+  --red: #ff2d35;       /* the base red */
 
-  /* Sobreiro's tile, white text on it */
-  --sobreiro: #6f4df6;        /* white reads on it at 5.16:1; #7b5cff fell short */
-
-  /* Defined by the base and used by no pattern in the pick */
-  --paper: #efe9df;
-  --paper-ink: #1b1a17;
-  --field: #e8242b;
+  /* The accent: a project sets these three to its own colour */
+  --accent: var(--red);       /* text and lines in the accent: the rule, hover, a pressed control */
+  --accent-fill: var(--red);  /* a fill in the accent: the button under the pointer */
+  --on-accent: var(--bg);     /* text on that fill */
 
   /* Type */
   --font-text: Inter, system-ui, sans-serif;
@@ -38,7 +33,6 @@
 :root[data-theme="light"] {
   --bg: #ffffff; --ink: #0d0d0d; --soft: #3a3a3a; --mute: #767676; --line: #e4e4e4;
   --surface: #f3f3f3; --red: #dc1f27;
-  --sobreiro: #5a3dd1;
   color-scheme: light;
 }
 
@@ -46,7 +40,6 @@
   :root:not([data-theme="dark"]) {
     --bg: #ffffff; --ink: #0d0d0d; --soft: #3a3a3a; --mute: #767676; --line: #e4e4e4;
     --surface: #f3f3f3; --red: #dc1f27;
-    --sobreiro: #5a3dd1;
     color-scheme: light;
   }
 }
