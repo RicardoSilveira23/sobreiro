@@ -135,6 +135,9 @@ header.site nav a:hover { color: var(--accent); }
   color: var(--ink);
 }
 .btn:hover { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
+/* A download is filled at rest and brightens under the pointer */
+.btn.fill { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
+.btn.fill:hover { filter: brightness(1.07); }
 
 /* Back link */
 .back { display: inline-block; margin: 56px 0 0; font-family: var(--font-display); font-weight: 500; font-size: 16px; }
@@ -169,6 +172,7 @@ footer.site .r { align-self: end; justify-self: end; max-width: 40ch; text-align
   /* The theme change fades */
   body, .row, .section, footer.site, .btn { transition: background-color .25s, color .25s, border-color .25s; }
   /* The button's arrow steps forward */
+  .btn.fill { transition: filter .18s, background-color .25s, color .25s, border-color .25s; }
   .btn span { transition: transform .18s; }
   /* Hover on a link is a colour change */
   header.site nav a, footer.site a { transition: color .15s, text-decoration-color .15s; }
