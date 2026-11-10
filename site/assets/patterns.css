@@ -1,0 +1,178 @@
+/* The parts every page shares, in the tokens of foundation.css. The accent comes from
+   --accent, --accent-fill and --on-accent. */
+
+/* Base */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.wrap { width: min(1280px, 100% - 56px); margin: 0 auto; }
+@media (max-width: 720px) { .wrap { width: calc(100% - 32px); } }
+
+/* Header */
+header.site {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 0;
+  padding: 14px 0;
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 500;
+}
+html.scrolled header.site { border-bottom-color: var(--line); }
+header.site nav { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; margin-left: auto; }
+header.site nav a { margin-left: 28px; }
+header.site nav a:hover { color: var(--accent); }
+
+/* Mark */
+.mark { width: 28px; height: 28px; display: block; }
+
+/* Theme switch */
+.theme { display: inline-flex; align-items: center; margin-left: 28px; padding: 4px; }
+.theme:hover { color: var(--accent); }
+.theme .to-dark { display: none; }
+:root[data-theme='light'] .theme .to-dark { display: block; }
+:root[data-theme='light'] .theme .to-light { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .theme .to-dark { display: block; }
+  :root:not([data-theme='dark']) .theme .to-light { display: none; }
+}
+
+/* Lettering */
+.name { padding-top: 40px; }
+.name svg { display: block; width: 100%; height: auto; overflow: visible; }
+.name text { font-family: var(--font-display); font-weight: 900; fill: var(--ink); }
+@media (max-width: 720px) { .name { padding-top: 28px; } }
+
+/* Rule */
+.rule { height: 6px; background: var(--accent); margin: 22px 0 18px; }
+
+/* Intro */
+.intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: end;
+  padding-bottom: 40px;
+}
+.intro p { font-size: clamp(18px, 1.7vw, 22px); line-height: 1.35; font-weight: 500; max-width: 44ch; text-wrap: balance; }
+.intro .meta { text-align: right; font-size: 15px; color: var(--mute); line-height: 1.8; }
+@media (max-width: 720px) {
+  .intro { grid-template-columns: 1fr; gap: 18px; }
+  .intro .meta { text-align: left; }
+}
+
+/* Section */
+.section { padding: 56px 0 0; margin-top: 32px; border-top: 1px solid var(--ink); }
+.section h2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 3.6vw, 48px);
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.section h2 small { font-family: var(--font-text); font-size: 15px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mute); }
+
+/* Row */
+.row {
+  display: grid;
+  grid-template-columns: 110px 1fr auto;
+  gap: 0 20px;
+  align-items: baseline;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.row .k { font-size: 15px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.row .n { font-family: var(--font-display); font-weight: 500; font-size: 20px; }
+.row .s { grid-column: 2; margin-top: 6px; max-width: 62ch; color: var(--soft); }
+.row .d { grid-column: 2; margin: 10px 0 0; padding: 0; list-style: none; max-width: 62ch; display: grid; gap: 6px; font-size: 15px; color: var(--soft); }
+.row .d li { padding-left: 18px; position: relative; }
+.row .d li::before { content: '–'; position: absolute; left: 0; color: var(--mute); }
+@media (max-width: 900px) {
+  .row { grid-template-columns: 1fr auto; }
+  .row .k { grid-column: 1 / -1; margin-bottom: 4px; }
+  .row .k:empty { display: none; }
+  .row .s, .row .d { grid-column: 1 / -1; }
+}
+
+/* Button */
+.more { display: flex; justify-content: center; padding-top: 28px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 28px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+}
+.btn:hover { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
+
+/* Back link */
+.back { display: inline-block; margin: 56px 0 0; font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.back:hover { color: var(--accent); }
+
+/* Footer */
+footer.site {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 72px;
+  padding: 40px 0 64px;
+  border-top: 1px solid var(--ink);
+  font-size: 14px;
+  color: var(--mute);
+}
+footer.site a { color: var(--ink); font-size: 17px; }
+footer.site a:hover { color: var(--accent); }
+footer.site .r { align-self: end; justify-self: end; max-width: 40ch; text-align: right; text-wrap: pretty; }
+@media (max-width: 720px) {
+  footer.site { grid-template-columns: 1fr; }
+  footer.site .r { justify-self: start; text-align: left; }
+}
+
+/* Motion: nothing moves under reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  /* The header's hairline fades in */
+  header.site { transition: border-color .2s, background-color .25s, color .25s; }
+  /* The name settles in once */
+  .name { animation: settle .7s var(--ease) both; }
+  @keyframes settle { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  /* The theme change fades */
+  body, .row, .section, footer.site, .btn { transition: background-color .25s, color .25s, border-color .25s; }
+  /* The button's arrow steps forward */
+  .btn span { transition: transform .18s; }
+  /* Hover on a link is a colour change */
+  header.site nav a, footer.site a { transition: color .15s, text-decoration-color .15s; }
+  /* The sun or moon turns under the pointer */
+  .theme svg { transition: transform .25s; }
+  .theme:hover svg { transform: rotate(20deg); }
+}

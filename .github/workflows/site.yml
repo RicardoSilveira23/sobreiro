@@ -18,6 +18,8 @@ on:
     paths: &site-paths
       - 'site/**'
       - 'scripts/check-site*.mjs'
+      - 'scripts/check-shared.mjs'
+      - 'scripts/shared.*.json'
       - 'scripts/smoke.mjs'
       - 'wrangler.jsonc'
       - 'package.json'
@@ -58,6 +60,9 @@ jobs:
 
       - name: Check the site
         run: node scripts/check-site.mjs
+
+      - name: Check the shared stylesheet
+        run: node scripts/check-shared.mjs scripts/shared.lock.json site/assets/sobreiro.css site/assets/site.css
 
       - name: The Worker uploads (size limits, config)
         run: npx wrangler deploy --dry-run

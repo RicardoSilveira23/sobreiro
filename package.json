@@ -3,7 +3,7 @@
   "private": true,
   "description": "Tools for the static site in site/: Cloudflare's wrangler for staging, and checks.",
   "scripts": {
-    "check": "node --test scripts/check-site.test.mjs && node scripts/check-site.mjs",
+    "check": "node --test scripts/check-site.test.mjs && node scripts/check-site.mjs && node scripts/check-shared.mjs scripts/shared.lock.json site/assets/sobreiro.css site/assets/site.css",
     "smoke": "node scripts/smoke.mjs",
     "dev": "wrangler dev"
   },
