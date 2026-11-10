@@ -233,10 +233,45 @@ export function selectorsOf(css) {
 
 // ---- colours ----------------------------------------------------------------
 
-const NAMED = "white black red blue green gray grey yellow orange purple pink";
+// Every CSS named colour and system colour, lower case.
+const NAMED = `
+  aliceblue antiquewhite aqua aquamarine azure beige bisque black
+  blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate
+  coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod
+  darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid
+  darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet
+  deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen
+  fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow
+  grey honeydew hotpink indianred indigo ivory khaki lavender
+  lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray
+  lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey
+  lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine
+  mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred
+  midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive
+  olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred
+  papayawhip peachpuff peru pink plum powderblue purple rebeccapurple
+  red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell
+  sienna silver skyblue slateblue slategray slategrey snow springgreen
+  steelblue tan teal thistle tomato turquoise violet wheat
+  white whitesmoke yellow yellowgreen canvas canvastext linktext visitedtext
+  activetext buttonface buttontext buttonborder field fieldtext highlight highlighttext
+  selecteditem selecteditemtext mark marktext graytext accentcolor accentcolortext
+`.split(/\s+/).filter(Boolean);
 const HEX = /#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})(?![\w-])/gi;
-const FUNC = /(?<![\w-])(?:rgba?|hsla?|oklch|color-mix)\(/gi;
-const NAME = new RegExp(`(?<![\\w-])(?:${NAMED.split(" ").join("|")})(?![\\w-])`, "gi");
+const FUNC = /(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color|light-dark)\(/gi;
+const NAME = new RegExp(`(?<![\\w-])(?:${NAMED.join("|")})(?![\\w(-])`, "gi");
+
+// Properties that carry a colour; named colours are looked for only in these.
+const COLOUR_PROPERTIES = new Set([
+  "color", "background", "background-color", "background-image", "border", "outline",
+  "outline-color", "fill", "stroke", "box-shadow", "text-shadow", "text-decoration",
+  "text-decoration-color", "caret-color", "accent-color", "column-rule", "column-rule-color",
+  "filter", "-webkit-text-fill-color",
+]);
+function carriesColour(property) {
+  const p = property.toLowerCase();
+  return COLOUR_PROPERTIES.has(p) || p.startsWith("border-") || p.startsWith("-webkit-text-stroke");
+}
 
 // Blanks out url(...) and quoted text, keeping the length.
 function maskValue(value) {
@@ -280,13 +315,21 @@ function callAt(text, from) {
 }
 
 // Every colour literal in a declaration value, in order of appearance.
-function literalsIn(value) {
+function literalsIn(value, named) {
   const masked = maskValue(value);
   const found = [];
   for (const m of masked.matchAll(HEX)) found.push({ at: m.index, text: m[0] });
   for (const m of masked.matchAll(FUNC)) found.push({ at: m.index, text: callAt(value, m.index) });
-  for (const m of masked.matchAll(NAME)) found.push({ at: m.index, text: m[0] });
-  return found.sort((a, b) => a.at - b.at).map((f) => f.text);
+  if (named) for (const m of masked.matchAll(NAME)) found.push({ at: m.index, text: m[0] });
+  // A literal inside a colour function is part of that function's one report.
+  const out = [];
+  let until = -1;
+  for (const f of found.sort((a, b) => a.at - b.at)) {
+    if (f.at < until) continue;
+    out.push(f.text);
+    if (f.text.endsWith(")")) until = f.at + f.text.length;
+  }
+  return out;
 }
 
 // One entry per colour literal used outside a custom property's value.
@@ -296,7 +339,7 @@ export function colourLiterals(css) {
   for (const rule of readRules(css)) {
     for (const d of rule.decls) {
       if (d.property.startsWith("--")) continue;
-      for (const lit of literalsIn(d.value)) {
+      for (const lit of literalsIn(d.value, carriesColour(d.property))) {
         out.push({ selector: rule.prelude, property: d.property, value: lit });
       }
     }
@@ -316,6 +359,12 @@ export function checkShared(lockFile, ownFiles) {
   const lock = JSON.parse(readText(lockFile));
   const files = lock.files ?? {};
   let patternsPath = null;
+
+  for (const required of ["patterns.css", "foundation.css", "check-shared.mjs"]) {
+    if (!Object.keys(files).some((key) => basename(key) === required)) {
+      problems.push(`shared.lock.json: must list ${required}`);
+    }
+  }
 
   for (const [key, expected] of Object.entries(files)) {
     const path = resolve(lockDir, key);
