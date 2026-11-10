@@ -1,6 +1,7 @@
 // Guards the static site: local links and files exist, fragments exist, nothing loads from
 // another host, images carry alt/width/height, pages have the basics, and each page's canonical
-// link is its own address on the Worker's custom domain (wrangler.jsonc).
+// link is its own address on the Worker's custom domain (wrangler.jsonc), with the tags a shared
+// link's card is made from.
 // Usage: node scripts/check-site.mjs [dir]   (default: site)
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, posix, relative, sep } from "node:path";
@@ -87,10 +88,32 @@ function checkCanonical(html, name, address) {
   return found.filter((href) => href !== want).map((href) => `${name}: canonical ${href}, wanted ${want}`);
 }
 
+// The card a pasted link shows: a title, a sentence, the page's own address and a picture this
+// site serves. The picture's address is absolute, as the services that draw the card need.
+function checkShare(root, html, name, address) {
+  const metas = [...html.matchAll(/<meta\b([^>]*)>/gi)].map(([, rest]) => ({
+    key: attr(rest, "property") ?? attr(rest, "name"),
+    content: attr(rest, "content"),
+  }));
+  const value = (key) => metas.find((m) => m.key === key)?.content ?? null;
+  const problems = [];
+  for (const key of ["og:title", "og:description", "og:url", "og:image", "twitter:card"]) {
+    if (!value(key)) problems.push(`${name}: missing <meta ${key.startsWith("og:") ? "property" : "name"}="${key}">`);
+  }
+  const want = new URL(name.replace(/(^|\/)index\.html$/, "$1"), address).href;
+  const url = value("og:url");
+  if (url && url !== want) problems.push(`${name}: og:url ${url}, wanted ${want}`);
+  const image = value("og:image");
+  if (image && !(image.startsWith(address) && isFileExact(root, join(root, image.slice(address.length))))) {
+    problems.push(`${name}: og:image ${image} is not a file of this site`);
+  }
+  return problems;
+}
+
 function checkPage(root, file, name, address) {
   const html = readFileSync(file, "utf8").replace(/<!--[\s\S]*?-->/g, "");
   const problems = [];
-  if (address) problems.push(...checkCanonical(html, name, address));
+  if (address) problems.push(...checkCanonical(html, name, address), ...checkShare(root, html, name, address));
   if (!/<html\b[^>]*\slang\s*=/i.test(html)) problems.push(`${name}: missing <html lang>`);
   if (!/<title\b[^>]*>\s*\S/i.test(html)) problems.push(`${name}: missing <title>`);
   for (const meta of ["viewport", "description"]) {

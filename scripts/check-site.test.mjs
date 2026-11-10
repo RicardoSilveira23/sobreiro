@@ -202,22 +202,61 @@ test("other elements that make requests are checked too", () => {
 const ADDRESS = "https://example.test/";
 const checkAt = (files) => withSite(files, (dir) => checkSite(dir, { address: ADDRESS }));
 
+// The tags a shared link's card is made from, for the page at this path.
+const share = (path = "", image = "og.png") =>
+  '<meta property="og:title" content="T"><meta property="og:description" content="d">' +
+  `<meta property="og:url" content="https://example.test/${path}">` +
+  `<meta property="og:image" content="https://example.test/${image}">` +
+  '<meta name="twitter:card" content="summary_large_image">';
+
 test("each page names its own address as canonical", () => {
   const problems = checkAt({
-    "index.html": page('<link rel="canonical" href="https://example.test/">', ""),
-    "manual/index.html": page('<link rel="canonical" href="https://example.test/manual/">', ""),
+    "index.html": page('<link rel="canonical" href="https://example.test/">' + share(), ""),
+    "manual/index.html": page('<link rel="canonical" href="https://example.test/manual/">' + share("manual/"), ""),
+    "og.png": "x",
   });
   assert.deepEqual(problems, []);
 });
 
 test("a missing or wrong canonical link is a problem", () => {
   const problems = checkAt({
-    "index.html": page("", ""),
-    "manual/index.html": page('<link rel="canonical" href="https://example.test/">', ""),
+    "index.html": page(share(), ""),
+    "manual/index.html": page('<link rel="canonical" href="https://example.test/">' + share("manual/"), ""),
+    "og.png": "x",
   });
   assert.deepEqual(problems, [
     'index.html: missing <link rel="canonical" href="https://example.test/">',
     "manual/index.html: canonical https://example.test/, wanted https://example.test/manual/",
+  ]);
+});
+
+test("a page with no share card is a problem: a pasted link would show no picture or sentence", () => {
+  const problems = checkAt({ "index.html": page('<link rel="canonical" href="https://example.test/">', "") });
+  assert.deepEqual(problems, [
+    'index.html: missing <meta property="og:title">',
+    'index.html: missing <meta property="og:description">',
+    'index.html: missing <meta property="og:url">',
+    'index.html: missing <meta property="og:image">',
+    'index.html: missing <meta name="twitter:card">',
+  ]);
+});
+
+test("the share card names the page's own address and a picture this site serves", () => {
+  const canonical = '<link rel="canonical" href="https://example.test/manual/">';
+  const problems = checkAt({
+    "index.html": page('<link rel="canonical" href="https://example.test/">' + share("", "missing.png"), ""),
+    "manual/index.html": page(canonical + share(), ""),
+    "other/index.html": page(
+      '<link rel="canonical" href="https://example.test/other/">' +
+        share("other/").replace("https://example.test/og.png", "https://elsewhere.test/og.png"),
+      "",
+    ),
+    "og.png": "x",
+  });
+  assert.deepEqual(problems, [
+    "index.html: og:image https://example.test/missing.png is not a file of this site",
+    "manual/index.html: og:url https://example.test/, wanted https://example.test/manual/",
+    "other/index.html: og:image https://elsewhere.test/og.png is not a file of this site",
   ]);
 });
 

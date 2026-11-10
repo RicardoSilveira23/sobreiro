@@ -1,0 +1,20 @@
+<!doctype html>
+<!-- The source of site/assets/img/og.png, the 1200x630 picture a shared link shows: the top of the
+     site in its dark theme, with the lettering, the rule and the intro's sentence. The colours are
+     the dark values of --bg and --soft in site/assets/foundation.css and of --sobreiro-text in sobreiro.css.
+     After changing the name or the sentence, open this file in a browser window of 1200 by 630 CSS
+     pixels at 100% zoom, capture the viewport, and save it over og.png. -->
+<meta charset="utf-8">
+<title>Sobreiro's share picture</title>
+<style>
+  @font-face { font-family: Inter; font-weight: 100 900; src: url('../site/assets/fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); }
+  @font-face { font-family: Unbounded; font-weight: 200 900; src: url('../site/assets/fonts/unbounded-latin-wght-normal.woff2') format('woff2-variations'); }
+  body { margin: 0; width: 1200px; height: 630px; background: #0b0b0b; display: flex; flex-direction: column; justify-content: center; padding-inline: 80px; box-sizing: border-box; }
+  svg { display: block; width: 1040px; height: auto; overflow: visible; }
+  text { font-family: Unbounded; font-weight: 900; fill: #fff; }
+  .rule { height: 6px; background: #a594ff; margin: 22px 0 18px; }
+  p { margin: 0; max-width: 24em; font: 500 34px/1.3 Inter; color: #bdbdbd; }
+</style>
+<svg viewBox="0 0 1000 94" aria-hidden="true"><text x="0" y="90" font-size="120" textLength="1000" lengthAdjust="spacing">SOBREIRO</text></svg>
+<div class="rule"></div>
+<p>Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</p>
