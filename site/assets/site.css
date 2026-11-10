@@ -13,23 +13,22 @@ header.site nav a[aria-current] { color: var(--sobreiro-text); }
 /* Theme switch */
 .theme[hidden] { display: none; }
 
-/* Intro: no space under it here, the first section sets the gap */
-.intro { padding-bottom: 0; }
-
-/* Button */
-.get { margin-top: 28px; }
-
-/* Field: the desktop in the app's purple, the taskbar along its foot and the app's windows on it */
-.field { position: relative; overflow: hidden; container-type: inline-size; margin-top: 40px; border-radius: var(--radius-tile); background: var(--desk); color: var(--on-desk); padding: 28px 0 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; }
-.field .say { position: relative; z-index: 1; padding-bottom: 76px; font-size: 14px; font-weight: 500; }
-.field .say span { display: block; max-width: 34ch; }
-.field .say b { display: block; font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 2vw, 30px); line-height: 1.1; margin-bottom: 12px; }
-.field .demo { position: relative; z-index: 1; }
+/* Field: the desktop in the app's purple, right under the rule, the taskbar along its foot and
+   the app's windows on it. Its left half holds the page's sentence at the top and, at the bottom,
+   the download with its note, ending 28px above the taskbar. */
+.field { position: relative; overflow: hidden; container-type: inline-size; border-radius: var(--radius-tile); background: var(--desk); color: var(--on-desk); padding: 28px 0 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; }
+.field .say { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding-bottom: 76px; }
+.field .line { max-width: 19ch; font-size: clamp(24px, 2.6vw, 32px); font-weight: 600; line-height: 1.18; letter-spacing: -.015em; }
+/* On the field the download is filled with the field's text colour, its text in the field's colour */
+.field .btn.fill { background: var(--on-desk); border-color: var(--on-desk); color: var(--desk); }
+.field .small { margin-top: 14px; max-width: 42ch; font-size: 14px; line-height: 1.45; }
+.field .demo { position: relative; z-index: 1; align-self: end; }
 .field .demo img { border-radius: 0; }
 .field .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: var(--taskbar); border-top: 1px solid var(--taskbar-line); }
 @container (max-width: 490px) { .field .bar { display: none; } }
-@media (max-width: 720px) {
-  .field { grid-template-columns: 1fr; padding: 24px 0 0; gap: 20px; }
+/* One column once the left half is too narrow for the sentence and the button */
+@media (max-width: 960px) {
+  .field { grid-template-columns: 1fr; padding: 24px 0 0; gap: 28px; }
   .field .say { padding: 0 24px; }
   .field .demo { justify-self: end; }
   .field .demo img { width: 100%; max-width: 490px; height: auto; }
@@ -91,7 +90,6 @@ footer.site .l { display: flex; flex-wrap: wrap; gap: 8px 28px; align-self: star
   header.site { transition: border-color .25s, background-color .25s, color .25s; }
   /* The theme change fades */
   .field, .rule, .listing, .code { transition: background-color .25s, color .25s, border-color .25s; }
-  .name text { transition: fill .25s; }
   .btn:hover span { transform: translateX(4px); }
   /* Hover on a link is a colour change, answering the reader */
   .row .s a, .row .d a, .note a, .styles button { transition: color .15s; }

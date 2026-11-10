@@ -1,7 +1,7 @@
 {
   "files": {
     "../site/assets/foundation.css": "sha256-9c6f6cdbf8a22ce66dd4fe6ef2c6806a066744565f693085f4dfd618ab17d9b5",
-    "../site/assets/patterns.css": "sha256-65372b594157bf67022bc939e1eaf4c87fc309d62517304ac358b59d608aa3f2",
+    "../site/assets/patterns.css": "sha256-77a28399df2ac31328b51f60cd666612d37dbace701bbb121db3642bdac18a56",
     "check-shared.mjs": "sha256-4514c100e34756b88fa94bf2f21171f265798720b2201ece32890cac2712e98a"
   }
 }

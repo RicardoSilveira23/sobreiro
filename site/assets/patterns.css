@@ -61,6 +61,24 @@ header.site nav a:hover { color: var(--accent); }
 .name svg { display: block; width: 100%; height: auto; overflow: visible; }
 .name text { font-family: var(--font-display); font-weight: 900; fill: var(--ink); }
 @media (max-width: 720px) { .name { padding-top: 28px; } }
+/* A name too short to fill the column keeps the family's cap height: its size is 7.2% of the
+   column, as the stretched name's is, at its own spacing, with the meta beside it on its baseline.
+   The space over and under the letters is what the stretched name's drawing leaves. */
+.name-line { display: grid; grid-template-columns: auto 1fr; gap: 12px 40px; align-items: end; align-items: last baseline; padding-top: 40px; }
+.name-line .name {
+  padding: .194em 0 .139em;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(40px, (100vw - 56px) * .072, 88.1px);
+  line-height: .74;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.name-line .meta { text-align: right; font-size: 15px; color: var(--mute); line-height: 1.8; }
+@media (max-width: 720px) {
+  .name-line { grid-template-columns: 1fr; padding-top: 28px; }
+  .name-line .meta { text-align: left; }
+}
 
 /* Rule */
 .rule { height: 6px; background: var(--accent); margin: 22px 0 18px; }
@@ -84,39 +102,45 @@ header.site nav a:hover { color: var(--accent); }
 .section { padding: 56px 0 0; margin-top: 32px; border-top: 1px solid var(--ink); }
 .section h2 {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 4px 14px;
   margin-bottom: 24px;
-  font-family: var(--font-display);
-  font-size: clamp(28px, 3.6vw, 48px);
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  line-height: 1;
+  letter-spacing: -.01em;
+  line-height: 1.1;
 }
-.section h2 small { font-family: var(--font-text); font-size: 15px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mute); }
+/* The count sits right after the word, on its baseline */
+.section h2 small { font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--mute); }
 
 /* Row */
 .row {
   display: grid;
-  grid-template-columns: 110px 1fr auto;
+  grid-template-columns: 110px minmax(0, 1fr);
   gap: 0 20px;
   align-items: baseline;
   padding: 18px 0;
   border-top: 1px solid var(--line);
 }
-.row .k { font-size: 15px; color: var(--mute); font-variant-numeric: tabular-nums; }
-.row .n { font-family: var(--font-display); font-weight: 500; font-size: 20px; }
+.row .k { grid-row: span 2; font-size: 15px; color: var(--mute); font-variant-numeric: tabular-nums; }
+/* A key in two parts (a date and its topic): one under the other */
+.row .k span { display: block; }
+.row .n { font-weight: 600; font-size: 20px; line-height: 1.3; letter-spacing: -.01em; }
+/* The state sits right after the name it belongs to */
+.row .st { margin-left: 14px; font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--mute); white-space: nowrap; }
+.row.now .st { color: var(--accent); }
+.row.now .st::before { content: '●'; margin-right: 8px; font-size: 9px; vertical-align: 1px; }
 .row .s { grid-column: 2; margin-top: 6px; max-width: 62ch; color: var(--soft); }
 .row .d { grid-column: 2; margin: 10px 0 0; padding: 0; list-style: none; max-width: 62ch; display: grid; gap: 6px; font-size: 15px; color: var(--soft); }
 .row .d li { padding-left: 18px; position: relative; }
 .row .d li::before { content: '–'; position: absolute; left: 0; color: var(--mute); }
 @media (max-width: 900px) {
-  .row { grid-template-columns: 1fr auto; }
-  .row .k { grid-column: 1 / -1; margin-bottom: 4px; }
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .row .k { grid-row: auto; margin-bottom: 4px; }
   .row .k:empty { display: none; }
+  .row .k span { display: inline; }
+  .row .k span + span::before { content: '·'; margin: 0 .4em; }
   .row .s, .row .d { grid-column: 1 / -1; }
 }
 
@@ -129,8 +153,7 @@ header.site nav a:hover { color: var(--accent); }
   padding: 16px 28px;
   border: 1.5px solid var(--ink);
   border-radius: var(--radius-pill);
-  font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 16px;
   color: var(--ink);
 }
@@ -140,7 +163,7 @@ header.site nav a:hover { color: var(--accent); }
 .btn.fill:hover { filter: brightness(1.07); }
 
 /* Back link */
-.back { display: inline-block; margin: 56px 0 0; font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.back { display: inline-block; margin: 56px 0 0; font-weight: 600; font-size: 16px; }
 .back:hover { color: var(--accent); }
 
 /* Footer */

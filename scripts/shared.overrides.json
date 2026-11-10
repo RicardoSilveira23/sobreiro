@@ -1,9 +1,7 @@
 {
   "html": "in-page links jump without animation here",
   "header.site": "the hairline under the header fades at the same speed as the rest here",
-  ".intro": "no space under the intro here, the first section sets the gap",
   ".row": "the columns of a row line up at their top here, not on their text baseline",
   ".section": "a section starts 64px below what precedes it here",
-  ".rule": "the rule fades when the theme changes",
-  ".name text": "the lettering fades when the theme changes"
+  ".rule": "the rule fades when the theme changes"
 }

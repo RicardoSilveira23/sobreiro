@@ -38,18 +38,19 @@
   </header>
 
   <main>
-  <h1 class="name" aria-label="Sobreiro"><svg viewBox="0 0 1000 94" aria-hidden="true"><text x="0" y="90" font-size="120" textLength="1000" lengthAdjust="spacing">SOBREIRO</text></svg></h1>
-  <div class="rule" aria-hidden="true"></div>
-
-  <div class="intro">
-    <p>Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</p>
+  <div class="name-line">
+    <h1 class="name">Sobreiro</h1>
     <div class="meta">Free, for Windows 11<br>Needs GitHub Copilot with AI credits, or Claude Code on Pro, Max or Ultra</div>
   </div>
-
-  <a class="btn get fill" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">Download from GitHub <span aria-hidden="true">→</span></a>
-
+  <div class="rule" aria-hidden="true"></div>
   <div class="field">
-    <p class="say"><b>Beside the clock</b><span>Hover the pill for when each limit resets, click it for the details, right-click it to change how they look.</span></p>
+    <div class="say">
+      <p class="line">Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</p>
+      <div class="get">
+        <a class="btn fill" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">Download from GitHub <span aria-hidden="true">→</span></a>
+        <p class="small">Sobreiro.exe, one file. Until the app is signed, Windows may warn about an unknown publisher: More info, then Run anyway.</p>
+      </div>
+    </div>
     <picture class="demo"><source srcset="assets/img/hero.webp" type="image/webp" media="(prefers-reduced-motion: no-preference)"><img src="assets/img/hero.png" width="490" height="516" alt="The details open above the pill on the taskbar, as bars: session 15% and weekly 45% used, and Copilot's AI credits 17% used, all on track. With motion on: a new reading lands on the pill, a click opens the details, another reading lands, and a click on the desktop closes them."></picture>
     <i class="bar" aria-hidden="true"></i>
   </div>
@@ -58,6 +59,7 @@
     <h2>Reading it</h2>
     <div class="pair">
       <div class="rows">
+        <div class="row"><span class="k">Pill</span><span class="n">Beside the clock</span><p class="s">Hover it for when each limit resets, click it for the details.</p></div>
         <div class="row"><span class="k">AI</span><span class="n">Copilot's credits</span><p class="s">GitHub Copilot's monthly AI credits, with the reset date and a small level bar. Only with a credit budget (Business, Enterprise or Pro).</p></div>
         <div class="row"><span class="k">5h</span><span class="n">Claude Code's session</span><p class="s">The five-hour limit. In the rings it's the outer one.</p></div>
         <div class="row"><span class="k">7d</span><span class="n">Claude Code's week</span><p class="s">The weekly limit, the inner ring.</p></div>
@@ -94,7 +96,7 @@
   <section class="section" id="install">
     <h2>Run it</h2>
     <div class="row"><span class="k">1</span><span class="n">Download</span><p class="s">Sobreiro.exe from the <a href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">latest release</a>.</p></div>
-    <div class="row"><span class="k">2</span><span class="n">Run Sobreiro.exe</span><p class="s">Until the app is signed, Windows may warn about an unknown publisher: More info, then Run anyway. The pill appears beside the clock and fills in within seconds while the Copilot CLI, gh or Claude Code is signed in. That's it.</p></div>
+    <div class="row"><span class="k">2</span><span class="n">Run Sobreiro.exe</span><p class="s">The pill appears beside the clock and fills in within seconds while the Copilot CLI, gh or Claude Code is signed in. That's it.</p></div>
     <p class="note">For Copilot, sign in with the Copilot CLI or gh auth login: Sobreiro doesn't read the sign-in VS Code or Visual Studio keeps. To also take Claude Code's numbers from the terminal, right-click the pill and choose Connect to Claude Code. <a href="manual/#install">The manual</a> has the rest.</p>
   </section>
 
