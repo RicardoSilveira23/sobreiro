@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en" data-v="b">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobreiro: site candidates</title>
+<script>try { var t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="foundation.css">
+<style>
+/* Candidates for the home page's product picture: A on the ground, B one field, C the wall.
+   Captures are the app's own --snapshot sheet (version 0.5.0), at 1x. */
+@font-face { font-family: Inter; font-weight: 100 900; font-display: swap; src: url('fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); }
+@font-face { font-family: Unbounded; font-weight: 200 900; font-display: swap; src: url('fonts/unbounded-latin-wght-normal.woff2') format('woff2-variations'); }
+
+/* Sobreiro's own: the app's purple on each ground, and white on the --sobreiro fill. */
+:root { --sobreiro-text: #a594ff; --on-sobreiro: #fff; }
+:root[data-theme="light"] { --sobreiro-text: #5a3dd1; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --sobreiro-text: #5a3dd1; } }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+img { display: block; }
+.wrap { width: min(1280px, 100% - 56px); margin: 0 auto; }
+@media (max-width: 720px) { .wrap { width: calc(100% - 32px); } }
+
+header.site { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 14px 0; background: var(--bg); font-size: 15px; font-weight: 500; }
+header.site nav { display: flex; align-items: center; }
+header.site nav a { margin-left: 28px; }
+header.site nav a:hover, .theme:hover { color: var(--sobreiro-text); }
+.mark { width: 28px; height: 28px; }
+.theme { display: inline-flex; margin-left: 28px; padding: 4px; }
+.theme .to-dark { display: none; }
+:root[data-theme='light'] .theme .to-dark { display: block; }
+:root[data-theme='light'] .theme .to-light { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .theme .to-dark { display: block; }
+  :root:not([data-theme='dark']) .theme .to-light { display: none; }
+}
+
+.name { padding-top: 40px; }
+.name svg { display: block; width: 100%; height: auto; overflow: visible; }
+.name text { font-family: var(--font-display); font-weight: 900; fill: var(--ink); }
+.rule { height: 6px; background: var(--sobreiro-text); margin: 22px 0 18px; }
+@media (max-width: 720px) { .name { padding-top: 28px; } }
+
+.intro { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: end; }
+.intro p { font-size: clamp(18px, 1.7vw, 22px); line-height: 1.35; font-weight: 500; max-width: 44ch; text-wrap: balance; }
+.intro .meta { text-align: right; font-size: 15px; color: var(--mute); line-height: 1.8; }
+@media (max-width: 720px) { .intro { grid-template-columns: 1fr; gap: 18px; } .intro .meta { text-align: left; } }
+
+.btn { display: inline-flex; align-items: center; gap: 14px; padding: 16px 28px; border: 1.5px solid var(--ink); border-radius: var(--radius-pill); font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.btn:hover { background: var(--sobreiro); border-color: var(--sobreiro); color: var(--on-sobreiro); }
+.get { margin-top: 28px; }
+
+/* Theme-matched captures: the flyout follows Windows, so the page shows the one for its theme. */
+.on-light { display: none; }
+:root[data-theme='light'] .on-light { display: block; }
+:root[data-theme='light'] .on-dark { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .on-light { display: block; }
+  :root:not([data-theme='dark']) .on-dark { display: none; }
+}
+figure { margin: 0; }
+figcaption { margin-top: 10px; font-size: 15px; color: var(--mute); }
+
+.v { display: none; }
+[data-v="a"] .v-a, [data-v="b"] .v-b, [data-v="c"] .v-c { display: block; }
+[data-v="a"] .intro.v-a, [data-v="b"] .intro.v-b, [data-v="c"] .intro.v-b { display: grid; }
+
+/* A: on the ground. The intro and the button left, the app right, aligned to the bottom. */
+.ga { display: grid; grid-template-columns: 1fr auto; gap: 40px; align-items: end; }
+.ga .app { display: grid; grid-template-columns: auto auto; gap: 18px 28px; align-items: end; }
+.ga .app figure:first-child { grid-row: span 2; }
+.ga .meta { margin-top: 18px; font-size: 15px; color: var(--mute); }
+@media (max-width: 900px) { .ga { grid-template-columns: 1fr; } }
+
+/* B: one field. The app as it sits on the screen, the flyout above the pill and the icon. */
+.field { margin-top: 40px; border-radius: var(--radius-tile); background: var(--sobreiro); color: var(--on-sobreiro); padding: 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; }
+.field .say { font-size: 14px; font-weight: 500; max-width: 34ch; }
+.field .say b { display: block; font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 2vw, 30px); line-height: 1.1; margin-bottom: 12px; }
+.field .say span { opacity: .9; }
+.field .desk { display: grid; justify-items: end; gap: 12px; }
+.field .tray { display: flex; gap: 12px; align-items: center; }
+@media (max-width: 720px) { .field { grid-template-columns: 1fr; min-height: 0; } .field .desk { justify-items: start; } }
+
+/* C: the wall. One tile per part, the capture as its device. */
+.wall { margin-top: 40px; display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: minmax(180px, auto); gap: 12px; }
+.tile { display: flex; flex-direction: column; justify-content: space-between; padding: 28px; border-radius: var(--radius-tile); background: var(--sobreiro); color: var(--on-sobreiro); }
+.tile.wide { grid-column: span 8; grid-row: span 2; min-height: 300px; flex-direction: row; align-items: flex-end; gap: 28px; }
+.tile.half { grid-column: span 4; padding: 22px; }
+.tile h3 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 2vw, 30px); line-height: 1.1; }
+.tile.half h3 { font-size: clamp(20px, 1.6vw, 24px); }
+.tile p { margin-top: 12px; font-size: 15px; max-width: 40ch; opacity: .9; }
+.tile .dev { margin-top: 20px; }
+@media (max-width: 1100px) { .wall { grid-template-columns: 1fr 1fr; } .tile.wide { grid-column: 1 / -1; grid-row: span 1; } .tile.half { grid-column: span 1; } }
+@media (max-width: 560px) { .wall { grid-template-columns: 1fr; } .tile.wide { flex-direction: column; align-items: flex-start; } .tile.half { grid-column: auto; } }
+
+/* Section and rows, as on the personal site. */
+.section { margin-top: 64px; padding-top: 56px; border-top: 1px solid var(--ink); }
+.section h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 24px; font-family: var(--font-display); font-size: clamp(28px, 3.6vw, 48px); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; line-height: 1; }
+.section h2 small { font-family: var(--font-text); font-size: 15px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mute); }
+.row { display: grid; grid-template-columns: 110px 1fr auto; gap: 0 20px; padding: 18px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; padding-top: 4px; }
+.row .k { font-size: 15px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.row .n { font-family: var(--font-display); font-weight: 500; font-size: 20px; }
+.row .s { grid-column: 2; margin-top: 6px; max-width: 62ch; color: var(--soft); }
+@media (max-width: 900px) { .row { grid-template-columns: 1fr auto; } .row .k { grid-column: 1 / -1; margin-bottom: 4px; } .row .s { grid-column: 1 / -1; } }
+.end { height: 120px; }
+
+/* The candidate switch: not part of the site. */
+.switch { position: fixed; left: 16px; bottom: 16px; z-index: 9; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 15px; color: var(--mute); }
+.switch button { color: var(--ink); text-decoration: underline 2px var(--line); text-underline-offset: 4px; }
+.switch button[aria-pressed="true"] { color: var(--sobreiro-text); text-decoration-color: currentColor; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a href="#" aria-label="Sobreiro, home"><img class="mark" src="img/sobreiro-mark.svg" alt=""></a>
+    <nav>
+      <a href="#">Manual</a>
+      <a href="#">GitHub</a>
+      <button class="theme" type="button" aria-label="Switch between light and dark">
+        <svg class="to-light" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="to-dark" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <h1 class="name" aria-label="Sobreiro"><svg viewBox="0 0 1000 94" aria-hidden="true"><text x="0" y="90" font-size="120" textLength="1000" lengthAdjust="spacing">SOBREIRO</text></svg></h1>
+  <div class="rule" aria-hidden="true"></div>
+
+  <!-- A: on the ground -->
+  <div class="v v-a">
+    <div class="ga">
+      <div>
+        <div class="intro" style="display:block"><p>How much of Claude Code's session and weekly limits you have left, always in view on the Windows taskbar.</p></div>
+        <a class="btn get" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">Download for Windows <span aria-hidden="true">↓</span></a>
+        <p class="meta">Version 0.5.0, for Windows</p>
+      </div>
+      <div class="app">
+        <figure><img class="on-dark" src="img/flyout-dark.png" width="330" height="289" alt="The flyout: session 27% used, on track, resets in 3h 11m; weekly 74% used, ends Tue 23:21, resets in 3d 13h"><img class="on-light" src="img/flyout-light.png" width="330" height="289" alt=""><figcaption>Flyout</figcaption></figure>
+        <figure><img class="on-dark" src="img/pill-dark.png" width="124" height="53" alt="The taskbar pill: 5h 37%, 7d 61%, and two rings"><img class="on-light" src="img/pill-light.png" width="124" height="54" alt=""><figcaption>Taskbar pill</figcaption></figure>
+        <figure><img class="on-dark" src="img/icon-dark.png" width="48" height="48" alt="The tray icon: two rings"><img class="on-light" src="img/icon-light.png" width="48" height="48" alt=""><figcaption>Tray icon</figcaption></figure>
+      </div>
+    </div>
+  </div>
+
+  <!-- B and C share the intro of the pattern: the sentence left, the meta right -->
+  <div class="intro v v-b">
+    <p>How much of Claude Code's session and weekly limits you have left, always in view on the Windows taskbar.</p>
+    <div class="meta">For Windows<br>Version 0.5.0</div>
+  </div>
+
+  <div class="v v-b">
+    <a class="btn get" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">Download for Windows <span aria-hidden="true">↓</span></a>
+    <div class="field">
+      <p class="say"><b>Two rings and a flyout</b><span>The outer ring is the session, the inner one the week. Click the pill or the tray icon for the rest.</span></p>
+      <div class="desk">
+        <img class="on-dark" src="img/flyout-dark.png" width="330" height="289" alt="The flyout: session 27% used, on track, resets in 3h 11m; weekly 74% used, ends Tue 23:21, resets in 3d 13h"><img class="on-light" src="img/flyout-light.png" width="330" height="289" alt="">
+        <img class="on-dark" src="img/strip-dark.png" width="172" height="53" alt="The taskbar pill, 5h 37% and 7d 61% with two rings, and the tray icon"><img class="on-light" src="img/strip-light.png" width="172" height="54" alt="">
+      </div>
+    </div>
+  </div>
+
+  <div class="v v-c">
+    <a class="btn get" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">Download for Windows <span aria-hidden="true">↓</span></a>
+    <div class="wall">
+      <div class="tile wide">
+        <div><h3>Flyout</h3><p>Each limit with what it has used, a badge for the pace, and when it resets. Click the pill or the tray icon.</p></div>
+        <div class="dev"><img class="on-dark" src="img/flyout-dark.png" width="330" height="289" alt="The flyout: session 27% used, on track; weekly 74% used, ends Tue 23:21"><img class="on-light" src="img/flyout-light.png" width="330" height="289" alt=""></div>
+      </div>
+      <div class="tile half">
+        <div><h3>Taskbar pill</h3><p>Both figures and the rings, just left of the tray icons.</p></div>
+        <div class="dev"><img class="on-dark" src="img/pill-dark.png" width="124" height="53" alt="The taskbar pill"><img class="on-light" src="img/pill-light.png" width="124" height="54" alt=""></div>
+      </div>
+      <div class="tile half">
+        <div><h3>Tray icon</h3><p>The outer ring is the session, the inner one the week.</p></div>
+        <div class="dev"><img class="on-dark" src="img/icon-dark.png" width="48" height="48" alt="The tray icon"><img class="on-light" src="img/icon-light.png" width="48" height="48" alt=""></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="section">
+    <h2>Install <small>3 steps</small></h2>
+    <div class="row"><span class="k">1</span><span class="n">Download</span><p class="s">The zip from the latest release on GitHub. Unzip it where you keep your apps.</p></div>
+    <div class="row"><span class="k">2</span><span class="n">Start Sobreiro</span><p class="s">Until the app is signed, Windows warns about an unknown publisher: More info, then Run anyway. The pill appears on the taskbar, left of the tray icons.</p></div>
+    <div class="row"><span class="k">3</span><span class="n">Connect to Claude Code</span><p class="s">Right-click the pill and choose Connect to Claude Code. It shows what changes in your settings.json, asks first and keeps a backup.</p></div>
+  </section>
+  <div class="end"></div>
+</div>
+
+<p class="switch">Shown: <button type="button" data-v="a" aria-pressed="false">A, on the ground</button>, <button type="button" data-v="b" aria-pressed="true">B, one field</button>, <button type="button" data-v="c" aria-pressed="false">C, the wall</button></p>
+
+<script>
+document.querySelector('.theme').addEventListener('click', function () {
+  var root = document.documentElement;
+  var dark = root.dataset.theme ? root.dataset.theme === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('theme', root.dataset.theme); } catch (e) {}
+});
+var v = location.hash.slice(1);
+function show(x) {
+  document.documentElement.dataset.v = x;
+  document.querySelectorAll('.switch button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.v === x)); });
+}
+if (v) show(v);
+document.querySelectorAll('.switch button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.v); }); });
+</script>
+</body>
+</html>

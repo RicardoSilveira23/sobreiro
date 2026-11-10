@@ -1,0 +1,13 @@
+{
+  "name": "sobreiro-site",
+  "private": true,
+  "description": "Tools for the static site in site/: Cloudflare's wrangler for staging, and checks.",
+  "scripts": {
+    "check": "node --test scripts/check-site.test.mjs && node scripts/check-site.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
+  }
+}

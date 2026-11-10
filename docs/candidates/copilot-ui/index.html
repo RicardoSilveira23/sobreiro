@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copilot variants</title>
+<style>
+  @font-face { font-family: Inter; src: url(../site/fonts/inter-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: Unbounded; src: url(../site/fonts/unbounded-latin-wght-normal.woff2) format("woff2"); font-weight: 200 900; }
+  :root {
+    --ground: #0b0b0b; --ink: #f4f4f4; --soft: #8d8d8d; --line: #262626;
+    --purple: #a594ff; --amber: #ffb020; --red: #ff6b6b; --green: #1a7f37;
+    --taskbar: #1c1c1c;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #141414; color: var(--ink); font: 14px/1.45 Inter, sans-serif; padding: 28px 24px 60px; }
+  h1 { font: 700 20px Unbounded; margin-bottom: 6px; }
+  h2 { font: 600 15px Inter; margin: 34px 0 4px; }
+  p.note { color: var(--soft); max-width: 70ch; }
+  .grid { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 14px; align-items: flex-start; }
+  .variant { display: flex; flex-direction: column; gap: 8px; }
+  .tag { font: 600 13px Inter; }
+  .tag span { color: var(--soft); font-weight: 400; }
+
+  /* Taskbar strip at real size, then 3x */
+  .strip { background: var(--taskbar); height: 48px; display: flex; align-items: center; justify-content: flex-end; padding: 0 10px 0 40px; gap: 6px; width: max-content; }
+  .zoom { transform: scale(3); transform-origin: top left; }
+  .zoomwrap { overflow: hidden; }
+  .tray { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+  .tray .dot { width: 16px; height: 16px; border-radius: 3px; background: #3a3a3a; }
+  .clock { font: 12px/16px Inter; text-align: right; color: var(--ink); padding-left: 6px; }
+  .pill { display: flex; align-items: center; padding: 4px 8px; border-radius: 4px; }
+  .lines { display: flex; flex-direction: column; justify-content: center; line-height: 16px; white-space: nowrap; }
+  .lines .l { font: 12px Inter; }
+  .lines b { font: 700 11px Unbounded; }
+  .lines .s { font: 11px Inter; color: var(--soft); }
+  .pill svg { margin-left: 8px; display: block; }
+  .mini { position: relative; height: 3px; margin: 5px 0 2px; background: rgba(244,244,244,.15); border-radius: 2px; }
+  .mini i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+
+  /* Flyout card */
+  .card { width: 330px; background: var(--ground); border: 1px solid var(--line); border-radius: 10px; padding: 18px 18px 14px; }
+  .title { font-size: 15px; color: var(--soft); padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
+  .title.next { margin-top: 10px; }
+  .row { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .head { display: flex; align-items: baseline; justify-content: space-between; }
+  .head .label { font-size: 15px; }
+  .head .fig { font: 700 22px/22px Unbounded; }
+  .head .unit { font-size: 14px; color: var(--soft); margin-left: 4px; }
+  .meter { position: relative; height: 6px; background: var(--line); margin-top: 6px; }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; }
+  .meter .tick { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--ink); }
+  .meta { margin-top: 10px; display: flex; align-items: center; gap: 8px; color: var(--soft); font-size: 14px; }
+  .badge { font-weight: 500; font-size: 14px; padding: 1px 8px; border-radius: 999px; }
+  .detail { color: var(--soft); font-size: 14px; margin-top: 4px; }
+  .footer { color: var(--soft); font-size: 14px; margin-top: 12px; }
+  .tip { font: 12px/1.5 "Segoe UI", sans-serif; background: #2b2b2b; border: 1px solid #3d3d3d; padding: 6px 9px; white-space: pre; width: max-content; }
+</style>
+</head>
+<body>
+<h1>Copilot in Sobreiro</h1>
+<p class="note">Mock-ups at real size in the app's type, colours and sizes. Sample reading: Claude 5h 37%, 7d 61%;
+Copilot 2,644 of 15,000 AI credits (17.6%), resets 1 Dec. The taskbar strips repeat at 3× below each one.</p>
+
+<h2>1 · The pill when both are on the PC (round 2)</h2>
+<p class="note">Copilot's figure sits on the pill in all four, next to Claude's. They differ only in the shape beside it:
+Claude keeps its two rings, and Copilot gets its own ring, nothing, a bar, or a small meter.</p>
+<div class="grid" id="both"></div>
+
+<h2>2 · The tray icon when both are on the PC</h2>
+<p class="note">The pill can be turned off, and then the tray icon is all that's left. With two icons, Copilot stays in
+sight there too. Windows 11 puts a new icon in the hidden tray until you drag it out once.</p>
+<div class="grid" id="tray"></div>
+
+<h2>3 · The taskbar when only Copilot is on the PC</h2>
+<div class="grid" id="solo"></div>
+
+<h2>4 · The flyout</h2>
+<p class="note">Proposed, not a choice: each service gets its own heading, and Copilot's credits take the same kind of row as a spend limit.</p>
+<div class="grid" id="flyouts"></div>
+
+<script>
+const C = { purple: "#a594ff", amber: "#ffb020", red: "#ff6b6b", ink: "#f4f4f4" };
+const level = p => p >= 90 ? C.red : p >= 70 ? C.amber : C.purple;
+
+// Concentric rings from the outside in, clockwise from 12 o'clock, round caps drawn short (as Ring.CappedSweep).
+function rings(size, stroke, gap, pcts, trackAlpha) {
+  const c = size / 2; let r = c - stroke / 2; let out = "";
+  for (const p of pcts) {
+    out += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${C.ink}" stroke-opacity="${trackAlpha}" stroke-width="${stroke}"/>`;
+    if (p > 0) {
+      const sweep = p >= 100 ? 360 : Math.max(0.5, p * 3.6 - stroke / r * 180 / Math.PI);
+      if (sweep >= 360) out += `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${level(p)}" stroke-width="${stroke}"/>`;
+      else {
+        const a = sweep * Math.PI / 180, x = c + r * Math.sin(a), y = c - r * Math.cos(a);
+        out += `<path d="M ${c} ${c - r} A ${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${x.toFixed(3)} ${y.toFixed(3)}" fill="none" stroke="${level(p)}" stroke-width="${stroke}" stroke-linecap="round"/>`;
+      }
+    }
+    r -= stroke + gap;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${out}</svg>`;
+}
+const line = (l, f) => `<div><span class="l">${l}</span> <b>${f}</b></div>`;
+const soft = (l, s) => `<div><span class="l">${l}</span> <span class="s">${s}</span></div>`;
+const pill = (lines, svg) => `<div class="pill"><div class="lines">${lines}</div>${svg}</div>`;
+const strip = (pills, icon) => `<div class="strip">${pills}<div class="tray"><div class="dot"></div><div class="dot"></div>${icon}</div><div class="clock">14:02<br>10/11/2026</div></div>`;
+const claudePill = pill(line("5h", "37%") + line("7d", "61%"), rings(26, 3, 2, [37, 61], 0.15));
+const icon2 = rings(16, 2.5, 1, [37, 61], 0.35);
+
+function variant(host, tag, sub, html, after = "") {
+  const el = document.createElement("div"); el.className = "variant";
+  el.innerHTML = `<div class="tag">${tag} <span>${sub}</span></div>${html}
+    <div class="zoomwrap"><div class="zoom">${html}</div></div>${after}`;
+  document.getElementById(host).appendChild(el);
+  const z = el.querySelector(".zoom"), w = el.querySelector(".zoomwrap");
+  requestAnimationFrame(() => { w.style.width = z.offsetWidth * 3 + "px"; w.style.height = z.offsetHeight * 3 + "px"; });
+}
+
+// A level bar filling from the bottom, rounded like the rings' caps.
+let clipId = 0;
+function vbar(p, w = 5, h = 26, trackAlpha = 0.15) {
+  const id = "c" + clipId++, f = h * Math.min(p, 100) / 100;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><clipPath id="${id}"><rect width="${w}" height="${h}" rx="${w / 2}"/></clipPath>
+    <rect width="${w}" height="${h}" rx="${w / 2}" fill="${C.ink}" fill-opacity="${trackAlpha}"/>
+    <rect y="${h - f}" width="${w}" height="${f}" fill="${level(p)}" clip-path="url(#${id})"/></svg>`;
+}
+const mini = p => `<div class="mini"><i style="width:${p}%;background:${level(p)}"></i></div>`;
+const copilotIcon = rings(16, 2.5, 1, [17], 0.35);
+
+variant("both", "B", "Copilot gets its own ring (round 1)",
+  strip(claudePill + pill(line("AI", "17%") + soft("", "1 Dec"), rings(26, 3, 2, [17], 0.15)), icon2));
+variant("both", "F", "Copilot as text only: the narrowest",
+  strip(claudePill + pill(line("AI", "17%") + soft("", "1 Dec"), ""), icon2));
+variant("both", "G", "Copilot gets a level bar, so the shapes say which is which",
+  strip(claudePill + pill(line("AI", "17%") + soft("", "1 Dec"), vbar(17)), icon2));
+variant("both", "H", "Copilot's figure over a small meter, like its flyout row",
+  strip(claudePill + pill(line("AI", "17%") + mini(17), ""), icon2));
+
+variant("tray", "T1", "one icon: Claude's rings",
+  strip(claudePill + pill(line("AI", "17%") + soft("", "1 Dec"), ""), icon2));
+variant("tray", "T2", "two icons: Claude's rings and Copilot's ring",
+  strip(claudePill + pill(line("AI", "17%") + soft("", "1 Dec"), ""), icon2 + copilotIcon));
+
+variant("solo", "D", "one line and one ring",
+  strip(pill(line("AI", "17%"), rings(26, 3, 2, [17], 0.15)), rings(16, 2.5, 1, [17], 0.35)));
+variant("solo", "E", "the reset date underneath",
+  strip(pill(line("AI", "17%") + soft("", "1 Dec"), rings(26, 3, 2, [17], 0.15)), rings(16, 2.5, 1, [17], 0.35)));
+
+function row(label, pct, fill, proj, badge, resets, detail) {
+  return `<div class="row"><div class="head"><span class="label">${label}</span><span><span class="fig">${pct}%</span><span class="unit">used</span></span></div>
+    <div class="meter"><i style="width:${pct}%;background:${fill}"></i>${proj ? `<span class="tick" style="left:calc(${proj}% - 1px)"></span>` : ""}</div>
+    <div class="meta">${badge}<span>${resets}</span></div>${detail ? `<div class="detail">${detail}</div>` : ""}</div>`;
+}
+const onTrack = `<span class="badge" style="background:#1a7f37;color:#fff">On track</span>`;
+const ends = `<span class="badge" style="background:#ffb020;color:#0b0b0b">Ends Thu 18:40</span>`;
+const session = row("Session", 37, C.purple, 74, onTrack, "resets in 2h 18m");
+const weekly = row("Weekly", 61, C.purple, null, ends, "resets in 3d 13h");
+const credits = row("AI credits", 17, C.purple, 56, onTrack, "resets in 20d 14h", "2,644 of 15,000 credits");
+
+for (const [tag, sub, body] of [
+  ["Both", "Claude first, then Copilot", `<div class="title">Claude Code</div>${session}${weekly}<div class="title next">GitHub Copilot</div>${credits}`],
+  ["Copilot only", "", `<div class="title">GitHub Copilot</div>${credits}`],
+]) {
+  const el = document.createElement("div"); el.className = "variant";
+  el.innerHTML = `<div class="tag">${tag} <span>${sub}</span></div><div class="card">${body}<div class="footer">Updated 3 min ago</div></div>`;
+  document.getElementById("flyouts").appendChild(el);
+}
+</script>
+</body>
+</html>

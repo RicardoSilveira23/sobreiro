@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sobreiro",
+  // Not a secret: it names the account, and only the API token grants access to it.
+  "account_id": "6314d32615af7b067087c36798a9c51b",
+  "compatibility_date": "2026-10-15",
+  // Staging: the workers.dev address and each pull request's preview URL, all behind a GitHub
+  // login (Cloudflare Access). See .github/workflows/site.yml.
+  "workers_dev": true,
+  "preview_urls": true,
+  // The public address, as a custom domain: deploying creates its DNS record and certificate.
+  // scripts/check-site.mjs reads it for the pages' canonical links, and the smoke test checks it.
+  // Keep comments on lines of their own: that script strips them before parsing.
+  "routes": [{ "pattern": "sobreiro.ricardosilveira.dev", "custom_domain": true }],
+  // The site as it is, no build. With no 404.html, a missing page is a plain 404.
+  "assets": { "directory": "./site" }
+}

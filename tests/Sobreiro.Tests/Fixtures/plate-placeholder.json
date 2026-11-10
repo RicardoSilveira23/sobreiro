@@ -1,0 +1,16 @@
+{
+  "image": "plate-placeholder.png",
+  "capturedAt": "2026-11-10T21:58:00+00:00",
+  "dark": true,
+  "origin": { "x": 1960, "y": 1392 },
+  "monitor": { "left": 0, "top": 0, "right": 2560, "bottom": 1440 },
+  "workArea": { "left": 0, "top": 0, "right": 2560, "bottom": 1392 },
+  "taskbar": { "left": 0, "top": 1392, "right": 2560, "bottom": 1440 },
+  "band": { "top": 1396, "bottom": 1436 },
+  "pill": { "left": 2300, "top": 1402, "right": 2400, "bottom": 1430 },
+  "icons": {
+    "claude": { "left": 2410, "top": 1404, "right": 2434, "bottom": 1428 },
+    "copilot": null
+  },
+  "ground": { "left": 2100, "right": 2290 }
+}

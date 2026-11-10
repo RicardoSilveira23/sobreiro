@@ -1,0 +1,136 @@
+# The site in site/: checked on every PR and push that touches it, and served by the Cloudflare
+# Worker `sobreiro`.
+#
+# Production: main at https://sobreiro.ricardosilveira.dev, public, the Worker's custom domain
+# (wrangler.jsonc). The pages say noindex until the repository is public.
+# Staging: main also at https://sobreiro.rs-staging.workers.dev, and each PR at
+# https://pr-<number>-sobreiro.rs-staging.workers.dev, both behind a GitHub login (Cloudflare
+# Access). A PR's preview is the check before anything goes public.
+#
+# Off until the repository variable DEPLOY is "true", with the CLOUDFLARE_API_TOKEN,
+# CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET secrets in place. Setting DEPLOY to anything
+# else stops it. The token needs Zone, Workers Routes, Edit on ricardosilveira.dev to attach the
+# domain. Setup: docs/plan.md, under Site.
+name: Site
+
+on:
+  pull_request:
+    paths: &site-paths
+      - 'site/**'
+      - 'scripts/check-site*.mjs'
+      - 'scripts/smoke.mjs'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.nvmrc'
+      - '.github/workflows/site.yml'
+  push:
+    branches: [main]
+    paths: *site-paths
+  # Run by hand to redeploy.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Test the checker
+        run: node --test scripts/check-site.test.mjs
+
+      - name: Check the site
+        run: node scripts/check-site.mjs
+
+      - name: The Worker uploads (size limits, config)
+        run: npx wrangler deploy --dry-run
+
+  # main to the public address and staging. The token goes only to the steps that use it:
+  # `npm ci` runs packages' install scripts.
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Deploy
+        run: npx wrangler deploy --message "$GITHUB_SHA"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # The public address needs no Access token. On the very first deploy its certificate can
+      # take a few minutes: if this fails then, re-run the job.
+      - name: The site works
+        id: smoke
+        run: |
+          sleep 20 # the new version reaches every edge
+          npm run smoke
+      - name: Roll back
+        if: failure() && steps.smoke.outcome == 'failure'
+        run: npx wrangler rollback --yes --message "Smoke test failed on $GITHUB_SHA"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  # Each pull request's site at its own preview URL, behind the same GitHub login as staging. It
+  # uploads a version without deploying it, so the public site is untouched. Forks and Dependabot
+  # get no secrets, so they have no preview.
+  preview:
+    needs: check
+    if: >-
+      github.event_name == 'pull_request' && vars.DEPLOY == 'true' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: preview
+      url: https://pr-${{ github.event.pull_request.number }}-sobreiro.rs-staging.workers.dev
+    env:
+      PR: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Upload the preview
+        run: npx wrangler versions upload --preview-alias "pr-$PR" --message "PR $PR at $SHA"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+      - name: The preview works
+        run: |
+          sleep 20 # the new version reaches every edge
+          npm run smoke -- "https://pr-$PR-sobreiro.rs-staging.workers.dev"
+        env:
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}

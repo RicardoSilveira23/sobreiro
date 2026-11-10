@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Sobreiro</AssemblyName>
+    <ApplicationIcon>Assets\sobreiro.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Fonts\*.ttf" />
+    <Resource Include="Fonts\*.ttf" />
+    <None Remove="Fonts\*.txt" />
+    <EmbeddedResource Include="Fonts\OFL-*.txt" LogicalName="%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\LICENSE" LogicalName="LICENSE.txt" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(BridgeExe)' != ''">
+    <!-- Changes the SDK's compile-inputs hash, which covers DefineConstants but not EmbeddedResource, so the dll is rebuilt both ways. -->
+    <DefineConstants>$(DefineConstants);CARRIES_BRIDGE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(BridgeExe)' != ''">
+    <EmbeddedResource Include="$(BridgeExe)" LogicalName="sobreiro-bridge.exe" />
+  </ItemGroup>
+  <Target Name="CheckBridgeExe" BeforeTargets="BeforeBuild;BeforeResGen;CoreCompile" Condition="'$(BridgeExe)' != '' And !Exists('$(BridgeExe)')">
+    <Error Text="BridgeExe points at a file that doesn't exist: $(BridgeExe)" />
+  </Target>
+  <ItemGroup>
+    <ProjectReference Include="..\Sobreiro.Core\Sobreiro.Core.csproj" />
+  </ItemGroup>
+</Project>

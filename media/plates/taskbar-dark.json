@@ -1,0 +1,51 @@
+{
+    "image":  "taskbar-dark.png",
+    "capturedAt":  "2026-11-10T12:49:40+00:00",
+    "dark":  true,
+    "origin":  {
+                   "x":  1729,
+                   "y":  1392
+               },
+    "monitor":  {
+                    "left":  0,
+                    "top":  0,
+                    "right":  2560,
+                    "bottom":  1440
+                },
+    "workArea":  {
+                     "left":  0,
+                     "top":  0,
+                     "right":  2560,
+                     "bottom":  1392
+                 },
+    "taskbar":  {
+                    "left":  0,
+                    "top":  1392,
+                    "right":  2560,
+                    "bottom":  1440
+                },
+    "band":  {
+                 "top":  1397,
+                 "bottom":  1435
+             },
+    "pill":  {
+                 "left":  2209,
+                 "top":  1397,
+                 "right":  2310,
+                 "bottom":  1435
+             },
+    "icons":  {
+                  "claude":  {
+                                 "left":  2346,
+                                 "top":  1392,
+                                 "right":  2378,
+                                 "bottom":  1440
+                             },
+                  "copilot":  null
+              },
+    "ground":  {
+                   "left":  1729,
+                   "right":  2209
+               },
+    "iconPx":  16
+}

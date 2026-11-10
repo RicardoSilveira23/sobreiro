@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobreiro manual</title>
+<meta name="description" content="Everything Sobreiro does, from installing it to taking it off again.">
+<link rel="canonical" href="https://sobreiro.ricardosilveira.dev/manual/">
+<!-- Out of search engines until the repository is public: docs/plan.md, Site. -->
+<meta name="robots" content="noindex">
+<link rel="icon" href="../favicon.ico">
+<script>try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="../assets/foundation.css">
+<link rel="stylesheet" href="../assets/sobreiro.css">
+<link rel="stylesheet" href="../assets/site.css">
+<script src="../assets/site.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a href="../" aria-label="Sobreiro, home"><img class="mark" src="../assets/img/sobreiro-mark.svg" width="28" height="28" alt=""></a>
+    <nav>
+      <a href="./" aria-current="page">Manual</a>
+      <a href="https://github.com/RicardoSilveira23/sobreiro">GitHub</a>
+      <button class="theme" type="button" hidden aria-label="Switch between light and dark">
+        <svg class="to-light" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="to-dark" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main class="manual">
+  <h1 class="listing">Manual</h1>
+  <div class="contents">
+    <p>Everything Sobreiro does, from installing it to taking it off again.</p>
+    <nav aria-label="Contents"><ul>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#connect">Connect to Claude Code</a></li>
+      <li><a href="#shows">What it shows</a></li>
+      <li><a href="#live">Live usage</a></li>
+      <li><a href="#data">What it reads and sends</a></li>
+      <li><a href="#uninstall">Uninstall</a></li>
+      <li><a href="#limits">Known limits</a></li>
+    </ul></nav>
+  </div>
+
+  <section class="section" id="install">
+    <h2>Install</h2>
+    <div class="row"><span class="k">1</span><span class="n">Download</span><p class="s">Sobreiro.exe from the <a href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">latest release</a>.</p></div>
+    <div class="row"><span class="k">2</span><span class="n">Run Sobreiro.exe</span><p class="s">The pill appears beside the clock and fills in within seconds while the Copilot CLI, gh or Claude Code is signed in.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Good to know</span>
+      <ul class="d">
+        <li>For Copilot, sign in with the Copilot CLI or gh auth login. Sobreiro doesn't read the sign-in VS Code or Visual Studio keeps. <a href="#data">What it reads and sends</a> lists every sign-in it tries.</li>
+        <li>Windows may warn about an unknown publisher until the app is signed: More info, then Run anyway; or tick Unblock in the file's Properties before the first run.</li>
+        <li>Sobreiro.exe is one file, with the bridge and the fonts inside. It can live anywhere; %LOCALAPPDATA%\Programs\Sobreiro is a good home. Start with Windows records the path where the exe is when you tick it, so tick it again if you move the file.</li>
+        <li>Upgrading from 0.7.0's zip: quit the old Sobreiro first (right-click the tray icon, then Quit); while it runs, the new exe only opens its details. Then run the new Sobreiro.exe, choose Reconnect to Claude Code if the menu offers it, and tick Start with Windows again if you use it. Last, delete the old folder. If you saved the new Sobreiro.exe into it (0.7.0 suggested %LOCALAPPDATA%\Programs, so the old folder is ...\Programs\Sobreiro), delete only sobreiro-bridge.exe and Fonts there.</li>
+        <li>It needs no .NET.</li>
+        <li>On Windows 11 a new tray icon starts in the overflow (^). Drag it onto the taskbar to keep it in view.</li>
+        <li>Starting Sobreiro.exe again while it runs opens the details.</li>
+      </ul></div>
+  </section>
+
+  <section class="section" id="connect">
+    <h2>Connect to Claude Code</h2>
+    <div class="row"><span class="k">Connect</span><span class="n">Point the status line at the bridge</span><p class="s">Right-click the icon or the pill and choose Connect to Claude Code. Sobreiro copies the bridge to %LOCALAPPDATA%\Sobreiro\sobreiro-bridge.exe, once you say Yes, and that copy becomes Claude Code's status line command.</p>
+      <ul class="d">
+        <li>It shows the settings file and your statusLine now and after, and asks first.</li>
+        <li>It saves a backup next to the file, named settings.json.sobreiro-&lt;date&gt;-&lt;time&gt;.bak.</li>
+        <li>It changes only statusLine.</li>
+        <li>Moving Sobreiro.exe later doesn't break the status line, since it runs the copy. When Sobreiro starts, it brings the copy up to date, or puts it back if you deleted it.</li>
+        <li>A status line that still runs a bridge elsewhere, such as an unzipped 0.7.0 folder, or the old openheadroom-bridge, shows Reconnect to Claude Code and Disconnect from Claude Code in the menu. Until you reconnect, the old bridge keeps feeding the same usage.json.</li>
+        <li>If you already have a status line command, the bridge runs it and passes its output through. Otherwise it prints 5h 8% · 7d 44%.</li>
+        <li>When it finishes, it says what it did and where the backup is.</li>
+        <li>The status line's numbers arrive after Claude Code's next response.</li>
+      </ul></div>
+    <div class="row"><span class="k">Disconnect</span><span class="n">Put the old status line back</span><p class="s">After a Connect from the app, Disconnect puts your previous statusLine back exactly. The confirmation shows the result first.</p>
+      <ul class="d">
+        <li>For a bridge set up by hand, it puts back the chained_command from config.json if there is one, and otherwise removes statusLine.</li>
+      </ul></div>
+    <div class="row"><span class="k"></span><span class="n">When it refuses</span><p class="s">Connect and Disconnect change nothing if settings.json isn't valid JSON or UTF-8, or config.json isn't valid JSON. Both respect CLAUDE_CONFIG_DIR.</p></div>
+    <div class="row"><span class="k">By hand</span><span class="n">Manual setup</span><p class="s">If you'd rather edit the file yourself, back up %USERPROFILE%\.claude\settings.json first. If its statusLine already has a command, copy that string into %LOCALAPPDATA%\Sobreiro\config.json so the bridge runs it and shows its output. Never put the bridge itself there.</p>
+<pre class="code" tabindex="0"><code>{ "chained_command": "~/.claude/statusline.sh" }</code></pre></div>
+    <div class="row"><span class="k"></span><span class="n">Then set statusLine</span><p class="s">Claude Code on Windows runs the command through Git Bash, so write the path with forward slashes and keep the quotes. The path is the bridge's copy in the data folder. Start (or restart) Sobreiro afterwards, which puts the bridge there.</p>
+<pre class="code" tabindex="0"><code>"statusLine": {
+  "type": "command",
+  "command": "\"C:/Users/&lt;you&gt;/AppData/Local/Sobreiro/sobreiro-bridge.exe\""
+}</code></pre>
+      <ul class="d">
+        <li>To disconnect, choose Disconnect from Claude Code in the menu, or restore the backed-up statusLine yourself (remove it if you had none).</li>
+      </ul></div>
+  </section>
+
+  <section class="section" id="shows">
+    <h2>What it shows</h2>
+    <div class="row"><span class="k">Services</span><span class="n">GitHub Copilot, Claude Code or both</span><p class="s">Sobreiro shows each one it finds on this PC. GitHub Copilot shows once there's a reading with a credit budget (Business, Enterprise or Pro), live or from the Copilot CLI's cache. Copilot Free has none, so it isn't shown. Claude Code shows once it's signed in here, has a reading, or is connected. With neither, it shows Claude Code's, with no data yet. A service that isn't shown has no pill block, tray icon or details section.</p></div>
+    <div class="row"><span class="k">Tray icons</span><span class="n">One for each service</span><p class="s">Both open the same details and the same menu. Claude Code's is two rings, like the Claude app's usage circle: the outer ring fills with the session %, the inner one with the weekly %, clockwise from 12 o'clock. Its tooltip gives the reset times. Copilot's is one ring, in the same colours. Its tooltip reads AI credits 17% · resets Tue 1 Dec 12:00 AM (the time in your format), then how many credits are used and the time of the reading.</p>
+      <ul class="d">
+        <li>A ring is purple below 70%, amber from 70% and red from 90%.</li>
+        <li>With no data only the empty tracks show.</li>
+      </ul></div>
+    <div class="row"><span class="k">Pill</span><span class="n">On the taskbar</span><p class="s">Just left of the tray icons, a block for each service. Claude Code's is 5h 27% above 7d 74%, like the clock, then the same two rings. Copilot's is AI 17% above the reset date, then a small level bar. With both, Claude Code's comes first. Click it for the details, right-click it for the menu.</p>
+      <ul class="d">
+        <li>The level bar is purple below 70%, amber from 70% and red from 90%, like the rings.</li>
+        <li>It finds the tray icons through UI Automation, so it never covers them.</li>
+        <li>It hides while a full-screen app runs, while an auto-hidden taskbar is down, or when the app buttons leave no room.</li>
+        <li>It follows scaling changes and comes back after Explorer restarts.</li>
+      </ul></div>
+    <div class="row"><span class="k">Details</span><span class="n">The figures</span><p class="s">Left-click a tray icon or the pill. The details panel is black or white, following Windows. Under the Claude Code heading, session and weekly each show the figure, a badge and a line like resets in 42m. Under the GitHub Copilot heading, which comes second when both show, one AI credits row shows the figure, a badge, resets in 20d 10h and 2,644 of 15,000 credits. When Copilot's reading isn't live and fresh, a line says why, for example that it comes from the Copilot CLI's cache.</p>
+      <p class="shot"><img src="../assets/img/manual-copilot.png" srcset="../assets/img/manual-copilot@2x.png 2x" width="330" height="219" alt="The details with Copilot only: AI credits 17% used, On track, resets in 20d 10h, 2,644 of 15,000 credits."></p></div>
+    <div class="row"><span class="k">Badges</span><span class="n">What the badge says</span><p class="s">One of seven, from how much is used and how far the period has gone: the session, the week or Copilot's month.</p>
+      <ul class="d">
+        <li>On track (green): at this pace you won't run out before the reset.</li>
+        <li>Ends 16:40 (amber): at this pace you run out then.</li>
+        <li>Likely used up (amber): that time has passed on an old reading.</li>
+        <li>Used up (red): the limit is at 100%.</li>
+        <li>Not used yet (grey): under 2% used, or the limit has just reset.</li>
+        <li>Too early (grey): less than 5% of the period has passed, too soon to tell a pace.</li>
+        <li>Resetting (grey): the reset is under 30 seconds away.</li>
+      </ul></div>
+    <div class="row"><span class="k">Menu</span><span class="n">Style</span><p class="s">Bars, Battery or Thermometer: how the details draw each limit. The tray icons stay rings in every style.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Bar colour</span><p class="s">Sobreiro purple, or the Windows accent. The accent is used only where it reads against the details panel's ground, and the bars stay purple where it doesn't. Amber and red stay as they are. On a taskbar that shows the accent colour itself, the rings are white or black, like the clock.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Show</span><p class="s">Tray icon only, or Tray icon and taskbar pill, the default.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Start with Windows</span><p class="s">Starts Sobreiro when you sign in to Windows. Style, colour and Show are kept in config.json. The menu also has Open data folder, About Sobreiro and Quit.</p></div>
+    <div class="row"><span class="k">Toasts</span><span class="n">At 80% and 95%</span><p class="s">Once per reset period for each limit, a toast comes from that service's tray icon. Copilot's is titled Copilot AI credits 80% used. Claude Code's reads Session 82% used, over Ends 16:40 · resets in 2h.</p></div>
+  </section>
+
+  <section class="section" id="live">
+    <h2>Live usage</h2>
+    <div class="row"><span class="k"></span><span class="n">Why it exists</span><p class="s">Claude Code's status line runs only in the terminal, so its numbers go stale while you work in VS Code, the desktop app or claude.ai. Live usage fixes that. It is always on, with no switch.</p></div>
+    <div class="row"><span class="k">When</span><span class="n">Every 5 minutes</span><p class="s">Also when you open the details on a reading over a minute old, and once as Sobreiro starts.</p></div>
+    <div class="row"><span class="k">Pauses</span><span class="n">When the token can't be used</span><p class="s">If the token has expired, Live usage pauses until Claude Code renews its sign-in. If Anthropic refuses it, Live usage doesn't send it again and waits for Claude Code to save a new one.</p>
+      <ul class="d">
+        <li>The last line of the details says so. It also says when Claude Code isn't signed in, when Anthropic asks it to wait, or when it can't reach Anthropic.</li>
+      </ul></div>
+    <div class="row"><span class="k">Back-off</span><span class="n">When Anthropic says too often</span><p class="s">It waits 5 minutes, or what Anthropic asks, and doubles that up to 30.</p></div>
+    <div class="row"><span class="k">Merging</span><span class="n">With the status line</span><p class="s">Its readings merge with the status line's, and within a reset period they replace them whatever the %, so the icon, the details and toasts stay current whichever app you use. If Live usage fails, the status line's readings still show.</p></div>
+    <div class="row"><span class="k">Copilot</span><span class="n">Live the same way</span><p class="s">Copilot's credits come from GitHub on the same schedule, and back off the same way when GitHub says too often. As Sobreiro starts, the Copilot CLI's cached reading fills in at once, and a live reading takes over when GitHub answers.</p></div>
+  </section>
+
+  <section class="section" id="data">
+    <h2>What it reads and sends</h2>
+    <div class="row"><span class="k">Reads</span><span class="n">Claude Code's sign-in</span><p class="s">The access token in .credentials.json, in the Claude config folder (%USERPROFILE%\.claude, or CLAUDE_CONFIG_DIR), into memory, for one request at a time. It never stores, logs or renews it.</p></div>
+    <div class="row"><span class="k"></span><span class="n">A GitHub sign-in</span><p class="s">On every PC, with or without Copilot, Sobreiro looks for one every 5 minutes, and when the details open on a reading over a minute old. It tries, in this order, stopping at the first GitHub accepts: the COPILOT_GITHUB_TOKEN, GH_TOKEN and GITHUB_TOKEN variables, the Copilot CLI's sign-in in Windows Credential Manager, then gh auth token --hostname github.com. To find the Copilot CLI's sign-in it may list the Credential Manager entries, but only on a PC where the Copilot CLI has been used, and it keeps only that one. Each is read into memory for one request at a time. Sobreiro never stores, logs or renews it. Copilot shows only for a plan with a credit budget.</p></div>
+    <div class="row"><span class="k"></span><span class="n">The Copilot CLI's cache</span><p class="s">%LOCALAPPDATA%\copilot\copilot-user-cache.json holds no tokens. Sobreiro reads it for a first reading and while GitHub can't be reached.</p></div>
+    <div class="row"><span class="k">Sends</span><span class="n">Two requests, one to each service</span><p class="s">GET https://api.anthropic.com/api/oauth/usage with Claude Code's token, for your usage. GET https://api.github.com/copilot_internal/user with any GitHub token it finds, every 5 minutes, and only to that address. Nothing else is sent, no redirects are followed and no cookies are kept. No telemetry and no update checks: nothing else leaves your machine.</p></div>
+    <div class="row"><span class="k">Saves</span><span class="n">The limits and a timestamp</span><p class="s">The bridge saves only the rate_limits fields and the time, never the rest of what Claude Code passes it.</p></div>
+    <div class="row"><span class="k">Relies on</span><span class="n">Undocumented addresses</span><p class="s">Anthropic and GitHub can change theirs, and Anthropic's terms don't allow third-party apps to use Claude sign-ins. If you'd rather not, don't install it.</p></div>
+    <div class="row"><span class="k">Folder</span><span class="n">%LOCALAPPDATA%\Sobreiro</span><p class="s">Where the app keeps its data. To use another folder, set SOBREIRO_DATA_DIR to its full path for both the bridge and the tray app; each data folder gets its own tray icon.</p>
+      <ul class="d">
+        <li>sobreiro-bridge.exe: the status line bridge, copied from Sobreiro.exe. Disconnect leaves it here.</li>
+        <li>usage.json: the readings, from the bridge and from Live usage.</li>
+        <li>config.json: style, colour and Show, and, after a Connect, your previous status line and its command.</li>
+        <li>alerts.json: which toasts have been shown.</li>
+        <li>log.txt: the diagnostics log.</li>
+      </ul></div>
+    <div class="row"><span class="k">Log</span><span class="n">What log.txt holds</span><p class="s">A small trace, so a tray that quit or failed to start leaves something behind. It never leaves your machine.</p>
+      <ul class="d">
+        <li>Each entry has the time, the process id and what happened: the start (with the version), the exit code, a failed start, an unexpected error, or Windows asking to end the session.</li>
+        <li>Errors are recorded by their type name and stack trace only. It holds no error messages, usage numbers or file contents.</li>
+        <li>One line each time Copilot's poll changes: which sources had a token and what GitHub answered. It holds no tokens, names or numbers.</li>
+        <li>The session entry, session-ending, is written when Windows asks to end the session: sign-out, shutdown, restart, or an installer or updater asking apps to close. The tray quits then, even if the sign-out or shutdown is cancelled. reason=Shutdown covers everything except sign-out.</li>
+        <li>A start with no later exit means the process was killed or crashed hard, which the log can't record.</li>
+        <li>At about 256 KB the file is moved to log.1.txt, replacing the older one.</li>
+        <li>If the tray can't start, it shows a box that names the log, or the data folder when the log couldn't be written there either.</li>
+      </ul></div>
+    <div class="row"><span class="k">For IT</span><span class="n">The token in memory</span><p class="s">The last access token, Claude's or GitHub's, can stay in the app's memory until it is overwritten, since HttpClient takes it as a string property. The app holds no refresh token.</p></div>
+  </section>
+
+  <section class="section" id="uninstall">
+    <h2>Uninstall</h2>
+    <div class="row"><span class="k">1</span><span class="n">Disconnect from Claude Code</span><p class="s">If you connected it, right-click the icon and choose Disconnect from Claude Code, so your status line is back as it was.</p></div>
+    <div class="row"><span class="k">2</span><span class="n">Untick Start with Windows</span><p class="s">In the same menu. It removes the entry that starts Sobreiro.exe when you sign in.</p></div>
+    <div class="row"><span class="k">3</span><span class="n">Quit</span><p class="s">Choose Quit in the menu.</p></div>
+    <div class="row"><span class="k">4</span><span class="n">Delete the files</span><p class="s">Delete Sobreiro.exe, and %LOCALAPPDATA%\Sobreiro, its data and the bridge copy. Connect's backups, settings.json.sobreiro-&lt;date&gt;-&lt;time&gt;.bak, stay in the Claude config folder beside settings.json; delete them too if you like.</p></div>
+  </section>
+
+  <section class="section" id="limits">
+    <h2>Known limits <small>6</small></h2>
+    <div class="row"><span class="k"></span><span class="n">Terminal only, when Live usage can't fetch</span><p class="s">When Live usage can't fetch (Claude Code not signed in, the sign-in refused or expired, Anthropic unreachable), the numbers update only through the status line, if you connected it, and only the terminal runs it. The VS Code extension never does, and neither does the desktop app (seen 2026-11-09), so usage there and on claude.ai, which counts against the same limits, shows up after your next response in the terminal. Between sessions the app shows the last values and their age, and a limit whose reset time has passed shows as reset.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Several sessions</span><p class="s">With several Claude Code sessions open, the higher used % within one reset period stays, so an idle session can't overwrite fresher numbers. A new period, or a new spend cap, replaces the old. Claude Code's own status line shows that session's numbers, so it can read lower than the tray.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Toasts need notifications on</span><p class="s">Toasts are Windows notifications, so they show only when notifications are on in Settings › System › Notifications.</p></div>
+    <div class="row"><span class="k"></span><span class="n">Plans</span><p class="s">Claude Code's limits appear only on Pro, Max and Ultra plans, or behind a gateway with a spend limit. Copilot's credits appear only with a monthly credit budget (Business, Enterprise or Pro), so Copilot Free isn't shown.</p></div>
+    <div class="row"><span class="k"></span><span class="n">No per-model limits</span><p class="s">Per-model weekly limits and plan details aren't shown. The status line doesn't have them, and Live usage leaves them out for now.</p></div>
+    <div class="row"><span class="k"></span><span class="n">The pill</span><p class="s">It depends on the taskbar's undocumented layout, which Windows updates can change. If it can't find the tray icons it hides, and the tray icon carries on. It shows on the primary monitor's taskbar only, and only with the taskbar at the bottom. It was checked on Windows 11 only.</p></div>
+  </section>
+
+  <a class="back" href="../">← Home</a>
+  </main>
+
+  <footer class="site">
+    <div class="l">
+      <a href="https://github.com/RicardoSilveira23/sobreiro/issues/new">Open an issue</a>
+    </div>
+    <p class="r">Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings. Not affiliated with or endorsed by Anthropic or GitHub.</p>
+  </footer>
+</div>
+</body>
+</html>

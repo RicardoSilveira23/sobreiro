@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Sobreiro/Sobreiro.csproj" />
+    <Project Path="src/Sobreiro.Bridge/Sobreiro.Bridge.csproj" />
+    <Project Path="src/Sobreiro.Core/Sobreiro.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Sobreiro.Tests/Sobreiro.Tests.csproj" />
+  </Folder>
+</Solution>

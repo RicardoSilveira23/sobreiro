@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: The manual
+    url: https://sobreiro.ricardosilveira.dev/manual/
+    about: Installing, settings, what it reads and sends, known limits
+  - name: A security problem
+    url: https://github.com/RicardoSilveira23/sobreiro/security/advisories/new
+    about: Report it privately, not in an issue

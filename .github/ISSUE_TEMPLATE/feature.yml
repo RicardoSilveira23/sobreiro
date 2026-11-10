@@ -1,0 +1,17 @@
+name: Idea
+description: Something you'd like Sobreiro to do
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: Sobreiro is a one-person project, so not every idea gets built.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What would it help with?

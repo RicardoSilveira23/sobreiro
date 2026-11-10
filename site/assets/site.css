@@ -1,0 +1,153 @@
+/* Every part of both pages, from the Night design (design/patterns.md) with Sobreiro's purple. */
+@font-face { font-family: Inter; font-weight: 100 900; font-display: swap; src: url('fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); }
+@font-face { font-family: Unbounded; font-weight: 200 900; font-display: swap; src: url('fonts/unbounded-latin-wght-normal.woff2') format('woff2-variations'); }
+
+/* Base */
+* { box-sizing: border-box; }
+html { scroll-padding-top: 72px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+img { display: block; }
+figure { margin: 0; }
+.wrap { width: min(1280px, 100% - 56px); margin: 0 auto; }
+@media (max-width: 720px) { .wrap { width: calc(100% - 32px); } }
+
+/* Header */
+header.site { position: sticky; top: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; padding: 14px 0; background: var(--bg); border-bottom: 1px solid transparent; font-size: 15px; font-weight: 500; }
+html.scrolled header.site { border-bottom-color: var(--line); }
+header.site nav { display: flex; align-items: center; }
+header.site nav a { margin-left: 28px; }
+header.site nav a:hover, header.site nav a[aria-current], .theme:hover { color: var(--sobreiro-text); }
+.mark { width: 28px; height: 28px; }
+
+/* Theme switch: the sun shows on dark, the moon on light */
+.theme { display: inline-flex; margin-left: 28px; padding: 4px; }
+.theme[hidden] { display: none; }
+.theme .to-dark { display: none; }
+:root[data-theme='light'] .theme .to-dark { display: block; }
+:root[data-theme='light'] .theme .to-light { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .theme .to-dark { display: block; }
+  :root:not([data-theme='dark']) .theme .to-light { display: none; }
+}
+
+/* Lettering and rule */
+.name { padding-top: 40px; }
+.name svg { display: block; width: 100%; height: auto; overflow: visible; }
+.name text { font-family: var(--font-display); font-weight: 900; fill: var(--ink); }
+.rule { height: 6px; background: var(--sobreiro-text); margin: 22px 0 18px; }
+@media (max-width: 720px) { .name { padding-top: 28px; } }
+
+/* Intro */
+.intro { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: end; }
+.intro p { font-size: clamp(18px, 1.7vw, 22px); line-height: 1.35; font-weight: 500; max-width: 44ch; text-wrap: balance; }
+.intro .meta { text-align: right; font-size: 15px; color: var(--mute); line-height: 1.8; }
+@media (max-width: 720px) { .intro { grid-template-columns: 1fr; gap: 18px; } .intro .meta { text-align: left; } }
+
+/* Button */
+.btn { display: inline-flex; align-items: center; gap: 14px; padding: 16px 28px; border: 1.5px solid var(--ink); border-radius: var(--radius-pill); font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.btn:hover { background: var(--sobreiro); border-color: var(--sobreiro); color: var(--on-sobreiro); }
+.get { margin-top: 28px; }
+
+/* Field: the desktop in Sobreiro's purple, the taskbar along its foot and the app's windows on it */
+.field { position: relative; overflow: hidden; container-type: inline-size; margin-top: 40px; border-radius: var(--radius-tile); background: var(--desk); color: var(--on-desk); padding: 28px 0 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; }
+.field .say { position: relative; z-index: 1; padding-bottom: 76px; font-size: 14px; font-weight: 500; }
+.field .say span { display: block; max-width: 34ch; }
+.field .say b { display: block; font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 2vw, 30px); line-height: 1.1; margin-bottom: 12px; }
+.field .demo { position: relative; z-index: 1; }
+.field .demo img { border-radius: 0; }
+.field .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: var(--taskbar); border-top: 1px solid var(--taskbar-line); }
+@container (max-width: 490px) { .field .bar { display: none; } }
+@media (max-width: 720px) {
+  .field { grid-template-columns: 1fr; padding: 24px 0 0; gap: 20px; }
+  .field .say { padding: 0 24px; }
+  .field .demo { justify-self: end; }
+  .field .demo img { width: 100%; max-width: 490px; height: auto; }
+}
+
+/* Reading it: the rows beside one details panel and its style switch */
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px 64px; align-items: end; }
+.styles { margin: 16px 0 0; font-size: 15px; color: var(--mute); }
+.styles button { margin-left: 10px; color: var(--ink); text-decoration: underline 1px var(--mute); text-underline-offset: 4px; }
+.styles button:hover { color: var(--sobreiro-text); }
+.styles button[aria-pressed="true"] { color: var(--sobreiro-text); text-decoration: underline 2px currentColor; }
+.panel { height: 504px; display: flex; align-items: flex-end; }
+.panel img[hidden] { display: none; }
+@media (max-width: 900px) { .pair { grid-template-columns: minmax(0, 1fr); } .panel { height: auto; } .panel img { max-width: 100%; height: auto; } }
+
+/* Options: the details in light and in the accent, and the taskbar with and without the pill.
+   Three columns need 330 + 330 + 441 + two 24px gaps = 1149px inside .wrap (100% - 56px), so
+   they stack below 1220px. */
+.options { display: grid; grid-template-columns: 330px 330px minmax(441px, 1fr); gap: 32px 24px; align-items: start; margin-top: 56px; }
+.options figure { margin: 0; }
+.options img { max-width: none; }
+.options figcaption { margin-top: 12px; font-size: 15px; color: var(--mute); }
+.options .taskbars { display: grid; gap: 24px; }
+@media (max-width: 1220px) { .options { grid-template-columns: minmax(0, 1fr); } .options img { max-width: 100%; height: auto; } }
+
+/* Section and rows */
+.section { margin-top: 64px; padding-top: 56px; border-top: 1px solid var(--ink); }
+.section h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 24px; font-family: var(--font-display); font-size: clamp(28px, 3.6vw, 48px); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; line-height: 1; }
+.section h2 small { font-family: var(--font-text); font-size: 15px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mute); }
+.row { display: grid; grid-template-columns: 110px 1fr auto; gap: 0 20px; padding: 18px 0; border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; padding-top: 4px; }
+.row .k { font-size: 15px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.row .n { font-family: var(--font-display); font-weight: 500; font-size: 20px; }
+.row .s { grid-column: 2; margin-top: 6px; max-width: 62ch; color: var(--soft); }
+.note { margin-top: 20px; margin-left: 130px; max-width: 62ch; font-size: 15px; color: var(--mute); }
+@media (max-width: 900px) { .note { margin-left: 0; } }
+.row .d { grid-column: 2; margin: 10px 0 0; padding: 0; list-style: none; max-width: 62ch; display: grid; gap: 6px; font-size: 15px; color: var(--soft); }
+.row .d li { padding-left: 18px; position: relative; }
+.row .d li::before { content: '–'; position: absolute; left: 0; color: var(--mute); }
+.row .code { grid-column: 2; margin-top: 10px; }
+.row .shot { grid-column: 2; margin: 14px 0 0; }
+.row .shot img { max-width: 100%; height: auto; }
+@media (max-width: 900px) { .row { grid-template-columns: minmax(0, 1fr) auto; } .row .k { grid-column: 1 / -1; margin-bottom: 4px; } .row .k:empty { display: none; } .row .s, .row .d, .row .code, .row .shot { grid-column: 1 / -1; } }
+.more { display: flex; justify-content: center; padding-top: 28px; margin: 0; }
+.row .s a, .row .d a, .note a { color: var(--ink); text-decoration: underline 1px var(--mute); text-underline-offset: 3px; }
+.row .s a:hover, .row .d a:hover, .note a:hover { color: var(--sobreiro-text); }
+
+/* Code: a block of settings to copy, scrolling inside itself */
+.code { margin: 0; padding: 18px; background: var(--surface); border-radius: var(--radius-tile); font: 14px/1.5 ui-monospace, Consolas, monospace; overflow-x: auto; max-width: 100%; }
+
+/* Listing page: the manual's title, then the sentence and the contents */
+.listing { margin-top: 40px; padding-bottom: 24px; border-bottom: 2px solid var(--ink); font-family: var(--font-display); font-weight: 900; font-size: clamp(40px, 7vw, 96px); letter-spacing: .02em; text-transform: uppercase; line-height: 1; overflow-wrap: anywhere; }
+.contents { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: end; }
+.contents p { font-size: clamp(19px, 1.8vw, 24px); line-height: 1.35; color: var(--mute); max-width: 44ch; text-wrap: balance; }
+.contents nav { justify-self: end; }
+.contents ul { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; text-align: left; font-size: 15px; color: var(--mute); line-height: 1.8; }
+.contents a:hover { color: var(--sobreiro-text); }
+.manual .section { margin-top: 40px; padding-top: 40px; }
+.contents + .section { margin-top: 56px; }
+.back { display: inline-block; margin: 56px 0 0; font-family: var(--font-display); font-weight: 500; font-size: 16px; }
+.back:hover { color: var(--sobreiro-text); }
+@media (max-width: 720px) { .contents { grid-template-columns: 1fr; gap: 18px; } .contents nav { justify-self: start; } .contents ul { columns: 1; } }
+
+/* Footer */
+footer.site { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 72px; padding: 40px 0 64px; border-top: 1px solid var(--ink); font-size: 14px; color: var(--mute); }
+footer.site .l { display: flex; flex-wrap: wrap; gap: 8px 28px; align-self: start; }
+footer.site a { color: var(--ink); font-size: 17px; }
+footer.site a:hover { color: var(--sobreiro-text); }
+footer.site .r { align-self: end; justify-self: end; max-width: 40ch; text-align: right; text-wrap: pretty; }
+@media (max-width: 720px) { footer.site { grid-template-columns: 1fr; } footer.site .r { justify-self: start; text-align: left; } }
+
+/* Motion: nothing moves under reduced motion. Numbers are design/language.md's. */
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. The name settles in once, on arrival */
+  .name { animation: settle .7s var(--ease) both; }
+  @keyframes settle { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  /* 2. The theme change fades */
+  body, header.site, .row, .section, footer.site, .btn, .field, .rule, .listing, .code { transition: background-color .25s, color .25s, border-color .25s; }
+  .name text { transition: fill .25s; }
+  /* 7. The button's arrow steps forward */
+  .btn span { transition: transform .18s; }
+  .btn:hover span { transform: translateX(4px); }
+  /* 6. The sun or moon turns under the pointer */
+  .theme svg { transition: transform .25s; }
+  .theme:hover svg { transform: rotate(20deg); }
+  /* Hover on a link is a colour change, answering the reader */
+  header.site nav a, footer.site a, .row .s a, .row .d a, .note a, .styles button { transition: color .15s; }
+}

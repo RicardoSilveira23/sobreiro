@@ -1,0 +1,10 @@
+/* Sobreiro's own tokens: the app's purple as text on each ground, and white on the --sobreiro fill.
+   --sobreiro itself comes from foundation.css. */
+:root { --sobreiro-text: #a594ff; --on-sobreiro: #fff;
+  /* The field, the desktop the demo runs on: the purple tile on dark. On white the darkened tile
+     was too much (Ricardo, 2026-11-09), so light takes the light purple with dark text, 7.7:1. */
+  --desk: var(--sobreiro); --on-desk: var(--on-sobreiro);
+  /* The Windows taskbar's own pixels in the captures: the same in both themes. */
+  --taskbar: #1c1c1c; --taskbar-line: #404040; }
+:root[data-theme="light"] { --sobreiro-text: #5a3dd1; --desk: #a594ff; --on-desk: var(--ink); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --sobreiro-text: #5a3dd1; --desk: #a594ff; --on-desk: var(--ink); } }

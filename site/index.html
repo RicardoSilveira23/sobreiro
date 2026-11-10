@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobreiro: Copilot and Claude Code usage on your taskbar</title>
+<meta name="description" content="A Windows 11 tray app that keeps GitHub Copilot's monthly AI credits and Claude Code's session and weekly limits in view on your taskbar.">
+<link rel="canonical" href="https://sobreiro.ricardosilveira.dev/">
+<!-- Out of search engines until the repository is public: docs/plan.md, Site. -->
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.ico">
+<script>try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<link rel="stylesheet" href="assets/foundation.css">
+<link rel="stylesheet" href="assets/sobreiro.css">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a href="./" aria-label="Sobreiro, home"><img class="mark" src="assets/img/sobreiro-mark.svg" width="28" height="28" alt=""></a>
+    <nav>
+      <a href="manual/">Manual</a>
+      <a href="https://github.com/RicardoSilveira23/sobreiro">GitHub</a>
+      <button class="theme" type="button" hidden aria-label="Switch between light and dark">
+        <svg class="to-light" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="to-dark" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+  <h1 class="name" aria-label="Sobreiro"><svg viewBox="0 0 1000 94" aria-hidden="true"><text x="0" y="90" font-size="120" textLength="1000" lengthAdjust="spacing">SOBREIRO</text></svg></h1>
+  <div class="rule" aria-hidden="true"></div>
+
+  <div class="intro">
+    <p>Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</p>
+    <div class="meta">Free, for Windows 11<br>Needs GitHub Copilot with AI credits, or Claude Code on Pro, Max or Ultra</div>
+  </div>
+
+  <a class="btn get" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">Download from GitHub <span aria-hidden="true">→</span></a>
+
+  <div class="field">
+    <p class="say"><b>Beside the clock</b><span>Hover the pill for when each limit resets, click it for the details, right-click it to change how they look.</span></p>
+    <picture class="demo"><source srcset="assets/img/hero.webp" type="image/webp" media="(prefers-reduced-motion: no-preference)"><img src="assets/img/hero.png" width="490" height="516" alt="The details open above the pill on the taskbar, as bars: session 15% and weekly 45% used, and Copilot's AI credits 17% used, all on track. With motion on: a new reading lands on the pill, a click opens the details, another reading lands, and a click on the desktop closes them."></picture>
+    <i class="bar" aria-hidden="true"></i>
+  </div>
+
+  <section class="section" id="reading">
+    <h2>Reading it</h2>
+    <div class="pair">
+      <div class="rows">
+        <div class="row"><span class="k">AI</span><span class="n">Copilot's credits</span><p class="s">GitHub Copilot's monthly AI credits, with the reset date and a small level bar. Only with a credit budget (Business, Enterprise or Pro).</p></div>
+        <div class="row"><span class="k">5h</span><span class="n">Claude Code's session</span><p class="s">The five-hour limit. In the rings it's the outer one.</p></div>
+        <div class="row"><span class="k">7d</span><span class="n">Claude Code's week</span><p class="s">The weekly limit, the inner ring.</p></div>
+        <div class="row"><span class="k">Badge</span><span class="n">On track, or when you'd run out</span><p class="s">At the pace you're going, whether you reach the limit before it resets.</p></div>
+        <div class="row"><span class="k">Style</span><span class="n">Bars, Battery or Thermometer</span><p class="s">Bars shows what you've used, the other two what's left. Right-click the pill or the tray icon, then Style.</p></div>
+        <div class="row"><span class="k">Options</span><span class="n">Colour and what to show</span><p class="s">Bars in Sobreiro's purple or your Windows accent, and the pill or just the tray icon. Right-click the pill or the tray icon. Dark or light follows Windows.</p></div>
+      </div>
+      <div>
+        <div class="panel">
+          <img data-services="both" data-style="bars" src="assets/img/panel-both-bars.png" srcset="assets/img/panel-both-bars@2x.png 2x" width="330" height="452" alt="The details for Claude Code and GitHub Copilot in Bars: what you've used">
+          <img data-services="both" data-style="battery" src="assets/img/panel-both-battery.png" srcset="assets/img/panel-both-battery@2x.png 2x" width="330" height="440" alt="The details for Claude Code and GitHub Copilot in Battery: what's left" hidden>
+          <img data-services="both" data-style="thermometer" src="assets/img/panel-both-thermometer.png" srcset="assets/img/panel-both-thermometer@2x.png 2x" width="330" height="504" alt="The details for Claude Code and GitHub Copilot in Thermometer: what's left" hidden>
+          <img data-services="claude" data-style="bars" src="assets/img/panel-claude-bars.png" srcset="assets/img/panel-claude-bars@2x.png 2x" width="330" height="289" alt="The details for Claude Code in Bars: what you've used" hidden>
+          <img data-services="claude" data-style="battery" src="assets/img/panel-claude-battery.png" srcset="assets/img/panel-claude-battery@2x.png 2x" width="330" height="277" alt="The details for Claude Code in Battery: what's left" hidden>
+          <img data-services="claude" data-style="thermometer" src="assets/img/panel-claude-thermometer.png" srcset="assets/img/panel-claude-thermometer@2x.png 2x" width="330" height="341" alt="The details for Claude Code in Thermometer: what's left" hidden>
+          <img data-services="copilot" data-style="bars" src="assets/img/panel-copilot-bars.png" srcset="assets/img/panel-copilot-bars@2x.png 2x" width="330" height="219" alt="The details for GitHub Copilot in Bars: what you've used" hidden>
+          <img data-services="copilot" data-style="battery" src="assets/img/panel-copilot-battery.png" srcset="assets/img/panel-copilot-battery@2x.png 2x" width="330" height="219" alt="The details for GitHub Copilot in Battery: what's left" hidden>
+          <img data-services="copilot" data-style="thermometer" src="assets/img/panel-copilot-thermometer.png" srcset="assets/img/panel-copilot-thermometer@2x.png 2x" width="330" height="219" alt="The details for GitHub Copilot in Thermometer: what's left" hidden>
+        </div>
+        <p class="styles" role="group" aria-label="Shows" hidden data-group="services">Shows<button type="button" data-services="copilot" aria-pressed="false">Copilot</button><button type="button" data-services="claude" aria-pressed="false">Claude Code</button><button type="button" data-services="both" aria-pressed="true">Both</button></p>
+        <p class="styles" role="group" aria-label="Style" hidden data-group="style">Style<button type="button" data-style="bars" aria-pressed="true">Bars</button><button type="button" data-style="battery" aria-pressed="false">Battery</button><button type="button" data-style="thermometer" aria-pressed="false">Thermometer</button></p>
+      </div>
+    </div>
+    <div class="options">
+      <figure><img src="assets/img/option-light.png" srcset="assets/img/option-light@2x.png 2x" width="330" height="452" alt="The details in the light theme"><figcaption>Light, with Windows</figcaption></figure>
+      <figure><img src="assets/img/option-accent.png" srcset="assets/img/option-accent@2x.png 2x" width="330" height="452" alt="The details with bars in the Windows accent colour"><figcaption>Your Windows accent</figcaption></figure>
+      <div class="taskbars">
+        <figure><img src="assets/img/option-tray-and-pill.png" width="441" height="48" alt="The taskbar with the pill and the tray icons"><figcaption>The pill and the tray icon</figcaption></figure>
+        <figure><img src="assets/img/option-tray-only.png" width="375" height="48" alt="The taskbar with just the tray icon"><figcaption>Just the tray icon</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="install">
+    <h2>Run it</h2>
+    <div class="row"><span class="k">1</span><span class="n">Download</span><p class="s">Sobreiro.exe from the <a href="https://github.com/RicardoSilveira23/sobreiro/releases/latest">latest release</a>.</p></div>
+    <div class="row"><span class="k">2</span><span class="n">Run Sobreiro.exe</span><p class="s">The pill appears beside the clock and fills in within seconds while the Copilot CLI, gh or Claude Code is signed in. That's it.</p></div>
+    <p class="note">For Copilot, sign in with the Copilot CLI or gh auth login: Sobreiro doesn't read the sign-in VS Code or Visual Studio keeps. Until the app is signed, Windows may warn about an unknown publisher: More info, then Run anyway. To also take Claude Code's numbers from the terminal, right-click the pill and choose Connect to Claude Code. <a href="manual/#install">The manual</a> has the rest.</p>
+  </section>
+
+  <section class="section" id="sends">
+    <h2>What it sends</h2>
+    <div class="row"><span class="k">Sends</span><span class="n">One request to GitHub, one to Anthropic</span><p class="s">Every 5 minutes it asks api.github.com for your Copilot AI credits and api.anthropic.com for your Claude Code usage, each with a sign-in already on this PC. It looks for both on every PC, whichever you use. It never stores, logs or renews those tokens, and nothing else leaves your machine.</p></div>
+    <div class="row"><span class="k">Relies on</span><span class="n">Undocumented addresses</span><p class="s">GitHub and Anthropic can change theirs, and Anthropic's terms don't allow third-party apps to use Claude sign-ins. If you'd rather not, don't install it.</p></div>
+  </section>
+
+  <section class="section" id="limits">
+    <h2>Known limits</h2>
+    <div class="row"><span class="k"></span><span class="n">Terminal only, when Sobreiro can't ask Anthropic</span><p class="s">Then, if you connected it, the numbers update only when Claude Code answers in the terminal. The VS Code extension and the desktop app don't run the status line.</p></div>
+    <div class="row"><span class="k"></span><span class="n">One taskbar</span><p class="s">The pill shows on the primary monitor's taskbar, at the bottom. If it can't find the tray icons it hides, and the tray icon carries on.</p></div>
+    <p class="more"><a class="btn" href="manual/#limits">All 6 known limits <span aria-hidden="true">→</span></a></p>
+  </section>
+  </main>
+
+  <footer class="site">
+    <div class="l">
+      <a href="https://github.com/RicardoSilveira23/sobreiro/issues/new">Open an issue</a>
+    </div>
+    <p class="r">Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings. Not affiliated with or endorsed by Anthropic or GitHub.</p>
+  </footer>
+</div>
+</body>
+</html>
