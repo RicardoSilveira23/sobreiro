@@ -2,7 +2,7 @@
 # Worker `sobreiro`.
 #
 # Production: main at https://sobreiro.ricardosilveira.dev, public, the Worker's custom domain
-# (wrangler.jsonc). The pages say noindex until the repository is public.
+# (wrangler.jsonc).
 # Staging: main also at https://sobreiro.rs-staging.workers.dev, and each PR at
 # https://pr-<number>-sobreiro.rs-staging.workers.dev, both behind a GitHub login (Cloudflare
 # Access). A PR's preview is the check before anything goes public.

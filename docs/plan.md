@@ -339,9 +339,8 @@ build step, in Ricardo's Night design. Design: [superpowers/specs/2026-11-09-sit
   Worker (`routes` in `wrangler.jsonc`), chosen on 2026-11-10 over GitHub Pages, which was
   never switched on. Each page's canonical link names its address there;
   `scripts/check-site.mjs` reads the domain from `wrangler.jsonc` and checks them.
-- Until the repo is public the pages say `noindex`, since their Download, GitHub and issue
-  links reach a private repo. To launch: make the repo public, then delete the
-  `<meta name="robots" content="noindex">` line and the comment above it from each page.
+- The pages said `noindex` until the repo went public on 2026-11-10; search engines may list
+  them since.
 - `.github/workflows/site.yml` checks the site (`scripts/check-site.mjs` and a `wrangler` dry
   run) on pull requests and pushes that touch it.
 - Deploys: a Cloudflare Worker serving `site/` as it is.
@@ -382,6 +381,10 @@ The order:
    force-push, no deletion).
 4. Remove `noindex` from the site's pages.
 5. Apply to SignPath Foundation for signing.
+
+Done on 2026-11-10, all but signing. The public repository started fresh: one commit, at
+0.9.0, the first release under GPL-3.0-or-later. The history before it stays private.
+Secret scanning and push protection are on as well.
 
 ### 5. After release
 
