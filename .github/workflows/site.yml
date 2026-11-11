@@ -55,7 +55,7 @@ jobs:
       - run: npm ci
 
       - name: Tests
-        run: node --test scripts/check-site.test.mjs scripts/page.test.mjs
+        run: node --test scripts/check-site.test.mjs scripts/page.test.mjs scripts/manual.test.mjs
 
       - name: Check the site
         run: node scripts/check-site.mjs
