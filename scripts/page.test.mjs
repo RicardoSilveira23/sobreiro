@@ -20,7 +20,6 @@ const sources = readdirSync(assets)
 
 const text = (html) =>
   html
-    .replace(/<script[\s\S]*?<\/script>/g, " ")
     .replace(/<svg[\s\S]*?<\/svg>/g, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&")
