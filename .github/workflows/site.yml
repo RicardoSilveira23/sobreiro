@@ -17,6 +17,7 @@ on:
   pull_request:
     paths: &site-paths
       - 'site/**'
+      - 'README.md'
       - 'scripts/check-site*.mjs'
       - 'scripts/*.test.mjs'
       - 'scripts/smoke.mjs'

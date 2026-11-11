@@ -331,8 +331,8 @@ Progress (2026-11-10), version 0.8.1:
   Tool overlay, a full-screen photo viewer). Before, Explorer raised the taskbar past the hidden
   pill and it came back under it, covered until a click on the taskbar.
 
-Site (2026-11-09): the user docs, in `site/`: a home page and a manual, plain HTML and CSS with no
-build step, in Ricardo's Night design. Design: [superpowers/specs/2026-11-09-site-design.md](superpowers/specs/2026-11-09-site-design.md).
+Site (2026-11-09): the user docs, in `site/`: a home page and a manual, plain HTML, CSS and a
+little script, with no build step, in its own look. Design: [design.md](design.md).
 
 - Address: <https://sobreiro.ricardosilveira.dev/>, with the manual at `/manual/`. Project
   sites live on subdomains of `ricardosilveira.dev`. It is a custom domain on the `sobreiro`
@@ -341,8 +341,8 @@ build step, in Ricardo's Night design. Design: [superpowers/specs/2026-11-09-sit
   `scripts/check-site.mjs` reads the domain from `wrangler.jsonc` and checks them.
 - The pages said `noindex` until the repo went public on 2026-11-10; search engines may list
   them since.
-- `.github/workflows/site.yml` checks the site (`scripts/check-site.mjs` and a `wrangler` dry
-  run) on pull requests and pushes that touch it.
+- `.github/workflows/site.yml` runs the tests and the site check (`scripts/check-site.mjs`), then a `wrangler` dry
+  run, on pull requests and pushes that touch it.
 - Deploys: a Cloudflare Worker serving `site/` as it is.
   Each push to `main` goes to the public address, and to staging at
   <https://sobreiro.rs-staging.workers.dev>; each pull request gets

@@ -110,6 +110,10 @@ test("a row's name is plain text, not a diagram box", () => {
   assert.match(rule(css, ".n"), /color: var\(--ink\)/);
 });
 
+test("with no script the switches stay hidden", () => {
+  assert.match(css, /(^|[}\s])\.manual \[hidden\]\s*\{[^}]*display: none/m);
+});
+
 test("the switches sit under the panel", () => {
   assert.ok(html.indexOf('class="panel"') < html.indexOf('class="styles"'));
 });

@@ -156,6 +156,12 @@ test("colours are the closed list", () => {
   }
 });
 
+test("no other colour notation", () => {
+  for (const [name, src] of [["index.html", home], ["manual/index.html", manual], ...sources]) {
+    assert.doesNotMatch(src, /\b(hsl|hwb|lab|lch|oklab|oklch|color-mix|color)\(/i, name);
+  }
+});
+
 test("the Download button's focus ring is ink", () => {
   assert.match(css, /\.dl:focus-visible\s*\{[^}]*outline-color: var\(--ink\)/);
 });
@@ -165,6 +171,7 @@ test("the sizes the design fixes", () => {
   assert.match(css, /\.dl,\s*\.mn\s*\{[^}]*min-height: 54px/);
   assert.match(css, /\.brand\s*\{[^}]*min-height: 44px/);
   assert.match(css, /\.foot a\s*\{[^}]*min-height: 44px/);
+  assert.match(css, /\.key\s*\{[^}]*max-width: 62ch/);
 });
 
 test("the page never stretches and has one theme", () => {
@@ -174,7 +181,8 @@ test("the page never stretches and has one theme", () => {
   }
 });
 
-test("motion stops for reduced motion", () => {
+// The stylesheet cut in two: the no-preference media block, and everything else.
+const motionSplit = () => {
   const start = css.indexOf("@media (prefers-reduced-motion: no-preference)");
   assert.notEqual(start, -1);
   let depth = 0;
@@ -186,9 +194,17 @@ test("motion stops for reduced motion", () => {
       break;
     }
   }
-  const rest = css.slice(0, start) + css.slice(end);
+  return { rest: css.slice(0, start) + css.slice(end), block: css.slice(start, end) };
+};
+
+test("a dot is invisible until it is animated", () => {
+  assert.match(motionSplit().rest, /\.dot\s*\{[^}]*opacity: 0/);
+});
+
+test("motion stops for reduced motion", () => {
+  const { rest, block } = motionSplit();
   assert.doesNotMatch(rest, /animation/);
-  assert.match(css.slice(start, end), /animation/);
+  assert.match(block, /animation/);
   assert.match(js, /\(prefers-reduced-motion: reduce\)/);
   assert.match(js, /matches\)\s*return/);
 });

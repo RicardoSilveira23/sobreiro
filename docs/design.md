@@ -5,8 +5,8 @@ beside it. Ricardo approved the landing page's design on 2026-11-11. Build plan:
 [superpowers/plans/2026-11-11-own-page.md](superpowers/plans/2026-11-11-own-page.md).
 
 It replaces the look in [the first site design](superpowers/specs/2026-11-09-site-design.md).
-Every colour, size and motion the page uses is written here. A value that is not here is not
-used.
+Every colour and motion the page uses is written here, and every size that shapes it. A colour
+that is not here is not used.
 
 ## Why
 
@@ -290,4 +290,5 @@ GitHub retired the standalone Copilot logo.
 
 - The manual's look above is drawn from the landing page's. Ricardo has not seen it rendered yet.
 - A dark theme. The approved page is light only, and the theme switch is gone.
-- The share picture (`og.png`) and the README's hero still show the earlier purple field.
+- The share picture (`og.png`) still shows the earlier dark page, and the README's hero the
+  earlier purple field.

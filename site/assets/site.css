@@ -101,7 +101,7 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .sends, .before { padding-top: 14px; border-top: 2px solid var(--v); }
 .before p, .key { font-size: 14.5px; color: var(--soft); }
 .before p { max-width: 62ch; }
-.key { display: grid; gap: 8px; }
+.key { display: grid; gap: 8px; max-width: 62ch; }
 .key li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: baseline; }
 .key i { width: 10px; height: 10px; border-radius: 50%; background: var(--v); }
 .key i.back { background: var(--ink); }

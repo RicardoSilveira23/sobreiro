@@ -138,10 +138,10 @@ Coming from the 0.7.0 zip? Quit the old Sobreiro before you run the new exe; the
 - The numbers come back and go to the taskbar.
 - Nothing else leaves: no telemetry, no update checks, no token stored, logged or renewed.
 
-Every 5 minutes, and when the details open on a reading over a minute old, Sobreiro asks GitHub
-for your Copilot AI credits and Anthropic for your Claude Code usage, each with a sign-in already
-on this computer. It looks for both sign-ins on every PC, whichever you use, and asks only where it
-finds one. These are its only network calls. If you don't want that, don't install it.
+It asks every 5 minutes, and when the details open on a reading over a minute old: GitHub for
+your Copilot AI credits and Anthropic for your Claude Code usage. It looks for both sign-ins on
+every PC, whichever you use, and asks only where it finds one. If you don't want that, don't
+install it.
 
 - It looks for a GitHub sign-in in this order and stops at the first GitHub accepts: the
   `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` and `GITHUB_TOKEN` variables, the Copilot CLI's sign-in in
