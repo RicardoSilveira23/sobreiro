@@ -188,7 +188,6 @@ def write_sheet(out_dir, manifest):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sobreiro pictures</title>
-<link rel="stylesheet" href="../site/assets/foundation.css">
 <style>
 body { margin: 0; padding: 24px; background: #fff; color: #111; font-family: system-ui, sans-serif; }
 h1, h2, h3 { font-weight: 600; }
