@@ -19,8 +19,7 @@ a small tool from a stranger:
 | What does it do with my sign-in? | A diagram of the two requests, and "What it sends" |
 | How do I get it? | Download, and three steps |
 
-Readers are developers on Windows 11 who use Claude Code or GitHub Copilot. Many open it on a
-phone first.
+Readers are developers on Windows 11 who use Claude Code or GitHub Copilot.
 
 The page it replaces wore a look made to be shared by several projects. This one is designed
 from what the tool does: it asks two addresses for numbers and draws them as rings.
@@ -278,7 +277,7 @@ All on 2026-11-11.
 | No Claude or Copilot logos; product names in plain text | |
 | With no script the dots still travel and the pill stays at its first reading | "the style is to stay" |
 | The manual is rewritten in this look, and the README updated to match, in the same change | "also rewrite the manual and update readme before we open PR" |
-| A public repository names no other repository | "public repos or repos that will become public should never have references to other repos specially mine that are private" |
+| A public repository names no other repository | |
 
 On the drawn pill: the rule for this project's pictures was that only the app draws them
 ([rendered media design](superpowers/specs/2026-11-10-rendered-media-design.md)). Drawing the
