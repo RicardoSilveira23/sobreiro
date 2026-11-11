@@ -165,7 +165,7 @@ All four faces are openly licensed, served from the site, Latin range only.
 | Steps | 30 px circles with a 1.5 px violet border, joined by a 2 px line. The third is the mark at 30 px. |
 | Notes | 14.5 px text, at most 62 characters to a line, under a 2 px rule with 14 px between |
 | Meta line | 14 px, at most 44 characters to a line |
-| Keyboard focus | A 2 px outline in the text's colour, 3 px away |
+| Keyboard focus | A 2 px outline in the text's colour, 3 px away. On the Download button it is Ink, since white would not show on the ground. |
 
 ## Motion
 
