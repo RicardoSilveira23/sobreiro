@@ -28,4 +28,6 @@
   function arm() { clearTimeout(timer); timer = setTimeout(function () { i = (i + 1) % S.length; step(S[i]); }, 3900); }
   dot.addEventListener('animationstart', arm);
   dot.addEventListener('animationiteration', arm);
+  /* The deferred script may start after the first animationstart has fired */
+  arm();
 })();

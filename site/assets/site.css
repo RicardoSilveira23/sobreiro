@@ -24,11 +24,13 @@ h1, h2, h3, p, ul, ol, figure { margin: 0; padding: 0; }
 ul, ol { list-style: none; }
 a { color: inherit; }
 a:focus-visible, button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.dl:focus-visible { outline-color: var(--ink); }
 h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; max-width: 1152px; margin-inline: auto; padding: 0 var(--gr) 40px var(--gl); overflow-x: clip; }
-.page > * { min-width: 0; }
+.page > *, .home > * { min-width: 0; }
+.home { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 
 /* Header: the name, nothing else */
 .top { display: flex; align-items: center; padding-block: 8px; }
@@ -112,14 +114,13 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 
 /* Desktop: words beside the diagram, the two notes on one line under them */
 @media (min-width: 1000px) {
-  .page.home { grid-template-columns: minmax(0, 1fr) 490px; grid-template-areas: "top top" "say flow" "before sends" "foot foot"; column-gap: 56px; row-gap: 32px; }
-  .home .top { grid-area: top; }
+  .page { row-gap: 32px; }
+  .home { grid-template-columns: minmax(0, 1fr) 490px; grid-template-areas: "say flow" "before sends"; column-gap: 56px; row-gap: 32px; }
   .home .say { grid-area: say; padding-top: 12px; grid-template-rows: auto auto auto 1fr; }
   .home .run { align-self: end; }
   .home .flow { grid-area: flow; align-self: start; }
   .home .before { grid-area: before; }
   .home .sends { grid-area: sends; }
-  .home .foot { grid-area: foot; }
   .flow .w { height: 28px; }
   .pill { padding-block: 20px; }
 }

@@ -85,6 +85,9 @@ test("the parts come in the phone's order", () => {
     return home.indexOf(s);
   });
   assert.deepEqual(at, [...at].sort((a, b) => a - b));
+  const main = inner(home, '<main class="home"', "main");
+  for (const s of ['class="say"', 'class="flow"', 'class="sends"', 'class="before"']) assert.ok(main.includes(s), `${s} inside main`);
+  assert.ok(!main.includes('class="foot"') && !main.includes('class="top"'));
 });
 
 test("the pill's first reading is in the HTML", () => {
@@ -151,6 +154,10 @@ test("colours are the closed list", () => {
       assert.match(m[1], /^(255,\s*255,\s*255|111,\s*77,\s*246)\b/, `${name}: ${m[0]}`);
     }
   }
+});
+
+test("the Download button's focus ring is ink", () => {
+  assert.match(css, /\.dl:focus-visible\s*\{[^}]*outline-color: var\(--ink\)/);
 });
 
 test("the sizes the design fixes", () => {
