@@ -1,96 +1,136 @@
-/* The parts only this site has, and where it differs from the shared stylesheet. */
-@font-face { font-family: Inter; font-weight: 100 900; font-display: swap; src: url('fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); }
-@font-face { font-family: Unbounded; font-weight: 200 900; font-display: swap; src: url('fonts/unbounded-latin-wght-normal.woff2') format('woff2-variations'); }
-
-/* Base */
-html { scroll-behavior: auto; }
-img { display: block; }
-figure { margin: 0; }
-
-/* Header */
-header.site nav a[aria-current] { color: var(--sobreiro-text); }
-
-/* Theme switch */
-.theme[hidden] { display: none; }
-
-/* Field: the desktop in the app's purple, right under the rule, the taskbar along its foot and
-   the app's windows on it. Its left half holds the page's sentence at the top and, at the bottom,
-   the download with its note, ending 28px above the taskbar. */
-.field { position: relative; overflow: hidden; container-type: inline-size; border-radius: var(--radius-tile); background: var(--desk); color: var(--on-desk); padding: 28px 0 0 28px; display: grid; grid-template-columns: 1fr auto; gap: 28px; }
-.field .say { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 28px; padding-bottom: 76px; }
-.field .line { max-width: 19ch; font-size: clamp(24px, 2.6vw, 32px); font-weight: 600; line-height: 1.18; letter-spacing: -.015em; }
-/* On the field the download is filled with the field's text colour, its text in the field's colour */
-.field .btn.fill { background: var(--on-desk); border-color: var(--on-desk); color: var(--desk); }
-.field .small { margin-top: 14px; max-width: 42ch; font-size: 14px; line-height: 1.45; }
-.field .demo { position: relative; z-index: 1; align-self: end; }
-.field .demo img { border-radius: 0; }
-.field .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; background: var(--taskbar); border-top: 1px solid var(--taskbar-line); }
-@container (max-width: 490px) { .field .bar { display: none; } }
-/* One column once the left half is too narrow for the sentence and the button */
-@media (max-width: 960px) {
-  .field { grid-template-columns: 1fr; padding: 24px 0 0; gap: 28px; }
-  .field .say { padding: 0 24px; }
-  .field .demo { justify-self: end; }
-  .field .demo img { width: 100%; max-width: 490px; height: auto; }
+/* Sobreiro's own look: docs/design.md. Light only. Every colour is a custom property here. */
+:root {
+  --bg: #ebe6ff; --ink: #1d1447; --soft: #4d457c; --v: #6f4df6; --vt: #5a3dd1; --on: #ffffff;
+  --line: #b9adf5; --box: #f6f3ff;
+  /* The pill, as the app draws it on a dark taskbar */
+  --tb: #1c1c1c; --dim: #9a9a9a; --purple: #a594ff; --amber: #ffb020; --red: #ff6b6b;
+  --gl: max(16px, env(safe-area-inset-left, 0px)); --gr: max(16px, env(safe-area-inset-right, 0px));
+  --ease: cubic-bezier(.3, .7, .2, 1);
+  color-scheme: light;
 }
 
-/* Reading it: the rows beside one details panel and its style switch */
-.pair { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px 64px; align-items: end; }
-.styles { margin: 16px 0 0; font-size: 15px; color: var(--mute); }
-.styles button { margin-left: 10px; color: var(--ink); text-decoration: underline 1px var(--mute); text-underline-offset: 4px; }
-.styles button:hover { color: var(--sobreiro-text); }
-.styles button[aria-pressed="true"] { color: var(--sobreiro-text); text-decoration: underline 2px currentColor; }
-.panel { height: 504px; display: flex; align-items: flex-end; }
-.panel img[hidden] { display: none; }
-@media (max-width: 900px) { .pair { grid-template-columns: minmax(0, 1fr); } .panel { height: auto; } .panel img { max-width: 100%; height: auto; } }
+@font-face { font-family: Inter; font-weight: 100 900; font-display: swap; src: url('fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); }
+@font-face { font-family: Unbounded; font-weight: 200 900; font-display: swap; src: url('fonts/unbounded-latin-wght-normal.woff2') format('woff2-variations'); }
+@font-face { font-family: Sora; font-weight: 100 800; font-display: swap; src: url('fonts/sora-latin-wght-normal.woff2') format('woff2-variations'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 100 800; font-display: swap; src: url('fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations'); }
 
-/* Options: the details in light and in the accent, and the taskbar with and without the pill.
-   Three columns need 330 + 330 + 441 + two 24px gaps = 1149px inside .wrap (100% - 56px), so
-   they stack below 1220px. */
-.options { display: grid; grid-template-columns: 330px 330px minmax(441px, 1fr); gap: 32px 24px; align-items: start; margin-top: 56px; }
-.options figure { margin: 0; }
-.options img { max-width: none; }
-.options figcaption { margin-top: 12px; font-size: 15px; color: var(--mute); }
-.options .taskbars { display: grid; gap: 24px; }
-@media (max-width: 1220px) { .options { grid-template-columns: minmax(0, 1fr); } .options img { max-width: 100%; height: auto; } }
+@property --p { syntax: '<number>'; inherits: false; initial-value: 0; }
 
-/* Section and rows */
-.section { margin-top: 64px; }
-.row { align-items: stretch; }
-.row:first-of-type { border-top: 0; padding-top: 4px; }
-.note { margin-top: 20px; margin-left: 130px; max-width: 62ch; font-size: 15px; color: var(--mute); }
-@media (max-width: 900px) { .note { margin-left: 0; } }
-.row .code { grid-column: 2; margin-top: 10px; }
-.row .shot { grid-column: 2; margin: 14px 0 0; }
-.row .shot img { max-width: 100%; height: auto; }
-@media (max-width: 900px) { .row .code, .row .shot { grid-column: 1 / -1; } }
-.row .s a, .row .d a, .note a { color: var(--ink); text-decoration: underline 1px var(--mute); text-underline-offset: 3px; }
-.row .s a:hover, .row .d a:hover, .note a:hover { color: var(--sobreiro-text); }
+/* Base */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+img { display: block; max-width: 100%; height: auto; }
+h1, h2, h3, p, ul, ol, figure { margin: 0; padding: 0; }
+ul, ol { list-style: none; }
+a { color: inherit; }
+a:focus-visible, button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.dl:focus-visible { outline-color: var(--ink); }
+h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
-/* Code: a block of settings to copy, scrolling inside itself */
-.code { margin: 0; padding: 18px; background: var(--surface); border-radius: var(--radius-tile); font: 14px/1.5 ui-monospace, Consolas, monospace; overflow-x: auto; max-width: 100%; }
+.page { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; max-width: 1152px; margin-inline: auto; padding: 0 var(--gr) 40px var(--gl); overflow-x: clip; }
+.page > *, .home > * { min-width: 0; }
+.home { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
 
-/* Listing page: the manual's title, then the sentence and the contents */
-.listing { margin-top: 40px; padding-bottom: 24px; border-bottom: 2px solid var(--ink); font-family: var(--font-display); font-weight: 900; font-size: clamp(40px, 7vw, 96px); letter-spacing: .02em; text-transform: uppercase; line-height: 1; overflow-wrap: anywhere; }
-.contents { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: end; }
-.contents p { font-size: clamp(19px, 1.8vw, 24px); line-height: 1.35; color: var(--mute); max-width: 44ch; text-wrap: balance; }
-.contents nav { justify-self: end; }
-.contents ul { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; text-align: left; font-size: 15px; color: var(--mute); line-height: 1.8; }
-.contents a:hover { color: var(--sobreiro-text); }
-.manual .section { margin-top: 40px; padding-top: 40px; }
-.contents + .section { margin-top: 56px; }
-@media (max-width: 720px) { .contents { grid-template-columns: 1fr; gap: 18px; } .contents nav { justify-self: start; } .contents ul { columns: 1; } }
+/* Header: the name, nothing else */
+.top { display: flex; align-items: center; padding-block: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; min-height: 44px; font: 700 20px Sora, system-ui, sans-serif; text-decoration: none; }
+.brand img { width: 32px; height: 32px; }
+
+/* The words */
+.say { display: grid; gap: 22px; justify-items: start; align-content: start; }
+.line { font: 600 clamp(26px, 2.9vw, 36px)/1.12 Sora, system-ui, sans-serif; letter-spacing: -.025em; max-width: 20ch; text-wrap: balance; }
+.acts { display: flex; flex-wrap: wrap; gap: 10px; }
+.dl, .mn { display: inline-flex; align-items: center; gap: 10px; min-height: 54px; border-radius: 12px; font-weight: 600; font-size: 17px; text-decoration: none; }
+.dl { padding: 0 24px 0 18px; background: var(--v); color: var(--on); }
+.dl svg { width: 24px; height: 24px; flex: none; }
+.mn { padding: 0 22px; border: 1.5px solid var(--v); color: var(--vt); }
+.meta { font-size: 14px; color: var(--soft); max-width: 44ch; }
+.steps li { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr); column-gap: 12px; align-items: center; min-height: 30px; padding-bottom: 16px; font-weight: 500; }
+.steps li:last-child { padding-bottom: 0; }
+.steps li:not(:last-child)::before { content: ""; position: absolute; left: 14px; top: 32px; bottom: 2px; width: 2px; background: var(--line); }
+.steps b { display: grid; place-items: center; width: 30px; height: 30px; border: 1.5px solid var(--v); border-radius: 50%; font: 600 14px Sora, system-ui, sans-serif; color: var(--vt); }
+.steps li:last-child b { border: 0; }
+.steps b img { width: 30px; height: 30px; }
+
+/* The diagram */
+.flow { justify-self: center; width: 100%; max-width: 490px; display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "a a" "wab wab" "b b" "w1 w2" "c1 c2"; justify-items: center; column-gap: 8px; }
+.a { grid-area: a; display: grid; gap: 12px; }
+.wab { grid-area: wab; } .exe { grid-area: b; } .w1 { grid-area: w1; } .w2 { grid-area: w2; } .n1 { grid-area: c1; } .n2 { grid-area: c2; }
+:where(.flow) .n { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); }
+:where(.flow) .n span { font-size: 12.5px; color: var(--soft); }
+.exe { display: flex; align-items: center; gap: 12px; }
+.exe img { width: 36px; height: 36px; }
+.exe strong { font: 600 15px 'JetBrains Mono', ui-monospace, Consolas, monospace; }
+.exe span { margin-left: auto; }
+.ad { display: grid; gap: 6px; align-self: stretch; align-content: start; }
+.ad b { font-weight: 600; font-size: 14.5px; line-height: 1.3; color: var(--ink); }
+.ad code { font: 11px/1.5 'JetBrains Mono', ui-monospace, Consolas, monospace; color: var(--soft); overflow-wrap: anywhere; }
+.ad code span { display: block; font-size: inherit; color: inherit; }
+
+/* A wire, and the dot that travels it */
+.w { position: relative; display: block; width: 2px; height: 36px; background: var(--line); }
+.dot { position: absolute; left: 50%; top: calc(var(--p) * 100%); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--v); opacity: 0; }
+
+/* The pill, drawn with the app's colours and figure face */
+.pill { display: flex; align-items: center; justify-content: center; gap: clamp(10px, 3vw, 18px); padding: 24px 10px; background: var(--tb); border-radius: 8px; color: var(--on); font: 400 clamp(18px, 5vw, 28px)/1.25 Inter, system-ui, sans-serif; }
+.pill span { font-size: inherit; color: inherit; }
+.nums { display: grid; text-align: right; white-space: nowrap; }
+.nums b { display: inline-block; min-width: 2.9em; font: 700 1em/1.25 Unbounded, Inter, system-ui, sans-serif; }
+.nums .dim { color: var(--dim); }
+.rings { flex: none; width: clamp(56px, 16vw, 88px); height: clamp(56px, 16vw, 88px); }
+.rings circle { fill: none; stroke-width: 5; }
+.tr { stroke: rgba(255, 255, 255, .2); }
+.pr { stroke: var(--purple); transform: rotate(-90deg); transform-origin: 26px 26px; transition: stroke-dashoffset .9s var(--ease), stroke .35s .25s; }
+.bar { flex: none; display: flex; align-items: flex-end; width: .45em; height: 2.4em; border-radius: 5px; background: rgba(255, 255, 255, .22); overflow: hidden; }
+.bar b { width: 100%; border-radius: 5px; background: var(--purple); transition: height .9s var(--ease), background .35s .25s; }
+.pr[data-t="a"] { stroke: var(--amber); } .bar b[data-t="a"] { background: var(--amber); }
+.pr[data-t="r"] { stroke: var(--red); } .bar b[data-t="r"] { background: var(--red); }
+.keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; font-size: 13px; line-height: 1.35; color: var(--soft); }
+.keys b { display: block; font: 600 17px Sora, system-ui, sans-serif; color: var(--ink); }
+.scale { position: relative; padding: 24px 0 20px; }
+.segs { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; }
+.segs i { flex: 70; background: var(--purple); }
+.segs i:nth-child(2) { flex: 20; background: var(--amber); }
+.segs i:nth-child(3) { flex: 10; background: var(--red); }
+.scale span { position: absolute; bottom: 0; transform: translateX(-50%); font-size: 11.5px; line-height: 1.3; color: var(--soft); }
+.mk { position: absolute; top: 0; transform: translateX(-50%); font: 600 12px/1.3 Sora, system-ui, sans-serif; color: var(--ink); transition: left .9s var(--ease); }
+.mk::after { content: ""; position: absolute; left: 50%; top: 16px; margin-left: -4px; border: 4px solid transparent; border-top: 5px solid var(--ink); }
+
+/* The two notes, each under a rule */
+.sends, .before { padding-top: 14px; border-top: 2px solid var(--v); }
+.before p, .key { font-size: 14.5px; color: var(--soft); }
+.before p { max-width: 62ch; }
+.key { display: grid; gap: 8px; max-width: 62ch; }
+.key li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: baseline; }
+.key i { width: 10px; height: 10px; border-radius: 50%; background: var(--v); }
+.key i.back { background: var(--ink); }
+.key i.none { background: none; border: 1.5px solid var(--soft); }
 
 /* Footer */
-footer.site .l { display: flex; flex-wrap: wrap; gap: 8px 28px; align-self: start; }
+.foot { font-size: 13px; color: var(--soft); display: flex; flex-wrap: wrap; gap: 0 20px; align-items: center; }
+.foot a { display: inline-grid; place-content: center; min-height: 44px; color: var(--vt); font-size: 14.5px; }
+.foot p { flex: 1 1 320px; }
 
-/* Motion: nothing moves under reduced motion */
+/* Desktop: words beside the diagram, the two notes on one line under them */
+@media (min-width: 1000px) {
+  .page { row-gap: 32px; }
+  .home { grid-template-columns: minmax(0, 1fr) 490px; grid-template-areas: "say flow" "before sends"; column-gap: 56px; row-gap: 32px; }
+  .home .say { grid-area: say; padding-top: 12px; grid-template-rows: auto auto auto 1fr; }
+  .home .run { align-self: end; }
+  .home .flow { grid-area: flow; align-self: start; }
+  .home .before { grid-area: before; }
+  .home .sends { grid-area: sends; }
+  .flow .w { height: 28px; }
+  .pill { padding-block: 20px; }
+}
+
+/* Motion: one loop of 5 seconds, standing for the app's 5 minutes */
 @media (prefers-reduced-motion: no-preference) {
-  /* The header's hairline fades at the same speed as the rest */
-  header.site { transition: border-color .25s, background-color .25s, color .25s; }
-  /* The theme change fades */
-  .field, .rule, .listing, .code { transition: background-color .25s, color .25s, border-color .25s; }
-  .btn:hover span { transform: translateX(4px); }
-  /* Hover on a link is a colour change, answering the reader */
-  .row .s a, .row .d a, .note a, .styles button { transition: color .15s; }
+  .w1 .dot, .w2 .dot { animation: ask 5s linear infinite; }
+  .wab .dot { animation: land 5s linear infinite; }
+  .pill.hit { animation: hit .6s ease-out; }
+  @keyframes ask { 0% { --p: 0; opacity: 0; background: var(--v); } 4% { --p: 0; opacity: 1; background: var(--v); } 24% { --p: 1; opacity: 1; background: var(--v); } 30% { --p: 1; background: var(--ink); } 52% { --p: 0; opacity: 1; background: var(--ink); } 56%, 100% { --p: 0; opacity: 0; background: var(--ink); } }
+  @keyframes land { 0%, 54% { --p: 1; opacity: 0; background: var(--ink); } 58% { --p: 1; opacity: 1; background: var(--ink); } 78% { --p: 0; opacity: 1; background: var(--ink); } 84%, 100% { --p: 0; opacity: 0; background: var(--ink); } }
+  @keyframes hit { 0% { box-shadow: 0 0 0 0 rgba(111, 77, 246, .55); } 100% { box-shadow: 0 0 0 12px rgba(111, 77, 246, 0); } }
 }

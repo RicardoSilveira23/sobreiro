@@ -17,9 +17,9 @@ on:
   pull_request:
     paths: &site-paths
       - 'site/**'
+      - 'README.md'
       - 'scripts/check-site*.mjs'
-      - 'scripts/check-shared.mjs'
-      - 'scripts/shared.*.json'
+      - 'scripts/*.test.mjs'
       - 'scripts/smoke.mjs'
       - 'wrangler.jsonc'
       - 'package.json'
@@ -55,14 +55,11 @@ jobs:
 
       - run: npm ci
 
-      - name: Test the checker
-        run: node --test scripts/check-site.test.mjs
+      - name: Tests
+        run: node --test scripts/check-site.test.mjs scripts/page.test.mjs scripts/manual.test.mjs
 
       - name: Check the site
         run: node scripts/check-site.mjs
-
-      - name: Check the shared stylesheet
-        run: node scripts/check-shared.mjs scripts/shared.lock.json site/assets/sobreiro.css site/assets/site.css
 
       - name: The Worker uploads (size limits, config)
         run: npx wrangler deploy --dry-run
