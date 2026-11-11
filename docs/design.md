@@ -1,7 +1,8 @@
 # Sobreiro's page (design)
 
-2026-11-11. The design of Sobreiro's landing page, `site/index.html`. Status: waiting for
-Ricardo's approval. Nothing is built from it yet.
+2026-11-11. The design of Sobreiro's site: the landing page, `site/index.html`, and the manual
+beside it. Ricardo approved the landing page's design on 2026-11-11. Build plan:
+[superpowers/plans/2026-11-11-own-page.md](superpowers/plans/2026-11-11-own-page.md).
 
 It replaces the look in [the first site design](superpowers/specs/2026-11-09-site-design.md).
 Every colour, size and motion the page uses is written here. A value that is not here is not
@@ -205,11 +206,45 @@ The inner ring and the bar stay purple throughout.
 
 | Reader | Sees |
 |---|---|
-| No script | The pill at 15%, 45% and 17%, purple, the marker at 15%. The dots still travel; the pill does not change. |
+| No script | The pill at 15%, 45% and 17%, purple, the marker at 15%. The dots still travel; the pill does not change. Ricardo kept this as it is. |
 | Reduced motion | The same pill. No dots, no pulse, nothing moving. |
 
 The page says everything in both cases: the wires, the boxes, the key and "What it sends" carry
 it without the motion.
+
+## The manual
+
+`site/manual/index.html` wears the same look: the same ground, colours, faces, header and
+footer. Its words stay as they are; they are the app's facts. Nothing on it moves.
+
+| Part | How it looks |
+|---|---|
+| Header | The mark and the name, linking home. Nothing else. |
+| Title | "Manual", in Sora 600 at the headline's size, with its one-line lead in Soft |
+| Contents | The seven section links in a wrapping row, Violet text, each at least 44 px tall |
+| Section | Starts under a 2 px Violet rule. Heading in Sora 600, 20 px. 40 px above the rule. |
+| Row | Label, name, then text. From 1000 px: three columns of 96 px, 240 px and the rest. Narrower: label and name on one line, text under them. 1 px Line rule between rows. |
+| Label | Sora 600, 13 px, Violet text |
+| Name | Inter 600, 16 px, Ink |
+| Text | Inter 16 px on a 1.6 line, Ink, at most 62 characters wide. Lists under it: 15 px, Soft. |
+| Code | JetBrains Mono 13 px in a Box with a 1.5 px Line border and 8 px corners. It scrolls sideways inside itself. |
+| Captures | The app's own pictures, unchanged, with 8 px corners. Captions 14 px, Soft. |
+| Home link | At the foot, shaped like the Manual button |
+
+The captures the landing page no longer holds sit in "What it shows", each beside the row it
+explains:
+
+| Row | Capture |
+|---|---|
+| Details | Copilot's details (already there) |
+| Style | The details panel with its two switches, Shows and Style |
+| Bar colour | "Light, with Windows" and "Your Windows accent" |
+| Show | The two taskbars: the pill and the tray icon, and just the tray icon |
+
+The switches are buttons at least 44 px tall: pressed is a Violet fill with white text, not
+pressed a 1.5 px Violet border with Violet text. The panel's box is 504 px tall, the tallest
+picture, so nothing shifts when a switch is pressed. With no script the first picture shows and
+the switches stay hidden.
 
 ## The page must not
 
@@ -241,6 +276,8 @@ All on 2026-11-11.
 | The two notes sit beside the content on one row, each under a violet rule: "Before you install" under the words, "What it sends" under the diagram | |
 | The steps sit under a "Run it" heading and end level with the diagram's bottom | |
 | No Claude or Copilot logos; product names in plain text | |
+| With no script the dots still travel and the pill stays at its first reading | "the style is to stay" |
+| The manual is rewritten in this look, and the README updated to match, in the same change | "also rewrite the manual and update readme before we open PR" |
 | A public repository names no other repository | "public repos or repos that will become public should never have references to other repos specially mine that are private" |
 
 On the drawn pill: the rule for this project's pictures was that only the app draws them
@@ -252,6 +289,6 @@ GitHub retired the standalone Copilot logo.
 
 ## Not settled
 
-- The manual page's look. This document covers the landing page only.
-- A dark theme. The approved page is light only.
-- How the README follows the new order of parts.
+- The manual's look above is drawn from the landing page's. Ricardo has not seen it rendered yet.
+- A dark theme. The approved page is light only, and the theme switch is gone.
+- The share picture (`og.png`) and the README's hero still show the earlier purple field.

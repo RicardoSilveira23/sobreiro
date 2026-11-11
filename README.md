@@ -115,9 +115,10 @@ and setting.
 
 ## Run it
 
-1. **Download** `Sobreiro.exe` from the [latest release](https://github.com/RicardoSilveira23/sobreiro/releases/latest).
-2. **Run it.** The pill appears beside the clock and fills in within seconds while the Copilot CLI,
-   `gh` or Claude Code is signed in. That's it. It is one file and can live anywhere.
+1. **Download** `Sobreiro.exe`, one file, from the [latest release](https://github.com/RicardoSilveira23/sobreiro/releases/latest).
+2. **Open it.**
+3. **The pill appears beside the clock.** It fills in within seconds while the Copilot CLI, `gh`
+   or Claude Code is signed in. That's it. The file can live anywhere.
 
 For Copilot, sign in with the Copilot CLI or `gh auth login`: Sobreiro doesn't read the sign-in
 VS Code or Visual Studio keeps.
@@ -132,6 +133,10 @@ Coming from the 0.7.0 zip? Quit the old Sobreiro before you run the new exe; the
 [Install](https://sobreiro.ricardosilveira.dev/manual/#install) lists the upgrade steps.
 
 ## What it reads, what it sends
+
+- Two requests, with a sign-in already on this PC.
+- The numbers come back and go to the taskbar.
+- Nothing else leaves: no telemetry, no update checks, no token stored, logged or renewed.
 
 Every 5 minutes, and when the details open on a reading over a minute old, Sobreiro asks GitHub
 for your Copilot AI credits and Anthropic for your Claude Code usage, each with a sign-in already
@@ -151,15 +156,15 @@ finds one. These are its only network calls. If you don't want that, don't insta
   folder (`%USERPROFILE%\.claude`, or `CLAUDE_CONFIG_DIR`), into memory, per request. It calls
   `GET https://api.anthropic.com/api/oauth/usage` with it. Nothing else is sent, no redirects
   are followed and no cookies are kept.
-- No token is stored, logged or renewed. The last one can stay in the app's memory until it is
-  overwritten, since `HttpClient` takes it as a string property. The app holds no refresh token.
+- The last token can stay in the app's memory until it is overwritten, since `HttpClient` takes
+  it as a string property. The app holds no refresh token.
 - The status line bridge, `sobreiro-bridge.exe` (Sobreiro copies it from itself to
   `%LOCALAPPDATA%\Sobreiro` when you Connect), saves only the `rate_limits` fields and a
   timestamp to `%LOCALAPPDATA%\Sobreiro\usage.json`, never the rest of what Claude Code passes it.
 - Connect to Claude Code changes one key in Claude Code's `settings.json`, `statusLine`, after
   asking and with a backup next to it; Disconnect puts it back. See
   [Connect](https://sobreiro.ricardosilveira.dev/manual/#connect).
-- No telemetry and no update checks. The site loads nothing from other hosts either.
+- The site loads nothing from other hosts either.
 - Both addresses are undocumented and can change, and Anthropic's terms don't allow third-party
   apps to use Claude sign-ins.
 - The diagnostics log, `log.txt` in the data folder, holds times, the version, exit codes and
@@ -248,7 +253,8 @@ Releases up to 0.8.1 were under MIT.
 
 The bundled fonts, Inter and Unbounded, are under the SIL Open Font License; their licence files
 are in `src/Sobreiro/Fonts/`, and the fonts and licences are inside `Sobreiro.exe`; About Sobreiro
-shows the licences. The site carries its own copies, in `site/assets/fonts/`.
+shows the licences. The site carries its own copies, in `site/assets/fonts/`, with two more faces
+under the same licence, Sora and JetBrains Mono, and their licence files.
 
 Not affiliated with or endorsed by Anthropic or GitHub. Sobreiro is the Portuguese name of the cork
 oak; its trunk in section is the tray's two rings.
