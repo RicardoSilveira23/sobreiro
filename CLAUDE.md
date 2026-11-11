@@ -2,7 +2,8 @@
 
 Windows tray app (formerly claude-tray) showing Claude Code's session and weekly limits and
 GitHub Copilot's monthly AI credits. Plan: [docs/plan.md](docs/plan.md) (milestones at the end);
-background: [docs/brief.md](docs/brief.md).
+background: [docs/brief.md](docs/brief.md). The landing page's design:
+[docs/design.md](docs/design.md); read it before styling anything in `site/`.
 
 ## Build rules
 
