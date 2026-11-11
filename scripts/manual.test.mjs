@@ -46,7 +46,7 @@ test("the seven sections are there, in order", () => {
   assert.deepEqual([...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]), ids);
 });
 
-test("the words are the app's facts, unchanged", () => {
+test("the rows are all there: 43, six of them known limits", () => {
   assert.equal(count(html, /class="row"/g), 43);
   assert.equal(count(section("limits"), /class="row"/g), 6);
   assert.match(inner(section("limits"), "<h2", "h2"), /<small>6<\/small>/);
@@ -95,4 +95,21 @@ test("the captures sit in What it shows", () => {
 test("the way home is a button", () => {
   assert.match(html, /<a class="back mn" href="\.\.\/">/);
   assert.match(site, /\.dl,\s*\.mn\s*\{[^}]*min-height: 54px/);
+});
+
+test("a row's name is plain text, not a diagram box", () => {
+  for (const m of site.matchAll(/(^|\})\s*([^{}]+)\{/g)) {
+    for (const sel of m[2].split(",").map((s) => s.trim())) {
+      if (/(^|[\s)])\.n(?![\w-])/.test(sel)) {
+        assert.match(sel, /^:where\(\.flow\) \.n(\s|$)/, sel);
+      }
+    }
+  }
+  assert.match(rule(css, ".n"), /font-weight|font: 600/);
+  assert.match(rule(css, ".n"), /font: 600 16px/);
+  assert.match(rule(css, ".n"), /color: var\(--ink\)/);
+});
+
+test("the switches sit under the panel", () => {
+  assert.ok(html.indexOf('class="panel"') < html.indexOf('class="styles"'));
 });

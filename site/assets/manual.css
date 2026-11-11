@@ -22,8 +22,8 @@
 .k { font: 600 13px Sora, system-ui, sans-serif; color: var(--vt); }
 .k:empty { display: none; }
 .n { font: 600 16px Inter, system-ui, sans-serif; color: var(--ink); }
-.s { font-size: 16px; line-height: 1.6; max-width: 62ch; margin-top: 4px; }
-.d { max-width: 62ch; margin-top: 8px; padding-left: 18px; list-style: disc; font-size: 15px; line-height: 1.5; color: var(--soft); }
+.s { overflow-wrap: anywhere; font-size: 16px; line-height: 1.6; max-width: 62ch; margin-top: 4px; }
+.d { overflow-wrap: anywhere; max-width: 62ch; margin-top: 8px; padding-left: 18px; list-style: disc; font-size: 15px; line-height: 1.5; color: var(--soft); }
 .d li + li { margin-top: 6px; }
 .code { max-width: 62ch; margin: 8px 0 0; padding: 12px 14px; overflow-x: auto; background: var(--box); border: 1.5px solid var(--line); border-radius: 8px; font: 13px/1.5 'JetBrains Mono', ui-monospace, Consolas, monospace; color: var(--ink); }
 .code code { font: inherit; }

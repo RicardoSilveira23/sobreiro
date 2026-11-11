@@ -57,8 +57,8 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .flow { justify-self: center; width: 100%; max-width: 490px; display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "a a" "wab wab" "b b" "w1 w2" "c1 c2"; justify-items: center; column-gap: 8px; }
 .a { grid-area: a; display: grid; gap: 12px; }
 .wab { grid-area: wab; } .exe { grid-area: b; } .w1 { grid-area: w1; } .w2 { grid-area: w2; } .n1 { grid-area: c1; } .n2 { grid-area: c2; }
-.n { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); }
-.n span { font-size: 12.5px; color: var(--soft); }
+:where(.flow) .n { width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); }
+:where(.flow) .n span { font-size: 12.5px; color: var(--soft); }
 .exe { display: flex; align-items: center; gap: 12px; }
 .exe img { width: 36px; height: 36px; }
 .exe strong { font: 600 15px 'JetBrains Mono', ui-monospace, Consolas, monospace; }
