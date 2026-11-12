@@ -107,7 +107,9 @@ Known limits, stated in the README:
   (green), "Ends 16:40" (amber: at this pace it runs out then), "Likely used up" (amber, when
   the projected run-out has passed on an old reading), "Used up" (red), or "Not used yet", "Too
   early" and "Resetting" (grey). Below them sit a spend limit row when present, and
-  "Updated 3 min ago".
+  "Updated 3 min ago". With Pace › Weekdays only (2026-11-12; Every day is the default) the
+  projection counts Monday to Friday for windows longer than a day, so the badge, the tick and
+  the alert text skip weekends ([design](superpowers/specs/2026-11-12-working-day-pace-design.md)).
 - **Styles:** Bars (the default) shows the % used, with a tick where use is heading by the
   reset. Battery and Thermometer show the % left, with what the pace will use by the reset
   drawn faint. The menu sets the style and the app's config remembers it. The tray icon stays
@@ -118,7 +120,7 @@ Known limits, stated in the README:
   track in that theme. Before giving up on it, the app tries Windows' lighter accent shades on the
   dark flyout and darker ones on the light flyout (the `AccentPalette`); if none pass, the bars
   stay purple. Amber from 70% and red from 90% stay fixed.
-- **Menu (right click):** Connect to Claude Code / Disconnect, Style, Bar colour, Show,
+- **Menu (right click):** Connect to Claude Code / Disconnect, Style, Bar colour, Pace, Show,
   Start with Windows, Open data folder, About, Quit.
 - **Taskbar pill (milestone 3, chosen 2026-11-09):** a small borderless window over the empty
   taskbar, just left of the tray icons. It shows `5h 37%` above `7d 61%`, two lines like the
