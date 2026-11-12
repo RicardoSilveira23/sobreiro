@@ -14,7 +14,7 @@ public sealed record LimitStatus(StatusKind Kind, string Text)
     public const double NotUsedBelow = 2;
 
     /// <summary>The badge for a limit, or null when it has no reset time or window length.</summary>
-    public static LimitStatus? For(Limit limit, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture)
+    public static LimitStatus? For(Limit limit, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, PaceDays days = PaceDays.EveryDay)
     {
         if (limit.ResetsAt is not { } resetsAt || limit.Window is not { } window || window <= TimeSpan.Zero)
             return null;
@@ -22,7 +22,7 @@ public sealed record LimitStatus(StatusKind Kind, string Text)
         if (limit.IsReset || limit.Percent < NotUsedBelow) return new(StatusKind.NotUsedYet, "Not used yet");
         if (limit.Percent >= 100) return new(StatusKind.UsedUp, "Used up");
 
-        var pace = Pace.Project(limit);
+        var pace = Pace.Project(limit, days, zone);
         if (pace is null) return new(StatusKind.TooEarly, "Too early");
         if (pace.RunsOutAt is { } at)
             return at <= now

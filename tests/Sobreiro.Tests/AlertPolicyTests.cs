@@ -1,5 +1,6 @@
 using System.Globalization;
 using Sobreiro.Core.Alerts;
+using Sobreiro.Core.Display;
 using Sobreiro.Core.Limits;
 
 namespace Sobreiro.Tests;
@@ -154,4 +155,16 @@ public class AlertPolicyTests
     [Fact]
     public void Claude_titles_unchanged() =>
         Assert.Equal("Session 80% used", Assert.Single(Check(AlertState.Empty, Session(80)).Alerts).Title);
+
+    [Fact]
+    public void The_alert_body_follows_the_pace_setting()
+    {
+        var at = new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero);   // a Saturday
+        var weekly = new Limit("Claude Code", LimitKind.Weekly, "Weekly", 80,
+            new DateTimeOffset(2026, 11, 16, 0, 0, 0, TimeSpan.Zero), at, false, TimeSpan.FromDays(7));
+        var everyDay = AlertPolicy.Check([weekly], AlertState.Empty, at, TimeZoneInfo.Utc, En).Alerts;
+        var weekdays = AlertPolicy.Check([weekly], AlertState.Empty, at, TimeZoneInfo.Utc, En, PaceDays.Weekdays).Alerts;
+        Assert.StartsWith("Ends ", Assert.Single(everyDay).Body);
+        Assert.StartsWith("On track · ", Assert.Single(weekdays).Body);
+    }
 }

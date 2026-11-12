@@ -97,6 +97,37 @@ public class LimitStatusTests
 
     [Fact]
     public void No_reset_time_gives_no_badge() => Assert.Null(For(Make(30, Five, null)));
+
+    private static DateTimeOffset T(string s) => DateTimeOffset.Parse(s);
+    private static Limit Weekly(double pct, string resets, string observed) =>
+        new("Claude Code", LimitKind.Weekly, "Weekly", pct, T(resets), T(observed), false, TimeSpan.FromDays(7));
+
+    [Fact]
+    public void Weekdays_turn_a_midweek_alarm_into_on_track()
+    {
+        var l = Weekly(58, "2026-11-16T09:00:00Z", "2026-11-12T09:00:00Z");
+        var at = T("2026-11-12T09:00:00Z");
+        Assert.Equal(StatusKind.Ends, LimitStatus.For(l, at, TimeZoneInfo.Utc, En)!.Kind);
+        Assert.Equal("On track", LimitStatus.For(l, at, TimeZoneInfo.Utc, En, PaceDays.Weekdays)!.Text);
+    }
+
+    [Fact]
+    public void Weekdays_show_a_run_out_on_a_working_day()
+    {
+        // Reset Fri 09:00, read Mon 09:00 at 40%: 24 weekday hours gone, 36 more to run out.
+        var l = Weekly(40, "2026-11-13T09:00:00Z", "2026-11-09T09:00:00Z");
+        var at = T("2026-11-09T09:00:00Z");
+        Assert.Equal("On track", LimitStatus.For(l, at, TimeZoneInfo.Utc, En)!.Text);
+        Assert.Equal("Ends Tue 9:00 PM", LimitStatus.For(l, at, TimeZoneInfo.Utc, En, PaceDays.Weekdays)!.Text);
+    }
+
+    [Fact]
+    public void A_stale_reading_past_its_weekday_run_out_is_likely_used_up()
+    {
+        var l = Weekly(40, "2026-11-13T09:00:00Z", "2026-11-09T09:00:00Z");
+        Assert.Equal("Likely used up",
+            LimitStatus.For(l, T("2026-11-12T09:00:00Z"), TimeZoneInfo.Utc, En, PaceDays.Weekdays)!.Text);
+    }
 }
 
 public class BadgeColourTests

@@ -23,7 +23,7 @@ public sealed record FlyoutModel(string Title, LimitView Session, LimitView Week
     CopilotSection? Copilot = null, bool ShowClaude = true)
 {
     public static FlyoutModel From(IReadOnlyList<Limit> all, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, LiveState live = LiveState.Off, bool legacyConnection = false,
-        string? copilotNote = null, bool showClaude = true)
+        string? copilotNote = null, bool showClaude = true, PaceDays days = PaceDays.EveryDay)
     {
         var credits = all.FirstOrDefault(l => l.Kind == LimitKind.Credits);
         var limits = all.Where(l => l.Kind != LimitKind.Credits).ToList();
@@ -32,11 +32,11 @@ public sealed record FlyoutModel(string Title, LimitView Session, LimitView Week
         var spend = limits.FirstOrDefault(l => l.Kind == LimitKind.Spend);
         return new FlyoutModel(
             Providers.Claude,
-            View(session, LimitKind.Session, "Session", now, zone, culture),
-            View(weekly, LimitKind.Weekly, "Weekly", now, zone, culture),
-            spend is null ? null : View(spend, LimitKind.Spend, "Spend", now, zone, culture),
+            View(session, LimitKind.Session, "Session", now, zone, culture, days),
+            View(weekly, LimitKind.Weekly, "Weekly", now, zone, culture, days),
+            spend is null ? null : View(spend, LimitKind.Spend, "Spend", now, zone, culture, days),
             FooterText(showClaude ? limits : credits is null ? [] : [credits], now, zone, culture, live, legacyConnection, showClaude),
-            credits is null ? null : new CopilotSection(View(credits, LimitKind.Credits, "AI credits", now, zone, culture), copilotNote),
+            credits is null ? null : new CopilotSection(View(credits, LimitKind.Credits, "AI credits", now, zone, culture, days), copilotNote),
             showClaude);
     }
 
@@ -49,12 +49,12 @@ public sealed record FlyoutModel(string Title, LimitView Session, LimitView Week
             : "resets in " + Duration.Format(at - now);
     }
 
-    private static LimitView View(Limit? limit, LimitKind kind, string label, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture)
+    private static LimitView View(Limit? limit, LimitKind kind, string label, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, PaceDays days)
     {
         if (limit is null)
             return new LimitView(kind, label, false, "–", "–", 0, null, UsageLevel.Normal, null, "No reading yet", null);
 
-        var pace = Pace.Project(limit);
+        var pace = Pace.Project(limit, days, zone);
 
         var used = limit.DisplayPercent;
         return new LimitView(
@@ -64,7 +64,7 @@ public sealed record FlyoutModel(string Title, LimitView Session, LimitView Week
             Math.Clamp(limit.Percent / 100, 0, 1),
             pace is null ? null : Math.Min(pace.ProjectedPercent, 100) / 100,
             UsageLevels.For(used),
-            LimitStatus.For(limit, now, zone, culture),
+            LimitStatus.For(limit, now, zone, culture, days),
             ResetsIn(limit, now, zone, culture),
             kind == LimitKind.Spend ? SpendDetail(limit)
                 : kind == LimitKind.Credits ? CreditsDetail(limit) : null);
