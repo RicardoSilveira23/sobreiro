@@ -29,7 +29,32 @@ public class AppConfigTests : IDisposable
         Assert.Equal(FlyoutStyle.Bars, c.Style);
         Assert.Equal(BarColourOption.Purple, c.BarColour);
         Assert.Equal(ShowOption.TrayAndPill, c.Show);
+        Assert.Equal(PaceDays.EveryDay, c.PaceDays);
         Assert.Empty(c.Extra);
+    }
+
+    [Fact] public void Pace_defaults_to_every_day() => Assert.Equal(PaceDays.EveryDay, AppConfig.Load(PathFor()).PaceDays);
+
+    [Theory]
+    [InlineData("\"weekdays\"", PaceDays.Weekdays)]
+    [InlineData("\"Weekdays\"", PaceDays.Weekdays)]
+    [InlineData("\"everyday\"", PaceDays.EveryDay)]
+    [InlineData("\"workdays\"", PaceDays.EveryDay)]
+    [InlineData("5", PaceDays.EveryDay)]
+    [InlineData("null", PaceDays.EveryDay)]
+    public void Pace_loads_and_unknown_values_fall_back(string json, PaceDays expected)
+    {
+        var loaded = AppConfig.Load(Write("{\"pace\":" + json + "}"));
+        Assert.Equal(expected, loaded.PaceDays);
+        Assert.DoesNotContain("pace", loaded.Extra.Keys);
+    }
+
+    [Fact]
+    public void Pace_round_trips_and_is_written_lower_case()
+    {
+        (AppConfig.Default with { PaceDays = PaceDays.Weekdays }).Save(PathFor());
+        Assert.Contains("\"pace\": \"weekdays\"", File.ReadAllText(PathFor()));
+        Assert.Equal(PaceDays.Weekdays, AppConfig.Load(PathFor()).PaceDays);
     }
 
     [Fact] public void Show_defaults_to_tray_and_pill() => Assert.Equal(ShowOption.TrayAndPill, AppConfig.Load(PathFor()).Show);
