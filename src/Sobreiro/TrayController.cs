@@ -253,7 +253,7 @@ internal sealed class TrayController : IDisposable
         }
         Guard("icon visibility", () => UpdateIconVisibility(showClaude, copilot.Count > 0));
         Guard("flyout", () => UpdateFlyout(shown, showClaude, now, zone, culture, config, showAt, legacy));
-        Guard("alerts", () => CheckAlerts(shown, now, zone, culture));
+        Guard("alerts", () => CheckAlerts(shown, now, zone, culture, config));
     }
 
     // A failing part (GDI, registry, an unexpected Core error) must not take the tray down.
@@ -342,14 +342,15 @@ internal sealed class TrayController : IDisposable
             ? CopilotStateText.Line(_copilot.State, reading, now, zone, culture)
             : null;
         _flyout.Render(
-            FlyoutModel.From(limits, now, zone, culture, _live.State, legacy, note, showClaude), config.Style, colours);
+            FlyoutModel.From(limits, now, zone, culture, _live.State, legacy, note, showClaude, config.PaceDays), config.Style, colours);
         if (showAt is { } at) _flyout.ShowNear(at.X, at.Y);
     }
 
     // The new state is kept even when saving it fails, so an alert never repeats every 30 seconds.
-    private void CheckAlerts(IReadOnlyList<Limit> limits, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture)
+    private void CheckAlerts(
+        IReadOnlyList<Limit> limits, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, AppConfig config)
     {
-        var (alerts, next) = AlertPolicy.Check(limits, _alerts, now, zone, culture);
+        var (alerts, next) = AlertPolicy.Check(limits, _alerts, now, zone, culture, config.PaceDays);
         if (ReferenceEquals(next, _alerts)) return;
         _alerts = next;
         if (AlertBalloon.For(alerts.Where(a => a.Kind != LimitKind.Credits).ToList()) is { } claude)

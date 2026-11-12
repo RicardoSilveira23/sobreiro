@@ -46,8 +46,8 @@ test("the seven sections are there, in order", () => {
   assert.deepEqual([...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]), ids);
 });
 
-test("the rows are all there: 43, six of them known limits", () => {
-  assert.equal(count(html, /class="row"/g), 43);
+test("the rows are all there: 44, six of them known limits", () => {
+  assert.equal(count(html, /class="row"/g), 44);
   assert.equal(count(section("limits"), /class="row"/g), 6);
   assert.match(inner(section("limits"), "<h2", "h2"), /<small>6<\/small>/);
   assert.equal(count(text(html), /A ring is purple below 70%, amber from 70% and red from 90%\./g), 1);

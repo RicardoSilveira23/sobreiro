@@ -17,7 +17,7 @@ public static class AlertPolicy
     /// <paramref name="state"/> itself when nothing changed, so callers can skip saving.
     /// </summary>
     public static (IReadOnlyList<Alert> Alerts, AlertState Next) Check(
-        IReadOnlyList<Limit> limits, AlertState state, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture)
+        IReadOnlyList<Limit> limits, AlertState state, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, PaceDays days = PaceDays.EveryDay)
     {
         var alerts = new List<Alert>();
         var marks = new Dictionary<LimitKind, AlertMark>(state.Marks);
@@ -39,7 +39,7 @@ public static class AlertPolicy
                     : $"{limit.Label} {limit.DisplayPercent}% used",
                 string.Join(" · ", new[]
                 {
-                    LimitStatus.For(limit, now, zone, culture)?.Text,
+                    LimitStatus.For(limit, now, zone, culture, days)?.Text,
                     FlyoutModel.ResetsIn(limit, now, zone, culture),
                 }.Where(t => t is not null))));
             marks[limit.Kind] = new AlertMark(limit.ResetsAt, crossed);

@@ -25,6 +25,7 @@ internal sealed class TrayMenu : IDisposable
     private readonly (ToolStripMenuItem Item, FlyoutStyle Style)[] _styles;
     private readonly (ToolStripMenuItem Item, BarColourOption Colour)[] _colours;
     private readonly (ToolStripMenuItem Item, ShowOption Show)[] _shows;
+    private readonly (ToolStripMenuItem Item, PaceDays Days)[] _paces;
     private readonly ToolStripMenuItem _autoStart = new("Start with Windows");
     private readonly ToolStripMenuItem _disconnect = new(ConnectMessage.Title(false)) { Visible = false };
     private ConnectionState _state;
@@ -50,6 +51,11 @@ internal sealed class TrayMenu : IDisposable
             (Item("Tray icon only", () => SetShow(ShowOption.TrayOnly)), ShowOption.TrayOnly),
             (Item("Tray icon and taskbar pill", () => SetShow(ShowOption.TrayAndPill)), ShowOption.TrayAndPill),
         ];
+        _paces =
+        [
+            (Item("Every day", () => SetPace(PaceDays.EveryDay)), PaceDays.EveryDay),
+            (Item("Weekdays only", () => SetPace(PaceDays.Weekdays)), PaceDays.Weekdays),
+        ];
         _connect.Click += (_, _) => RunConnect(connect: _state != ConnectionState.Connected);
         _disconnect.Click += (_, _) => RunConnect(connect: false);
         _autoStart.Click += (_, _) => ToggleAutoStart();
@@ -60,6 +66,7 @@ internal sealed class TrayMenu : IDisposable
             _disconnect,
             new ToolStripMenuItem("Style", null, _styles.Select(s => (ToolStripItem)s.Item).ToArray()),
             new ToolStripMenuItem("Bar colour", null, _colours.Select(c => (ToolStripItem)c.Item).ToArray()),
+            new ToolStripMenuItem("Pace", null, _paces.Select(p => (ToolStripItem)p.Item).ToArray()),
             new ToolStripMenuItem("Show", null, _shows.Select(s => (ToolStripItem)s.Item).ToArray()),
             new ToolStripSeparator(),
             _autoStart,
@@ -94,6 +101,7 @@ internal sealed class TrayMenu : IDisposable
         var config = TrayController.ConfigForDisplay();
         foreach (var (item, style) in _styles) item.Checked = style == config.Style;
         foreach (var (item, colour) in _colours) item.Checked = colour == config.BarColour;
+        foreach (var (item, days) in _paces) item.Checked = days == config.PaceDays;
         foreach (var (item, show) in _shows) item.Checked = show == config.Show;
 
         try
@@ -125,6 +133,8 @@ internal sealed class TrayMenu : IDisposable
     private void SetStyle(FlyoutStyle style) => ChangeConfig(c => c with { Style = style });
 
     private void SetColour(BarColourOption colour) => ChangeConfig(c => c with { BarColour = colour });
+
+    private void SetPace(PaceDays days) => ChangeConfig(c => c with { PaceDays = days });
 
     private void SetShow(ShowOption show) => ChangeConfig(c => c with { Show = show });
 

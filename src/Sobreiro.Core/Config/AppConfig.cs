@@ -27,7 +27,11 @@ public sealed record AppConfig(
     private const string ColourKey = "bar_colour";
     private const string ShowKey = "show";
 
+    private const string PaceKey = "pace";
+
     public ShowOption Show { get; init; } = ShowOption.TrayAndPill;
+
+    public PaceDays PaceDays { get; init; } = PaceDays.EveryDay;
 
     public static readonly AppConfig Default = new(
         null, null, FlyoutStyle.Bars, BarColourOption.Purple, new Dictionary<string, string>());
@@ -61,6 +65,7 @@ public sealed record AppConfig(
             var style = FlyoutStyle.Bars;
             var colour = BarColourOption.Purple;
             var show = ShowOption.TrayAndPill;
+            var pace = PaceDays.EveryDay;
             var extra = new Dictionary<string, string>();
 
             foreach (var property in doc.RootElement.EnumerateObject())
@@ -84,12 +89,15 @@ public sealed record AppConfig(
                     case ShowKey:
                         show = ParseEnum(value, ShowOption.TrayAndPill);
                         break;
+                    case PaceKey:
+                        pace = ParseEnum(value, PaceDays.EveryDay);
+                        break;
                     default:
                         extra[property.Name] = value.GetRawText();
                         break;
                 }
             }
-            return new AppConfig(chained, previous, style, colour, extra) { Show = show };
+            return new AppConfig(chained, previous, style, colour, extra) { Show = show, PaceDays = pace };
         }
         catch (JsonException e)
         {
@@ -119,6 +127,7 @@ public sealed record AppConfig(
             writer.WriteString(StyleKey, Style.ToString().ToLowerInvariant());
             writer.WriteString(ColourKey, BarColour.ToString().ToLowerInvariant());
             writer.WriteString(ShowKey, Show.ToString().ToLowerInvariant());
+            writer.WriteString(PaceKey, PaceDays.ToString().ToLowerInvariant());
             foreach (var (key, raw) in Extra)
             {
                 writer.WritePropertyName(key);

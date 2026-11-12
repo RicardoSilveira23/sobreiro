@@ -186,4 +186,28 @@ public class FlyoutModelTests
         Assert.Equal("Updated 2 min ago", m.Footer);
         Assert.False(m.ShowClaude);
     }
+
+    [Fact]
+    public void The_pace_setting_reaches_the_bar_and_the_badge()
+    {
+        var at = DateTimeOffset.Parse("2026-11-12T09:00:00Z");
+        var weekly = new Limit(Providers.Claude, LimitKind.Weekly, "Weekly", 58,
+            DateTimeOffset.Parse("2026-11-16T09:00:00Z"), at, false, TimeSpan.FromDays(7));
+        var everyDay = FlyoutModel.From([weekly], at, TimeZoneInfo.Utc, En).Weekly;
+        var weekdays = FlyoutModel.From([weekly], at, TimeZoneInfo.Utc, En, days: PaceDays.Weekdays).Weekly;
+        Assert.Equal(1.0, everyDay.ProjectedFraction);
+        Assert.Equal(StatusKind.Ends, everyDay.Status!.Kind);
+        Assert.Equal(0.9667, weekdays.ProjectedFraction!.Value, 0.0001);
+        Assert.Equal(StatusKind.OnTrack, weekdays.Status!.Kind);
+    }
+
+    [Fact]
+    public void The_pace_setting_reaches_copilot_credits()
+    {
+        var at = DateTimeOffset.Parse("2026-11-16T00:00:00Z");
+        var credits = new Limit(Providers.Copilot, LimitKind.Credits, "AI credits", 40,
+            DateTimeOffset.Parse("2026-12-01T00:00:00Z"), at, false, TimeSpan.FromDays(30));
+        var view = FlyoutModel.From([credits], at, TimeZoneInfo.Utc, En, days: PaceDays.Weekdays).Copilot!.Credits;
+        Assert.Equal(0.84, view.ProjectedFraction!.Value, 0.0001);
+    }
 }
