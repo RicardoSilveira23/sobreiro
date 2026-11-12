@@ -56,8 +56,8 @@ which is worth a look on its own.
 - **A tray icon for each:** one ring for Copilot, two for Claude Code.
 - **Hover** the pill or a tray icon for when each limit resets.
 - **Click** it for the details: each limit, what's used or left, when it resets, and the badge.
-- **Right-click** it for the menu: the style, the bar colour, what to show and Connect to Claude
-  Code.
+- **Right-click** it for the menu: the style, the bar colour, the pace, what to show and Connect
+  to Claude Code.
 
 <table>
   <tr>
