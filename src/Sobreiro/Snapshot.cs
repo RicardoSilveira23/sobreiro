@@ -308,7 +308,7 @@ internal static class Snapshot
         };
     }
 
-    // The taskbar pill with no data and three readings, on a taskbar-coloured strip.
+    // The taskbar pill with no data and three readings, then with numbers that have stopped, on a taskbar-coloured strip.
     private static FrameworkElement PillStrip(DateTimeOffset now, bool light)
     {
         var colours = TaskbarColours.For(light, false, BarColourOption.Purple, null);
@@ -323,19 +323,19 @@ internal static class Snapshot
             row.Children.Add(pill);
         }
 
-        // Second row: every stopped Claude block, then a stopped Claude block beside a stopped Copilot one.
+        // Second row, numbers that have stopped: Claude's block; both blocks; Copilot's beside a fresh
+        // Claude block; both figures at 100%, the widest; and a block with no figures to keep.
         var stopped = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
         var old = now.AddDays(-3);
-        var oldReadings = new[] { Reading(LimitKind.Session, 37, old), Reading(LimitKind.Weekly, 61, old) };
+        var oldReadings = new[] { Reading(LimitKind.Session, 37, old), Reading(LimitKind.Weekly, 78, old) };
         var oldCredits = LimitList.FromCopilot(CopilotSample(now) with { ObservedAt = old }, now);
-        var states = new[]
-        {
-            ProviderState.Expired, ProviderState.NoSignIn, ProviderState.Refused,
-            ProviderState.Offline, ProviderState.BadAnswer, ProviderState.RateLimited,
-        };
-        foreach (var state in states)
-            stopped.Children.Add(StoppedPill(oldReadings, state, ProviderState.Ok, colours, now));
+        var fresh = new[] { Reading(LimitKind.Session, 37, now), Reading(LimitKind.Weekly, 78, now) };
+        var full = new[] { Reading(LimitKind.Session, 100, old), Reading(LimitKind.Weekly, 100, old) };
+        stopped.Children.Add(StoppedPill(oldReadings, ProviderState.Expired, ProviderState.Ok, colours, now));
         stopped.Children.Add(StoppedPill(oldReadings.Concat(oldCredits).ToList(), ProviderState.Refused, ProviderState.Offline, colours, now));
+        stopped.Children.Add(StoppedPill(fresh.Concat(oldCredits).ToList(), ProviderState.Ok, ProviderState.NoSignIn, colours, now));
+        stopped.Children.Add(StoppedPill(full, ProviderState.BadAnswer, ProviderState.Ok, colours, now));
+        stopped.Children.Add(StoppedPill([], ProviderState.Expired, ProviderState.Ok, colours, now));
 
         var rows = new StackPanel();
         rows.Children.Add(row);
@@ -346,7 +346,7 @@ internal static class Snapshot
     private static FrameworkElement StoppedPill(
         IReadOnlyList<Limit> limits, ProviderState live, ProviderState copilot, TaskbarColours colours, DateTimeOffset now)
     {
-        var pill = PillView.Build(PillModel.From(limits, TimeZoneInfo.Local, true, live, PillWords.MissesNeeded, copilot, PillWords.MissesNeeded, now), colours);
+        var pill = PillView.Build(PillModel.From(limits, TimeZoneInfo.Local, true, live, PillStale.MissesNeeded, copilot, PillStale.MissesNeeded, now), colours);
         pill.Margin = new Thickness(0, 0, 24, 0);
         return pill;
     }

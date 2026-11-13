@@ -52,8 +52,9 @@ which is worth a look on its own.
 - **The pill:** a block for each service, beside the clock. GitHub Copilot's is `AI 17%` over the
   reset date and a small level bar: the monthly AI credits, with a credit budget (Business,
   Enterprise or Pro, not Free). Claude Code's is `5h 9%` over `7d 44%`, the session and the week,
-  then two rings; the outer ring is the session. When a block's numbers have stopped, it shows
-  two words, such as `no network`, in place of its figures; the details say what to do.
+  then two rings; the outer ring is the session. When a block's numbers have stopped, it keeps
+  its last figures, each followed by `*`, and its rings or bar turn grey; the details say why
+  and what to do.
 - **A tray icon for each:** one ring for Copilot, two for Claude Code.
 - **Hover** the pill or a tray icon for when each limit resets.
 - **Click** it for the details: each limit, what's used or left, when it resets, and the badge.
