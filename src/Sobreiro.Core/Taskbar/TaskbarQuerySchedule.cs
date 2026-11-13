@@ -9,30 +9,29 @@ public readonly record struct TaskbarQuerySchedule
     // default(TaskbarQuerySchedule) is the fresh schedule: nothing asked, nothing answered.
     private bool HasAsked { get; init; }
     private TimeSpan LastAsked { get; init; }
-    private bool Out { get; init; }
     private bool SwitchPending { get; init; }
-    private int AnswerCount { get; init; }
-    private TaskbarAnchors? Latest { get; init; }
-    private TaskbarAnchors? Before { get; init; }
+    private bool Unsettled { get; init; }
+    private bool HasAnswer { get; init; }
+    private TaskbarAnchors? LastAnswer { get; init; }
 
     /// <summary>
-    /// True until two answers in a row agree (a missing answer counts as one), and again after a foreground
-    /// switch or <see cref="SlowCheck"/>. Never while a question is still out. <see cref="Asked"/> clears the
-    /// switch and records the time, and a clock that went back is simply not due.
+    /// True when nothing has been asked yet, a foreground switch came since the last question, the last answers
+    /// have not agreed yet, or <see cref="SlowCheck"/> has passed since the last question. A question whose
+    /// answer never comes is therefore asked again after the slow check. A clock that went back is not due.
     /// </summary>
     public bool Due(TimeSpan now) =>
-        !Out && (!HasAsked
-        || SwitchPending
-        || AnswerCount < 2
-        || Latest != Before
-        || now - LastAsked >= SlowCheck);
+        !HasAsked || SwitchPending || Unsettled || now - LastAsked >= SlowCheck;
 
-    /// <summary>A question went out at <paramref name="now"/>; the switches seen so far are covered by it.</summary>
-    public TaskbarQuerySchedule Asked(TimeSpan now) => this with { HasAsked = true, Out = true, LastAsked = now, SwitchPending = false };
+    /// <summary>A question went out at <paramref name="now"/>: it covers the switches seen so far and is the one that settles the answers.</summary>
+    public TaskbarQuerySchedule Asked(TimeSpan now) =>
+        this with { HasAsked = true, LastAsked = now, SwitchPending = false, Unsettled = false };
 
-    /// <summary>The answer to the last question; null when the taskbar could not be read.</summary>
+    /// <summary>
+    /// The answer to a question; null when the taskbar could not be read, which is an answer like any other.
+    /// The first answer, or one that differs from the answer before it, calls for another question.
+    /// </summary>
     public TaskbarQuerySchedule Answered(TaskbarAnchors? answer) =>
-        this with { Out = false, AnswerCount = Math.Min(AnswerCount + 1, 2), Before = Latest, Latest = answer };
+        this with { Unsettled = !HasAnswer || answer != LastAnswer, HasAnswer = true, LastAnswer = answer };
 
     /// <summary>The foreground window changed: the next tick asks.</summary>
     public TaskbarQuerySchedule ForegroundSwitched() => this with { SwitchPending = true };

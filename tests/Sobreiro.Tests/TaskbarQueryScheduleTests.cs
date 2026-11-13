@@ -35,5 +35,11 @@ public class TaskbarQueryScheduleTests
     [Fact] public void A_switch_while_a_question_is_out_asks_again_after_the_answer() =>
         Assert.True(Settled(A, 0).Asked(S(16)).ForegroundSwitched().Answered(A).Due(S(18)));
     [Fact] public void A_clock_that_went_back_is_not_due() => Assert.False(Settled(A, 100).Due(S(50)));
+    [Fact] public void A_lost_answer_is_asked_again_after_15_seconds()
+    {
+        var asked = Settled(A, 0).Asked(S(16));
+        Assert.False(asked.Due(S(18)));
+        Assert.True(asked.Due(S(31)));
+    }
     [Fact] public void The_slow_check_is_15_seconds() => Assert.Equal(S(15), TaskbarQuerySchedule.SlowCheck);
 }
