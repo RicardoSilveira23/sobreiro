@@ -5,13 +5,15 @@ using Sobreiro.Core.Copilot;
 namespace Sobreiro.Copilot;
 
 /// <summary>
-/// Reads the Copilot CLI's sign-in from Windows Credential Manager. Target names are never logged or returned, and
-/// each blob copy is zeroed after use.
+/// Reads the Copilot CLI's sign-in from Windows Credential Manager. Target names are never logged or returned,
+/// each blob copy is zeroed after use, and the decoded text is cleared by <see cref="CopilotToken.FromBlob(ReadOnlySpan{byte})"/>.
 /// </summary>
 internal static class CredentialStore
 {
-    private const int ErrorNotFound = 1168;
     private const uint CredTypeGeneric = 1;
+
+    // Fixed text: nothing read from Credential Manager is ever in an exception.
+    private const string ListingFailed = "Credential Manager did not list its entries.";
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Credential
@@ -37,17 +39,30 @@ internal static class CredentialStore
     [DllImport("advapi32.dll")]
     private static extern void CredFree(IntPtr buffer);
 
+    /// <summary>
+    /// The Copilot CLI's tokens. Throws when Credential Manager refuses a listing, so the poll logs "error" and
+    /// not "none": a refusal is not the same as finding nothing.
+    /// </summary>
     public static TokenSearch CopilotTokens()
     {
         var tokens = new List<string>();
         var entryFound = false;
-        if (!CredEnumerateW("copilot-cli*", 0, out var count, out var list))
+        if (!CredEnumerateW(CopilotCliCredential.Filter, 0, out var count, out var list))
         {
-            if (Marshal.GetLastWin32Error() != ErrorNotFound) return tokens;
-            // No target name starts with copilot-cli. Older versions of the CLI may name it differently, so list
-            // everything and match here: but only on a PC where the Copilot CLI has left its folder.
-            if (!CopilotCliHasBeenUsed()) return tokens;
-            if (!CredEnumerateW(null, 0, out count, out list)) return tokens;
+            switch (CopilotCliCredential.AfterFailure(Marshal.GetLastWin32Error(), CopilotCliHasBeenUsed()))
+            {
+                case ListingAnswer.NoEntry:
+                    return tokens;
+                case ListingAnswer.ListEverything:
+                    // No target name starts with copilot-cli. Older versions of the CLI may name it differently,
+                    // so list everything and match here.
+                    if (CredEnumerateW(null, 0, out count, out list)) break;
+                    if (CopilotCliCredential.AfterListingEverythingFailed(Marshal.GetLastWin32Error()) == ListingAnswer.NoEntry)
+                        return tokens;
+                    throw new InvalidOperationException(ListingFailed);
+                default:
+                    throw new InvalidOperationException(ListingFailed);
+            }
         }
 
         try
@@ -57,8 +72,7 @@ internal static class CredentialStore
                 var entry = Marshal.ReadIntPtr(list, i * IntPtr.Size);
                 var credential = Marshal.PtrToStructure<Credential>(entry);
                 if (credential.Type != CredTypeGeneric) continue;
-                var name = Marshal.PtrToStringUni(credential.TargetName);
-                if (name is null || !name.Contains("copilot-cli", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!CopilotCliCredential.IsOurs(Marshal.PtrToStringUni(credential.TargetName))) continue;
                 entryFound = true;
                 if (credential.CredentialBlob == IntPtr.Zero || credential.CredentialBlobSize == 0) continue;
 
