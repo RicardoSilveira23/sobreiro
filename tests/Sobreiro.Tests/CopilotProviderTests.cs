@@ -208,11 +208,14 @@ public class CopilotProviderTests
     public async Task A_cache_read_that_throws_counts_as_a_bad_answer()
     {
         var rig = new Rig();
-        rig.CacheFunc = () => throw new IOException("ghp_SECRET");
+        rig.CacheFunc = () => throw new InvalidOperationException("ghp_SECRET");
         var poll = await rig.Provider.PollAsync(LiveSchedule.Start(Now), Now, CancellationToken.None);
         Assert.Equal(ProviderState.BadAnswer, poll.State);
+        Assert.Equal("copilot BadAnswer Failed", poll.Log);
         poll.Keep!(Now);
         Assert.Null(rig.Provider.Shown);
+        Assert.Equal(["copilot BadAnswer Failed cache=none"], rig.Logged);
+        Assert.DoesNotContain(rig.Logged, line => line.Contains("ghp_SECRET"));
     }
 
     [Fact]

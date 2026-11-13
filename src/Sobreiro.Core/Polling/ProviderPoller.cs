@@ -96,6 +96,7 @@ public sealed class ProviderPoller : IDisposable
 
     internal void Complete(PollRun run, Task<ProviderPoll> task, DateTimeOffset now)
     {
+        if (!ReferenceEquals(run, _poll)) return; // a run already handed back does nothing
         var dropped = run.Cts.IsCancellationRequested;
         run.Cts.Dispose();
         _poll = null;

@@ -30,12 +30,14 @@ public class ProviderPollerTests
     private readonly List<PollRun> _runs = [];
     private readonly List<string> _traced = [];
     private readonly List<string> _order = [];
+    private readonly List<(ProviderState State, int Misses)> _atRedraw = [];
     private int _changed;
     private readonly ProviderPoller _poller;
 
     public ProviderPollerTests()
     {
-        _poller = new ProviderPoller(_provider, _runs.Add, () => { _changed++; _order.Add("changed"); }, _traced.Add);
+        _poller = new ProviderPoller(
+            _provider, _runs.Add, () => { _changed++; _order.Add("changed"); _atRedraw.Add((_poller!.State, _poller.Misses)); }, _traced.Add);
     }
 
     private static ProviderPoll Ok(DateTimeOffset at, Action<DateTimeOffset>? keep = null) =>
@@ -86,14 +88,15 @@ public class ProviderPollerTests
     {
         var kept = new List<DateTimeOffset>();
         _poller.Start(Now);
-        var poll = Ok(Now) with
+        var poll = new ProviderPoll(
+            LiveSchedule.Start(Now).AfterNoCredentials(Now), ProviderState.RateLimited, "fake Ok")
         {
-            State = ProviderState.RateLimited,
             Keep = at => { kept.Add(at); _order.Add("keep"); },
         };
         _runs[0].Done(Task.FromResult(poll), Now.AddSeconds(3));
 
         Assert.Equal(ProviderState.RateLimited, _poller.State);
+        Assert.Equal([(ProviderState.RateLimited, 1)], _atRedraw);
         Assert.Equal([Now.AddSeconds(3)], kept);
         Assert.Equal(1, _changed);
         Assert.Equal(["fake Ok"], _traced);
@@ -212,11 +215,36 @@ public class ProviderPollerTests
     }
 
     [Fact]
-    public void After_dispose_nothing_happens()
+    public void A_run_handed_back_twice_does_nothing_the_second_time()
     {
         var kept = 0;
         _poller.Start(Now);
+        _runs[0].Done(Task.FromResult(Ok(Now)), Now);
+        _poller.Tick(Now.AddMinutes(5));
+        Assert.Equal(2, _runs.Count);
+        Assert.Equal(1, _changed);
+
+        _runs[0].Done(Task.FromResult(Ok(Now) with { State = ProviderState.RateLimited, Keep = _ => kept++ }), Now.AddMinutes(5));
+
+        Assert.Equal(ProviderState.Ok, _poller.State);
+        Assert.Equal(0, kept);
+        Assert.Equal(1, _changed);
+        _poller.Tick(Now.AddHours(5));
+        Assert.Equal(2, _runs.Count);
+
+        _runs[1].Done(Task.FromResult(Ok(Now) with { State = ProviderState.Expired }), Now.AddHours(5));
+        Assert.Equal(ProviderState.Expired, _poller.State);
+        Assert.Equal(2, _changed);
+    }
+
+    [Fact]
+    public async Task After_dispose_nothing_happens()
+    {
+        var kept = 0;
+        _poller.Start(Now);
+        await _runs[0].RunAsync();
         _poller.Dispose();
+        Assert.True(_provider.Tokens[0].IsCancellationRequested);
         _runs[0].Done(Task.FromResult(Ok(Now, _ => kept++)), Now.AddSeconds(1));
 
         Assert.Equal(0, kept);

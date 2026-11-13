@@ -149,8 +149,8 @@ Known limits, stated in the README:
 - `Sobreiro.Core`: shared library holding the `usage.json` model, parsing, window state
   (reset passed, age, colour level) and the settings.json editor. The UI consumes a
   provider-neutral list of limits (provider, label, percent, resets at, observed at), so a
-  second provider adds a source rather than a new UI. Build no provider interface until a
-  second provider exists.
+  second provider adds a source rather than a new UI. Copilot is the second: since 2026-11-13
+  both sit behind one interface in `Sobreiro.Core.Polling`.
 - `Sobreiro.Tests`: xUnit tests for Core.
 - `Sobreiro.Baseline`: console tool, not shipped. It measures a release build for
   [baseline.md](baseline.md); `scripts/baseline.ps1` runs it.
