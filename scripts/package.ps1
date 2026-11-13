@@ -11,11 +11,16 @@
   Optional git tag. Must be v<version> or v<version>-<suffix>, else the script fails.
 .PARAMETER KeepBridge
   Also leaves sobreiro-bridge.exe in OutputDir, for scripts/baseline.ps1 to measure.
+.PARAMETER Compression
+  Off (default) stores what the single file carries as it is; On compresses it. Compressed,
+  the exe is less than half the size, but the app unpacks itself into memory at every start
+  and stays about 80 MB heavier: docs/baseline.md, under Experiments.
 #>
 param(
     [string]$OutputDir = 'dist',
     [string]$Tag,
-    [switch]$KeepBridge
+    [switch]$KeepBridge,
+    [ValidateSet('On', 'Off')][string]$Compression = 'Off'
 )
 
 Set-StrictMode -Version Latest
@@ -74,8 +79,9 @@ if ((Test-Path -LiteralPath (Join-Path $vsInstaller 'vswhere.exe')) -and -not (G
     -p:PublishAot=true -o "$bridgeOut"
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish of the bridge failed (exit $LASTEXITCODE)" }
 
+$compress = if ($Compression -eq 'On') { 'true' } else { 'false' }
 & dotnet publish "$(Join-Path $repoRoot 'src/Sobreiro')" -c Release -r win-x64 --self-contained true `
-    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
+    -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=$compress `
     -p:BridgeExe="$(Join-Path $bridgeOut 'sobreiro-bridge.exe')" -o "$trayOut"
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish of the tray failed (exit $LASTEXITCODE)" }
 

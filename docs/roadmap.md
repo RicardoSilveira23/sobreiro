@@ -6,8 +6,10 @@ see [Not in this roadmap](#not-in-this-roadmap).
 
 ## Where it stands
 
-Checked on 2026-11-13 against 0.10.0. The process figures are its row in
-[baseline.md](baseline.md), which also says how each one is taken.
+Checked on 2026-11-13 against 0.10.0 as `main` now packages it: the bridge with Native AOT and
+the tray without single-file compression. The process figures are the newest rows in
+[baseline.md](baseline.md), which also says how each one is taken. 0.10.0 as released measured
+184 MB private memory, an 80.4 MB `Sobreiro.exe` and a 17.0 MB bridge.
 
 | What | Value |
 |---|---|
@@ -16,15 +18,16 @@ Checked on 2026-11-13 against 0.10.0. The process figures are its row in
 | Tray app | WPF and WinForms, native calls in 12 files (pill, flyout, autostart, Credential Manager, theme) |
 | Tests | 660, all against Core. CI runs on Windows only |
 | Polling | Every 5 minutes, 2-minute retry, stepped back-off on rate limits |
-| Memory | 184 MB private, 331 MB working set, after 10 minutes idle and still rising slowly |
-| CPU | 1.5 s in the first minute, then 13.9 s per idle hour |
-| Start | 0.55 s from launch to the first pill; 0.62 s on the first start |
-| Files | `Sobreiro.exe` 80.4 MB, `sobreiro-bridge.exe` 17.0 MB; one bridge run takes 43 ms |
+| Memory | 98 MB private, 174 MB working set, after 10 minutes idle and still rising slowly |
+| CPU | 1.1 s in the first minute, then 13.0 s per idle hour |
+| Start | 0.38 s from launch to the first pill; 0.84 s on the first start |
+| Files | `Sobreiro.exe` 168.9 MB, `sobreiro-bridge.exe` 2.2 MB; one bridge run takes 9 ms |
 
 ## What decides the order
 
 - **The memory is the runtime and the UI toolkit, not the logic.** Core does one HTTP call per
-  provider every 5 minutes. Moving Core alone to another language leaves the 184 MB where it is.
+  provider every 5 minutes. Moving Core alone to another language leaves the 98 MB where it is.
+  (It was 184 MB while the exe was compressed: 83 MB of that was the exe unpacked into memory.)
 - **Core is small and nearly OS-neutral.** Sharing it across systems is the easy part.
 - **The pill is the product, and the part most tied to Windows.** Any new shell is judged on
   the pill first.
@@ -41,7 +44,9 @@ Stays on C#, WPF and .NET 10.
 - Two packaging experiments, each kept only if the baseline improves:
   - publish the bridge with Native AOT, as plan.md describes. Done and kept on 2026-11-13:
     17.0 MB and 43 ms became 2.2 MB and 9 ms;
-  - publish the tray without single-file compression.
+  - publish the tray without single-file compression. Done and kept on 2026-11-13: private
+    memory went from 181 MB to 98 MB and a later start from 0.54 s to 0.38 s, for an exe of
+    168.9 MB where it was 73.7 MB.
 - Defined, tested behaviour for each way the data can stop: an endpoint that changes or
   refuses, an expired Claude Code token, no sign-in at all. The pill says which one it is.
 - A provider interface in Core, now that there are two providers.
@@ -51,18 +56,21 @@ Stays on C#, WPF and .NET 10.
 
 | Measure | Baseline (0.10.0) | Target |
 |---|---|---|
-| Private memory, 10 min idle | 184 MB | 150 MB or less |
+| Private memory, 10 min idle | 184 MB | 150 MB or less (met without compression: 98 MB) |
 | CPU per idle hour | 13.9 s | 5 s or less |
-| Start to first pill | 0.55 s | 1 s or less, the first start included |
+| Start to first pill | 0.55 s | 1 s or less, the first start included (without compression: 0.38 s, first start 0.84 s) |
 | Bridge exe | 17.0 MB, runs in 43 ms | 5 MB or less, runs in 15 ms or less (met with Native AOT: 2.2 MB, 9 ms) |
 
 The targets were checked against the first baseline row on 2026-11-13:
 
-- **Memory and CPU: kept, and not yet covered.** No item in the list above lowers either. The
-  two packaging experiments change size and start time only. Each target needs a change of its
-  own, measured the same way, or it is given up in writing before 1.0. The steady processor
-  time, about 0.2 s a minute, most likely comes from checking the taskbar every 2 seconds; it
-  has not been profiled.
+- **Memory: kept, and met on 2026-11-13.** Publishing the tray without compression brought it
+  to 98 MB. That was not expected when the targets were checked: the packaging experiments were
+  thought to change size and start time only.
+- **CPU: kept, and not yet covered.** No item in the list above lowers it; the tray measured
+  13.0 s to 15.8 s per idle hour on 2026-11-13 whichever way it was packaged. The target needs
+  a change of its own, measured the same way, or it is given up in writing before 1.0. The
+  steady processor time, about 0.2 s a minute, most likely comes from checking the taskbar
+  every 2 seconds; it has not been profiled.
 - **Start to first pill: tightened.** The first run measured 0.55 s, so 2 s would have let the
   start get three times slower unnoticed.
 - **Bridge: the 50 ms line is dropped.** The 0.10.0 bridge already ran in 43 ms, so that line
