@@ -6,8 +6,8 @@ see [Not in this roadmap](#not-in-this-roadmap).
 
 ## Where it stands
 
-Checked on 2026-11-13 against 0.10.0 as `main` now packages it: the bridge with Native AOT and
-the tray without single-file compression. The process figures are the newest rows in
+Checked on 2026-11-13 against 1.0.0, which publishes the bridge with Native AOT and the tray
+without single-file compression. The process figures are the newest row in
 [baseline.md](baseline.md), which also says how each one is taken. 0.10.0 as released measured
 184 MB private memory, an 80.4 MB `Sobreiro.exe` and a 17.0 MB bridge.
 
@@ -18,15 +18,15 @@ the tray without single-file compression. The process figures are the newest row
 | Tray app | WPF and WinForms, native calls in 12 files (pill, flyout, autostart, Credential Manager, theme) |
 | Tests | 956, all against Core. CI runs on Windows only |
 | Polling | Every 5 minutes, 2-minute retry, stepped back-off on rate limits |
-| Memory | 98 MB private, 174 MB working set, after 10 minutes idle and still rising slowly |
-| CPU | 1.1 s in the first minute, then 13.0 s per idle hour |
-| Start | 0.38 s from launch to the first pill; 0.84 s on the first start |
+| Memory | 97 MB private, 173 MB working set, after 10 minutes idle and still rising slowly |
+| CPU | 1.1 s in the first minute, then 14.9 s per idle hour |
+| Start | 0.40 s from launch to the first pill; 0.43 s on the first start |
 | Files | `Sobreiro.exe` 168.9 MB, `sobreiro-bridge.exe` 2.2 MB; one bridge run takes 9 ms |
 
 ## What decides the order
 
 - **The memory is the runtime and the UI toolkit, not the logic.** Core does one HTTP call per
-  provider every 5 minutes. Moving Core alone to another language leaves the 98 MB where it is.
+  provider every 5 minutes. Moving Core alone to another language leaves the 97 MB where it is.
   (It was 184 MB while the exe was compressed: 83 MB of that was the exe unpacked into memory.)
 - **Core is small and nearly OS-neutral.** Sharing it across systems is the easy part.
 - **The pill is the product, and the part most tied to Windows.** Any new shell is judged on
@@ -107,9 +107,9 @@ the others, first on paper and then in running code.
 ### Carried over from 1.0: idle CPU
 
 5 s of processor time or less per idle hour, measured with the baseline script as before. 1.0
-shipped at 13.0 s to 15.8 s. Profile the idle tray first; the taskbar check every 2 seconds is
-the suspect, not the finding. It does not wait for the shell decision: whatever lowers it on
-the current shell is worth having in a 1.x release.
+shipped at 14.9 s (13.0 s to 15.8 s across the runs of 2026-11-13). Profile the idle tray
+first; the taskbar check every 2 seconds is the suspect, not the finding. It does not wait for
+the shell decision: whatever lowers it on the current shell is worth having in a 1.x release.
 
 ### Step 1: compare on paper
 
