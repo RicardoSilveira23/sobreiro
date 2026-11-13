@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- SPIKE (shell candidate A): throwaway. The tray icon, the pill and the flyout on Avalonia, Core untouched. Never merged. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Sobreiro</AssemblyName>
+    <RootNamespace>Sobreiro.SpikeA</RootNamespace>
+    <ApplicationManifest>..\Sobreiro\app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\Sobreiro\Assets\sobreiro.ico</ApplicationIcon>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Warnings are the spike's findings: they are recorded, not fixed. -->
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TieredCompilation>false</TieredCompilation>
+    <PublishAot Condition="'$(SpikeNoAot)' != 'true'">true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Win32" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.HarfBuzz" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="..\Sobreiro\Fonts\*.ttf" Link="Fonts\%(Filename)%(Extension)" />
+    <Compile Include="..\Sobreiro\WindowsTheme.cs" Link="Linked\WindowsTheme.cs" />
+    <Compile Include="..\Sobreiro\Copilot\CredentialStore.cs" Link="Linked\CredentialStore.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sobreiro.Core\Sobreiro.Core.csproj" />
+  </ItemGroup>
+</Project>
