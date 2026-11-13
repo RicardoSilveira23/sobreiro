@@ -112,20 +112,20 @@ public class FlyoutModelTests
 
     [Theory]
     [InlineData(LiveState.Ok, "No numbers yet.")]
-    [InlineData(LiveState.NoSignIn, "No numbers yet. Live usage needs Claude Code to be signed in.")]
-    [InlineData(LiveState.Refused, "No numbers yet. Anthropic didn't accept Claude Code's sign-in. Live usage waits for a new one.")]
-    [InlineData(LiveState.Failing, "No numbers yet. Live usage can't reach Anthropic.")]
+    [InlineData(LiveState.NoSignIn, "No numbers yet. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.")]
+    [InlineData(LiveState.Refused, "No numbers yet. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.")]
+    [InlineData(LiveState.Offline, "No numbers yet. Sobreiro can't reach Anthropic. Check the connection; it tries again every 2 minutes.")]
     public void Footer_without_limits_with_live_usage_on(LiveState live, string expected) =>
         Assert.Equal(expected, FlyoutModel.From(LimitList.From(null, Now), Now, TimeZoneInfo.Utc, En, live).Footer);
 
     [Fact]
     public void Footer_adds_the_refused_sentence_after_the_age() =>
-        Assert.Equal("Updated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Live usage waits for a new one.",
+        Assert.Equal("Updated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.",
             FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now.AddSeconds(-180)), Now), Now, TimeZoneInfo.Utc, En, LiveState.Refused).Footer);
 
     [Fact]
     public void Footer_adds_the_live_sentence() =>
-        Assert.Equal("Updated 3 min ago. Live usage is paused until Claude Code renews its sign-in.",
+        Assert.Equal("Updated 3 min ago. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.",
             FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now.AddSeconds(-180)), Now), Now, TimeZoneInfo.Utc, En, LiveState.Expired).Footer);
 
     [Fact]

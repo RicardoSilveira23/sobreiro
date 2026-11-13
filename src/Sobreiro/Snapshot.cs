@@ -316,7 +316,33 @@ internal static class Snapshot
             pill.Margin = new Thickness(0, 0, 24, 0);
             row.Children.Add(pill);
         }
-        return new Border { Background = Solid(light ? "#F0F0F0" : "#1C1C1C"), Padding = new Thickness(16, 8, 16, 8), Child = row };
+
+        // Second row: every stopped Claude block, then a stopped Claude block beside a stopped Copilot one.
+        var stopped = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+        var old = now.AddDays(-3);
+        var oldReadings = new[] { Reading(LimitKind.Session, 37, old), Reading(LimitKind.Weekly, 61, old) };
+        var oldCredits = LimitList.FromCopilot(CopilotSample(now) with { ObservedAt = old }, now);
+        var states = new[]
+        {
+            LiveState.Expired, LiveState.NoSignIn, LiveState.Refused,
+            LiveState.Offline, LiveState.BadAnswer, LiveState.RateLimited,
+        };
+        foreach (var state in states)
+            stopped.Children.Add(StoppedPill(oldReadings, state, CopilotState.Ok, colours, now));
+        stopped.Children.Add(StoppedPill(oldReadings.Concat(oldCredits).ToList(), LiveState.Refused, CopilotState.Offline, colours, now));
+
+        var rows = new StackPanel();
+        rows.Children.Add(row);
+        rows.Children.Add(stopped);
+        return new Border { Background = Solid(light ? "#F0F0F0" : "#1C1C1C"), Padding = new Thickness(16, 8, 16, 8), Child = rows };
+    }
+
+    private static FrameworkElement StoppedPill(
+        IReadOnlyList<Limit> limits, LiveState live, CopilotState copilot, TaskbarColours colours, DateTimeOffset now)
+    {
+        var pill = PillView.Build(PillModel.From(limits, TimeZoneInfo.Local, true, live, PillWords.MissesNeeded, copilot, PillWords.MissesNeeded, now), colours);
+        pill.Margin = new Thickness(0, 0, 24, 0);
+        return pill;
     }
 
     private static Limit Reading(LimitKind kind, int percent, DateTimeOffset now) =>

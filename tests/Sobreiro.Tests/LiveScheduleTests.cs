@@ -188,4 +188,37 @@ public class LiveScheduleTests
         Assert.False(s.FetchOnOpen(T0.AddMinutes(2)));
         Assert.True(s.FetchOnOpen(T0.AddMinutes(5)));
     }
+
+    [Fact]
+    public void Start_has_no_misses() => Assert.Equal(0, LiveSchedule.Start(T0).Misses);
+
+    [Fact]
+    public void A_success_after_misses_gives_zero()
+    {
+        var s = LiveSchedule.Start(T0).AfterNoReading(T0).AfterNoReading(T0.AddMinutes(5)).AfterFetch(Ok, T0.AddMinutes(10));
+        Assert.Equal(0, s.Misses);
+    }
+
+    [Theory]
+    [InlineData(LiveOutcome.RateLimited)]
+    [InlineData(LiveOutcome.Failed)]
+    [InlineData(LiveOutcome.Unreachable)]
+    public void Each_failed_outcome_adds_a_miss(LiveOutcome outcome) =>
+        Assert.Equal(1, LiveSchedule.Start(T0).AfterFetch(new LiveResult(outcome, null, null), T0).Misses);
+
+    [Fact]
+    public void No_credentials_refused_and_no_reading_each_add_a_miss()
+    {
+        Assert.Equal(1, LiveSchedule.Start(T0).AfterNoCredentials(T0).Misses);
+        Assert.Equal(1, LiveSchedule.Start(T0).AfterRefused(T0.AddHours(1), T0).Misses);
+        Assert.Equal(1, LiveSchedule.Start(T0).AfterNoReading(T0).Misses);
+    }
+
+    [Fact]
+    public void Three_failures_in_a_row_give_three()
+    {
+        var failed = new LiveResult(LiveOutcome.Failed, null, null);
+        var s = LiveSchedule.Start(T0).AfterFetch(failed, T0).AfterFetch(failed, T0.AddMinutes(2)).AfterFetch(failed, T0.AddMinutes(4));
+        Assert.Equal(3, s.Misses);
+    }
 }

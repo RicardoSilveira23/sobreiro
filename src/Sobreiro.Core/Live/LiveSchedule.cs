@@ -8,9 +8,10 @@ public sealed record RefusedSignIn(DateTimeOffset? ExpiresAt);
 /// max(Retry-After, step) with step 5, 10, 20, 30, 30... minutes; a success resets the step. WaitUntil is set while
 /// a wait after a 429 or a failure runs; opening the flyout does not cut it short. Refused holds the sign-in a
 /// 401 or 403 turned down: it is not sent again, and the file is read every minute until it gives a new one.
+/// Misses counts the polls in a row that brought no reading; a success resets it.
 /// </summary>
 public sealed record LiveSchedule(
-    DateTimeOffset NextDue, DateTimeOffset? LastSuccess, int RateLimitStep, DateTimeOffset? WaitUntil, RefusedSignIn? Refused = null)
+    DateTimeOffset NextDue, DateTimeOffset? LastSuccess, int RateLimitStep, DateTimeOffset? WaitUntil, RefusedSignIn? Refused = null, int Misses = 0)
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan RetryInterval = TimeSpan.FromMinutes(2);
@@ -39,7 +40,7 @@ public sealed record LiveSchedule(
         switch (result.Outcome)
         {
             case LiveOutcome.Ok:
-                return new LiveSchedule(now + Interval, now, 0, null);
+                return new LiveSchedule(now + Interval, now, 0, null, null, 0);
             case LiveOutcome.Unauthorized:
                 throw new ArgumentException("A refused sign-in goes through AfterRefused.", nameof(result));
             case LiveOutcome.RateLimited:
@@ -51,9 +52,10 @@ public sealed record LiveSchedule(
                     WaitUntil = now + wait,
                     RateLimitStep = Math.Min(RateLimitStep + 1, StepMinutes.Length),
                     Refused = null,
+                    Misses = Misses + 1,
                 };
             default:
-                return this with { NextDue = now + RetryInterval, WaitUntil = now + RetryInterval, Refused = null };
+                return this with { NextDue = now + RetryInterval, WaitUntil = now + RetryInterval, Refused = null, Misses = Misses + 1 };
         }
     }
 
@@ -63,12 +65,12 @@ public sealed record LiveSchedule(
 
     /// <summary>No sign-in to send (none, expired, or the refused one): read the file again in a minute.</summary>
     public LiveSchedule AfterNoCredentials(DateTimeOffset now) =>
-        this with { NextDue = now + NoCredentialsInterval, WaitUntil = null };
+        this with { NextDue = now + NoCredentialsInterval, WaitUntil = null, Misses = Misses + 1 };
 
     /// <summary>
     /// A Copilot poll that found nothing to show (no sign-in, or none GitHub accepted): ask again in five minutes,
     /// and opening the flyout does not ask sooner.
     /// </summary>
     public LiveSchedule AfterNoReading(DateTimeOffset now) =>
-        this with { NextDue = now + Interval, WaitUntil = now + Interval, Refused = null };
+        this with { NextDue = now + Interval, WaitUntil = now + Interval, Refused = null, Misses = Misses + 1 };
 }

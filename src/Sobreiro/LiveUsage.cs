@@ -37,6 +37,8 @@ internal sealed class LiveUsage : IDisposable
     /// <summary>Ok until the first poll answers.</summary>
     public LiveState State { get; private set; } = LiveState.Ok;
 
+    public int Misses => _schedule?.Misses ?? 0;
+
     private bool IsOn => _schedule is not null;
 
     public void Start(DateTimeOffset now)
@@ -101,7 +103,7 @@ internal sealed class LiveUsage : IDisposable
             // LivePoll throws only for cancellation; anything else counts as a failure. Its text stays out of the log.
             Debug.WriteLine($"Sobreiro: Live usage poll threw {task.Exception?.InnerException?.GetType().Name}");
             result = new LivePollResult(
-                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), LiveState.Failing, null, nameof(LiveOutcome.Failed));
+                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), LiveState.BadAnswer, null, nameof(LiveOutcome.Failed));
         }
 
         _schedule = result.Schedule;

@@ -50,8 +50,16 @@ public static class PillView
         if (model.ShowClaude)
         {
             var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            lines.Children.Add(Line(model.Session, ink));
-            lines.Children.Add(Line(model.Weekly, ink));
+            if (model.ClaudeWords is { } words)
+            {
+                lines.Children.Add(Word(words.Top, ink));
+                lines.Children.Add(Word(words.Bottom, ink));
+            }
+            else
+            {
+                lines.Children.Add(Line(model.Session, ink));
+                lines.Children.Add(Line(model.Weekly, ink));
+            }
 
             var rings = Rings(model.Rings, colours);
             rings.Margin = new Thickness(TextToRings, 0, 0, 0);
@@ -80,16 +88,24 @@ public static class PillView
     {
         var ink = colours.Ink;
         var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        lines.Children.Add(Line(copilot.Credits, ink));
-        lines.Children.Add(new TextBlock
+        if (copilot.Words is { } words)
         {
-            Text = copilot.ResetDate,
-            Foreground = Solid(ink, ResetAlpha),
-            FontFamily = Inter,
-            FontSize = ResetSize,
-            TextAlignment = TextAlignment.Right,
-            HorizontalAlignment = HorizontalAlignment.Right,
-        });
+            lines.Children.Add(Word(words.Top, ink));
+            lines.Children.Add(Word(words.Bottom, ink));
+        }
+        else
+        {
+            lines.Children.Add(Line(copilot.Credits, ink));
+            lines.Children.Add(new TextBlock
+            {
+                Text = copilot.ResetDate,
+                Foreground = Solid(ink, ResetAlpha),
+                FontFamily = Inter,
+                FontSize = ResetSize,
+                TextAlignment = TextAlignment.Right,
+                HorizontalAlignment = HorizontalAlignment.Right,
+            });
+        }
 
         var bar = LevelBar(copilot, colours);
         bar.Margin = new Thickness(TextToRings, 0, 0, 0);
@@ -130,6 +146,17 @@ public static class PillView
         }
         return canvas;
     }
+
+    // One word of a stopped block, in the label's font and size.
+    private static TextBlock Word(string text, Rgb ink) => new()
+    {
+        Text = text,
+        Foreground = Solid(ink),
+        FontFamily = Inter,
+        FontSize = LabelSize,
+        TextAlignment = TextAlignment.Right,
+        HorizontalAlignment = HorizontalAlignment.Right,
+    };
 
     private static TextBlock Line(PillLine line, Rgb ink)
     {

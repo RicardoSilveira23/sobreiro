@@ -30,14 +30,15 @@ public class CopilotStateTests
     [Fact]
     public void Problem_comes_before_source() =>
         Assert.Equal(
-            "Can't reach GitHub. From the Copilot CLI, as of 09:25.",
-            Line(CopilotState.Failing, Reading(Seen, CopilotSource.Cache)));
+            "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes. From the Copilot CLI, as of 09:25.",
+            Line(CopilotState.Offline, Reading(Seen, CopilotSource.Cache)));
 
     [Theory]
-    [InlineData(CopilotState.NoSignIn, "No GitHub sign-in Sobreiro can use.")]
-    [InlineData(CopilotState.Refused, "GitHub didn't accept the sign-in.")]
-    [InlineData(CopilotState.Failing, "Can't reach GitHub.")]
-    [InlineData(CopilotState.RateLimited, "GitHub asked Sobreiro to wait.")]
+    [InlineData(CopilotState.NoSignIn, "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.")]
+    [InlineData(CopilotState.Refused, "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.")]
+    [InlineData(CopilotState.RateLimited, "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.")]
+    [InlineData(CopilotState.Offline, "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.")]
+    [InlineData(CopilotState.BadAnswer, "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.")]
     public void Each_problem_has_its_sentence(CopilotState state, string sentence) =>
         Assert.Equal(sentence, Line(state, Reading(Now)));
 

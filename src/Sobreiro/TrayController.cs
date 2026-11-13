@@ -329,7 +329,7 @@ internal sealed class TrayController : IDisposable
         if (showClaude) parts.Add(TooltipText.Render(limits, now, zone, culture, legacy));
         if (limits.FirstOrDefault(l => l.Kind == LimitKind.Credits) is { } credits)
             parts.Add(TooltipText.RenderCopilot(credits, now, zone, culture));
-        _pill.Update(PillModel.From(limits, zone, showClaude), colours, string.Join("\n", parts));
+        _pill.Update(PillModel.From(limits, zone, showClaude, _live.State, _live.Misses, _copilot.State, _copilot.Misses, now), colours, string.Join("\n", parts));
     }
 
     private void UpdateFlyout(

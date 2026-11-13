@@ -56,11 +56,16 @@ public static class CopilotPoll
                         return Done(
                             schedule.AfterFetch(new LiveResult(LiveOutcome.RateLimited, null, fetch.RetryAfter), now),
                             CopilotState.RateLimited, null, results);
+                    case CopilotOutcome.Unreachable:
+                        results[signIn.Kind] = "unreachable";
+                        return Done(
+                            schedule.AfterFetch(new LiveResult(LiveOutcome.Unreachable, null, null), now),
+                            CopilotState.Offline, null, results);
                     default:
                         results[signIn.Kind] = "failed";
                         return Done(
                             schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now),
-                            CopilotState.Failing, null, results);
+                            CopilotState.BadAnswer, null, results);
                 }
             }
         }

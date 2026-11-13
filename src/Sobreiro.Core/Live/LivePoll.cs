@@ -48,7 +48,8 @@ public static class LivePoll
         {
             LiveOutcome.Ok => LiveState.Ok,
             LiveOutcome.RateLimited => LiveState.RateLimited,
-            _ => LiveState.Failing,
+            LiveOutcome.Unreachable => LiveState.Offline,
+            _ => LiveState.BadAnswer,
         };
         return new LivePollResult(
             schedule.AfterFetch(result, now), state, result.Outcome == LiveOutcome.Ok ? result.Limits : null, result.Outcome.ToString());

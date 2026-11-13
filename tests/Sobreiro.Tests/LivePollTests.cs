@@ -156,15 +156,14 @@ public class LivePollTests : IDisposable
     [Theory]
     [InlineData(HttpStatusCode.InternalServerError)]
     [InlineData(HttpStatusCode.Found)]
-    public async Task Other_replies_are_failing_and_retry_in_two_minutes(HttpStatusCode code)
+    public async Task Other_replies_are_a_bad_answer_and_retry_in_two_minutes(HttpStatusCode code)
     {
         var path = ValidCredentials();
         var handler = new CountingHandler(() => Reply(code));
         var result = await Run(path, handler, _start);
 
         Assert.Single(handler.Seen);
-        Assert.Equal(LiveState.Failing, result.State);
-        Assert.Equal("Live usage can't reach Anthropic.", LiveStateText.Footer(result.State));
+        Assert.Equal(LiveState.BadAnswer, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Equal("Failed", result.Outcome);
@@ -176,14 +175,35 @@ public class LivePollTests : IDisposable
     }
 
     [Fact]
-    public async Task An_unreachable_host_is_failing()
+    public async Task A_200_with_an_unexpected_body_is_a_bad_answer()
+    {
+        var handler = new CountingHandler(() => Reply(HttpStatusCode.OK, "{\"unexpected\":true}"));
+        var result = await Run(ValidCredentials(), handler, _start);
+
+        Assert.Equal(LiveState.BadAnswer, result.State);
+        Assert.Null(result.Limits);
+        Assert.Equal("Failed", result.Outcome);
+    }
+
+    [Fact]
+    public async Task A_request_timing_out_is_offline()
+    {
+        var handler = new CountingHandler(() => throw new TaskCanceledException("timed out"));
+        var result = await Run(ValidCredentials(), handler, _start);
+
+        Assert.Equal(LiveState.Offline, result.State);
+        Assert.Null(result.Limits);
+        Assert.Equal("Unreachable", result.Outcome);
+    }
+
+    [Fact]
+    public async Task An_unreachable_host_is_offline()
     {
         var path = ValidCredentials();
         var handler = new CountingHandler(() => throw new HttpRequestException("no route"));
         var result = await Run(path, handler, _start);
 
-        Assert.Equal(LiveState.Failing, result.State);
-        Assert.Equal("Live usage can't reach Anthropic.", LiveStateText.Footer(result.State));
+        Assert.Equal(LiveState.Offline, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Equal("Unreachable", result.Outcome);
