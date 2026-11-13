@@ -75,6 +75,7 @@ Notes on an experiment:
 
 - **Bridge with Native AOT: kept.** Both figures improved: 17.0 MB to 2.2 MB, and a run from
   43 ms to 9 ms. `Sobreiro.exe`, which carries the bridge, went from 80.4 MB to 73.7 MB. The
-  Native AOT bridge was built by CI and timed on the PC above, which has no MSVC linker; the
-  73.7 MB is the size CI printed for its own build. Both rows are bridge-only runs: the tray was
-  not started, since the change does not touch it.
+  Native AOT bridge in the row was built by CI and timed on the PC above, which had no MSVC
+  linker then; the 73.7 MB is the size CI printed for its own build. A build on that PC later
+  the same day, with the linker installed, gave the same three figures. Both rows are
+  bridge-only runs: the tray was not started, since the change does not touch it.
