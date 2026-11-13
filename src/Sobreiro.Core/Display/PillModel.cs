@@ -16,17 +16,18 @@ public sealed record PillModel(PillLine Session, PillLine Weekly, RingsModel Rin
     private const string Dash = "–";
 
     public static PillModel From(IReadOnlyList<Limit> limits, TimeZoneInfo zone, bool showClaude) =>
-        From(limits, zone, showClaude, LiveState.Off, CopilotState.Ok, DateTimeOffset.UnixEpoch);
+        // Off and Ok never give words, so the placeholder time is never read.
+        From(limits, zone, showClaude, LiveState.Off, 0, CopilotState.Ok, 0, DateTimeOffset.UnixEpoch);
 
     /// <summary>As above, and a block whose numbers have stopped carries its two words and an empty ring or bar.</summary>
     public static PillModel From(IReadOnlyList<Limit> limits, TimeZoneInfo zone, bool showClaude,
-        LiveState live, CopilotState copilot, DateTimeOffset now)
+        LiveState live, int liveMisses, CopilotState copilot, int copilotMisses, DateTimeOffset now)
     {
-        var claudeWords = PillWords.ForClaude(live, limits, now);
+        var claudeWords = PillWords.ForClaude(live, limits, now, liveMisses);
         var credits = limits.FirstOrDefault(l => l.Kind == LimitKind.Credits);
         return From(claudeWords is null ? limits : []) with
         {
-            Copilot = CopilotBlock(credits, zone, PillWords.ForCopilot(copilot, credits, now)),
+            Copilot = CopilotBlock(credits, zone, PillWords.ForCopilot(copilot, credits, now, copilotMisses)),
             ShowClaude = showClaude,
             ClaudeWords = claudeWords,
         };

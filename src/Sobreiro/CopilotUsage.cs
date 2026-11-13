@@ -44,6 +44,8 @@ internal sealed class CopilotUsage : IDisposable
     /// <summary>Ok until the first poll answers.</summary>
     public CopilotState State { get; private set; } = CopilotState.Ok;
 
+    public int Misses => _schedule?.Misses ?? 0;
+
     public CopilotReading? Shown => CopilotShown.Pick(_live, _cache);
 
     public void Start(DateTimeOffset now)

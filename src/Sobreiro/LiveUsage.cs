@@ -37,6 +37,8 @@ internal sealed class LiveUsage : IDisposable
     /// <summary>Ok until the first poll answers.</summary>
     public LiveState State { get; private set; } = LiveState.Ok;
 
+    public int Misses => _schedule?.Misses ?? 0;
+
     private bool IsOn => _schedule is not null;
 
     public void Start(DateTimeOffset now)

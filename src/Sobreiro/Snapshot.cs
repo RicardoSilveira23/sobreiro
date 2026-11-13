@@ -340,7 +340,7 @@ internal static class Snapshot
     private static FrameworkElement StoppedPill(
         IReadOnlyList<Limit> limits, LiveState live, CopilotState copilot, TaskbarColours colours, DateTimeOffset now)
     {
-        var pill = PillView.Build(PillModel.From(limits, TimeZoneInfo.Local, true, live, copilot, now), colours);
+        var pill = PillView.Build(PillModel.From(limits, TimeZoneInfo.Local, true, live, PillWords.MissesNeeded, copilot, PillWords.MissesNeeded, now), colours);
         pill.Margin = new Thickness(0, 0, 24, 0);
         return pill;
     }
