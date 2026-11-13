@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -40,9 +41,42 @@ public static partial class CopilotToken
         return m.Success ? m.Value : null;
     }
 
-    /// <summary>Decodes a credential blob as UTF-8, then as UTF-16LE (BOMs ignored), and returns the first token found.</summary>
-    public static string? FromBlob(ReadOnlySpan<byte> blob) =>
-        Find(Encoding.UTF8.GetString(blob).TrimStart('﻿')) ?? Find(Encoding.Unicode.GetString(blob).TrimStart('﻿'));
+    /// <summary>
+    /// Decodes a credential blob as UTF-8, then as UTF-16LE, and returns the first token found. The decoded
+    /// text only ever lives in a buffer that is cleared before this returns: the token is the one string made.
+    /// </summary>
+    public static string? FromBlob(ReadOnlySpan<byte> blob)
+    {
+        // UTF-8 gives at most one character per byte, plus one; UTF-16 gives fewer.
+        var scratch = ArrayPool<char>.Shared.Rent(blob.Length + 1);
+        try
+        {
+            return FromBlob(blob, scratch);
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(scratch);
+        }
+    }
+
+    /// <summary>As above, decoding into <paramref name="scratch"/> (at least one longer than the blob), all of which is cleared.</summary>
+    internal static string? FromBlob(ReadOnlySpan<byte> blob, Span<char> scratch)
+    {
+        try
+        {
+            foreach (var encoding in (ReadOnlySpan<Encoding>)[Encoding.UTF8, Encoding.Unicode])
+            {
+                var text = scratch[..encoding.GetChars(blob, scratch)];
+                foreach (var match in Pattern().EnumerateMatches(text))
+                    return new string(text.Slice(match.Index, match.Length));
+            }
+            return null;
+        }
+        finally
+        {
+            scratch.Clear();
+        }
+    }
 
     /// <summary>COPILOT_GITHUB_TOKEN, GH_TOKEN, GITHUB_TOKEN in that order: trimmed, non-empty, distinct, as-is.</summary>
     public static IReadOnlyList<string> FromEnvironment(Func<string, string?> getEnv)

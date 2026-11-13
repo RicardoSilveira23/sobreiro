@@ -50,7 +50,8 @@ sign-in if it does.
   `copilot-language-server/oauth-token-key*`, and only a generic entry whose name starts with
   `copilot-language-server/oauth-token-key` is read. Sobreiro never lists every entry to find
   it (the Copilot CLI's entry keeps its own, older rule).
-- Its contents are decoded as the CLI's are: UTF-8, then UTF-16, and the first text shaped like
+- Its contents are decoded as the CLI's are, into a buffer that is cleared before the reader
+  returns: UTF-8, then UTF-16, and the first text shaped like
   a GitHub token (`gho_`, `ghu_`, `ghp_`, `github_pat_`) is the token.
 - The log line gains one word: `copilot <state> env=… credential-manager=…
   language-server=… gh=…`, with the same values as the others (`ok`, `refused`, `no-budget`,
