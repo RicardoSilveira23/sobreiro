@@ -20,6 +20,9 @@ internal static unsafe partial class TaskbarProbe
     private static IUIAutomation? _automation;
     [ThreadStatic] private static bool _comReady;
 
+    /// <summary>SOBREIRO_SPIKE_RELEASE=gc leaves the answer's COM objects to the garbage collector, as first measured.</summary>
+    private static readonly bool ReleaseAtOnce = Environment.GetEnvironmentVariable("SOBREIRO_SPIKE_RELEASE") != "gc";
+
     public static TaskbarAnchors? Query(IntPtr taskbar)
     {
         try
@@ -39,16 +42,27 @@ internal static unsafe partial class TaskbarProbe
 
             var items = new List<(string ClassName, PixelRect Rect, int ProcessId)>();
             var buttons = new List<PixelRect>();
-            var root = automation.ElementFromHandleBuildCache(taskbar, cache);
-            foreach (var level1 in Children(root))
+            var made = new List<object> { cache };
+            try
             {
-                foreach (var child in Children(level1.BuildUpdatedCache(cache)))
+                var root = Keep(made, automation.ElementFromHandleBuildCache(taskbar, cache));
+                foreach (var level1 in Children(root, made))
                 {
-                    var className = Text(child);
-                    items.Add((className, Rect(child), Number(child)));
-                    if (className != FrameClass) continue;
-                    foreach (var button in Children(child.BuildUpdatedCache(cache))) buttons.Add(Rect(button));
+                    foreach (var child in Children(Keep(made, level1.BuildUpdatedCache(cache)), made))
+                    {
+                        var className = Text(child);
+                        items.Add((className, Rect(child), Number(child)));
+                        if (className != FrameClass) continue;
+                        foreach (var button in Children(Keep(made, child.BuildUpdatedCache(cache)), made)) buttons.Add(Rect(button));
+                    }
                 }
+            }
+            finally
+            {
+                // Each element holds its cached answer in this process until it is released: waiting for
+                // the garbage collector let them pile up, about 1 MB a minute.
+                if (ReleaseAtOnce)
+                    foreach (var one in made) (one as ComObject)?.FinalRelease();
             }
             return TaskbarLayout.Anchors(bounds, items, buttons, Environment.ProcessId);
         }
@@ -72,12 +86,21 @@ internal static unsafe partial class TaskbarProbe
         }
     }
 
-    private static IEnumerable<IUIAutomationElement> Children(IUIAutomationElement element)
+    private static T Keep<T>(List<object> made, T value) where T : class
     {
+        made.Add(value);
+        return value;
+    }
+
+    private static List<IUIAutomationElement> Children(IUIAutomationElement element, List<object> made)
+    {
+        var found = new List<IUIAutomationElement>();
         var children = element.GetCachedChildren();
-        if (children is null) yield break;
+        if (children is null) return found;
+        made.Add(children);
         var count = children.Length();
-        for (var i = 0; i < count; i++) yield return children.GetElement(i);
+        for (var i = 0; i < count; i++) found.Add(Keep(made, children.GetElement(i)));
+        return found;
     }
 
     private static string Text(IUIAutomationElement element)
