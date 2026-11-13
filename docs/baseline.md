@@ -141,4 +141,5 @@ Notes on an experiment:
     took private memory from 24.5 MB to 94 MB, and it stayed at 92 to 94 MB for the five
     minutes it was watched. The row is an app whose flyout has not been opened yet.
   - `Sobreiro.exe` is 1.3 MB larger because the spike carries its fonts twice.
-  - The code is on the branch `spike/shell-f-plain-window`.
+  - The code is on the branch `spike/shell-f-plain-window`, cut from `main` at `f6c7df4`: the
+    row above it is the same code without the spike.
