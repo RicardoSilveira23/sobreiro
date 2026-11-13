@@ -30,6 +30,13 @@ public partial class App : Application
             return;
         }
 
+        // SPIKE: --spike-pill <folder> draws sample pills with WPF and by hand, side by side, and exits.
+        if (e.Args.Length == 2 && e.Args[0] == "--spike-pill")
+        {
+            Shutdown(Pill.SpikeSheet.Write(e.Args[1]));
+            return;
+        }
+
         // --media renders the product pictures and exits: no tray icon, no mutex, no network.
         if (e.Args.Length > 0 && e.Args[0] == "--media")
         {

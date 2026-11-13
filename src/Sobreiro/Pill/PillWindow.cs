@@ -15,7 +15,7 @@ namespace Sobreiro.Pill;
 /// The small borderless window over the taskbar that holds the pill. It is owned by the taskbar,
 /// never takes focus, and is placed in physical pixels by the tracker.
 /// </summary>
-internal sealed class PillWindow : Window
+internal sealed class PillWindow : Window, IPillWindow
 {
     private const double OffScreen = -32000;
     private readonly IntPtr _owner;
@@ -68,7 +68,9 @@ internal sealed class PillWindow : Window
     /// Swaps the face and leaves the window laid out and ready to measure and move: the first call
     /// shows it at its off-screen start location, without activating it.
     /// </summary>
-    public void Render(PillModel model, TaskbarColours colours, string tooltip)
+    public void SetDpi(int dpi) { }
+
+    public void Render(PillModel model, TaskbarColours colours, string tooltip, int dpi)
     {
         // Same face as last time: keep it, so a hover highlight or an open tooltip is not reset.
         if (_shown && model == _lastModel && colours == _lastColours && tooltip == _lastTooltip) return;

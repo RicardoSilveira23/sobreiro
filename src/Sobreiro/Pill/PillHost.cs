@@ -27,7 +27,8 @@ internal sealed class PillHost : IDisposable
     private readonly long _clockStart = Stopwatch.GetTimestamp();
 
     private HwndSource? _messages;
-    private PillWindow? _window;
+    private PlainMessageWindow? _plainMessages;
+    private IPillWindow? _window;
     private IntPtr _taskbar;
     private IntPtr _trayNotify;
     private IntPtr _locationHook;
@@ -76,7 +77,7 @@ internal sealed class PillHost : IDisposable
         {
             if (_window is not null && !WindowAlive(_window)) CloseWindow();
             if (_window is null) CreateWindow();
-            else _window.Render(model, colours, tooltip);
+            else _window.Render(model, colours, tooltip, TaskbarNative.DpiOf(_taskbar));
             Place();
         });
     }
@@ -92,6 +93,8 @@ internal sealed class PillHost : IDisposable
             _messages?.RemoveHook(WndProc);
             _messages?.Dispose();
             _messages = null;
+            _plainMessages?.Close();
+            _plainMessages = null;
         });
     }
 
@@ -102,7 +105,14 @@ internal sealed class PillHost : IDisposable
 
     private void Start()
     {
-        if (_messages is null)
+        if (Spike.PlainWindow)
+        {
+            _plainMessages ??= new PlainMessageWindow(msg =>
+            {
+                if (msg == _taskbarCreated) Guard("taskbar created", Tick);
+            });
+        }
+        else if (_messages is null)
         {
             // A top-level window, not message-only: broadcasts such as TaskbarCreated skip message-only windows.
             _messages = new HwndSource(new HwndSourceParameters("SobreiroPillMessages") { WindowStyle = 0 });
@@ -165,12 +175,21 @@ internal sealed class PillHost : IDisposable
     private void CreateWindow()
     {
         if (_model is not { } model || _colours is not { } colours || _taskbar == IntPtr.Zero) return;
-        var window = new PillWindow(_taskbar);
+        IPillWindow window;
+        if (Spike.PlainWindow)
+        {
+            window = new PlainPillWindow(_taskbar);
+        }
+        else
+        {
+            var wpf = new PillWindow(_taskbar);
+            wpf.DpiChanged += (_, _) => _dispatcher.BeginInvoke(() => Guard("dpi", Place));
+            window = wpf;
+        }
         window.LeftClicked += () => Guard("click", () => LeftClicked?.Invoke());
         window.RightClicked += () => Guard("click", () => RightClicked?.Invoke());
-        window.DpiChanged += (_, _) => _dispatcher.BeginInvoke(() => Guard("dpi", Place));
         _window = window;
-        window.Render(model, colours, _tooltip);
+        window.Render(model, colours, _tooltip, TaskbarNative.DpiOf(_taskbar));
     }
 
     private void CloseWindow()
@@ -188,12 +207,12 @@ internal sealed class PillHost : IDisposable
         }
     }
 
-    private static bool WindowAlive(PillWindow window) => TaskbarNative.IsWindow(window.Handle);
+    private static bool WindowAlive(IPillWindow window) => TaskbarNative.IsWindow(window.Handle);
 
     /// <summary>One UI Automation query at a time, on a thread-pool thread; the answer comes back through the dispatcher.</summary>
     private void AskUiAutomation()
     {
-        if (!Active || _taskbar == IntPtr.Zero) return;
+        if (!Active || _taskbar == IntPtr.Zero || Spike.Uia == "none") return;
         if (_querying)
         {
             _requery = true;
@@ -205,7 +224,7 @@ internal sealed class PillHost : IDisposable
         var generation = _generation;
         _ = Task.Run(() =>
         {
-            var answer = TaskbarProbe.Query(taskbar);
+            var answer = Spike.Uia == "managed" ? TaskbarProbe.Query(taskbar) : TaskbarProbeCom.Query(taskbar);
             _dispatcher.BeginInvoke(() => Guard("anchors", () => OnProbed(taskbar, generation, answer)));
         });
     }
@@ -219,6 +238,7 @@ internal sealed class PillHost : IDisposable
         if (taskbar == _taskbar && generation == _generation)
         {
             _schedule = _schedule.Answered(answer);
+            Spike.Trace($"anchors ({Spike.Uia}): {answer?.ToString() ?? "none"}");
             if (answer is not null)
             {
                 _anchors = answer;
@@ -261,9 +281,11 @@ internal sealed class PillHost : IDisposable
             AskUiAutomation();
             return;
         }
+        window.SetDpi(dpi);
         var (width, height) = window.PixelSize;
         var gap = (int)Math.Round(4.0 * dpi / 96);
         var place = PillPlacement.Place(monitor, taskbarRect, _anchors, width, height, gap);
+        Spike.Trace($"place ({(Spike.PlainWindow ? "plain" : "wpf")}): {place} size {width}x{height} dpi {dpi}");
         if (place.IsShown) window.MoveTo(place.X, place.Y, place.BandTop);
         else window.HideNow();
     }

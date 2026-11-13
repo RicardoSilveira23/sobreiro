@@ -11,6 +11,8 @@
   <ItemGroup>
     <None Remove="Fonts\*.ttf" />
     <Resource Include="Fonts\*.ttf" />
+    <!-- SPIKE: the hand-drawn pill reads its fonts without WPF. -->
+    <EmbeddedResource Include="Fonts\*.ttf" LogicalName="font/%(Filename)%(Extension)" />
     <None Remove="Fonts\*.txt" />
     <EmbeddedResource Include="Fonts\OFL-*.txt" LogicalName="%(Filename)%(Extension)" />
     <EmbeddedResource Include="..\..\LICENSE" LogicalName="LICENSE.txt" />
