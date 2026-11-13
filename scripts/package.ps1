@@ -12,14 +12,15 @@
 .PARAMETER KeepBridge
   Also leaves sobreiro-bridge.exe in OutputDir, for scripts/baseline.ps1 to measure.
 .PARAMETER Compression
-  On (default) compresses what the single file carries; Off stores it as it is. Both were
-  measured: docs/baseline.md, under Experiments.
+  Off (default) stores what the single file carries as it is; On compresses it. Compressed,
+  the exe is less than half the size, but the app unpacks itself into memory at every start
+  and stays about 80 MB heavier: docs/baseline.md, under Experiments.
 #>
 param(
     [string]$OutputDir = 'dist',
     [string]$Tag,
     [switch]$KeepBridge,
-    [ValidateSet('On', 'Off')][string]$Compression = 'On'
+    [ValidateSet('On', 'Off')][string]$Compression = 'Off'
 )
 
 Set-StrictMode -Version Latest
