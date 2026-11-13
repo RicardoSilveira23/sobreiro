@@ -55,12 +55,13 @@ CLI or `gh` as the place to sign in.
 
 ## The rule
 
-- **Claude's block shows the words** when Live usage is on, its last poll ended in one of the
-  states above, and the newest Claude reading is over 15 minutes old or there is none. Until
-  then it keeps its figures. A status line that still delivers fresh numbers keeps the figures
+- **Claude's block shows the words** when Live usage is on, its last two polls in a row brought
+  no reading and the last ended in one of the states above, and the newest session or weekly
+  reading is over 15 minutes old or there is none. Until then it keeps its figures. A status line that still delivers fresh numbers keeps the figures
   whatever the poll says.
-- **Copilot's block shows the words** when it has a reading, its last poll ended in one of the
-  states above, and that reading is over 24 hours old. Its budget is monthly, so a figure from
+- **Copilot's block shows the words** when it has a reading, its last two polls in a row
+  brought none and the last ended in one of the states above, and that reading is over 24
+  hours old. Its budget is monthly, so a figure from
   the Copilot CLI's cache stays good for hours; a PC where that cache is the only source must
   not lose its figure. With no reading there is no Copilot block, as today.
 - **The flyout** says its sentence from the first failed poll, as today, in the places it
@@ -82,6 +83,10 @@ CLI or `gh` as the place to sign in.
 - A 5xx answer counts as BadAnswer, not Offline: the address answered.
 - RateLimited gets words too, though the issue does not list it.
 - The flyout keeps the sentence where it is instead of gaining a notice at the top.
+- Two polls in a row, not one, before the words show. Added after review: on a PC that has
+  just woken, or an app that has just started beside an old reading, the 15-minute rule
+  protects nothing, and one poll sent before the network is back would put `no` / `network`
+  on the pill until the retry. The cost is that the words come one to five minutes later.
 
 ## Left to the builder
 
