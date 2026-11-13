@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Sobreiro.Copilot;
 using Sobreiro.Core.Copilot;
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro;
 
@@ -42,7 +43,7 @@ internal sealed class CopilotUsage : IDisposable
     }
 
     /// <summary>Ok until the first poll answers.</summary>
-    public CopilotState State { get; private set; } = CopilotState.Ok;
+    public ProviderState State { get; private set; } = ProviderState.Ok;
 
     public int Misses => _schedule?.Misses ?? 0;
 
@@ -120,7 +121,7 @@ internal sealed class CopilotUsage : IDisposable
             // CopilotPoll throws only for cancellation; anything else counts as a failure. Its text stays out of the log.
             if (task.Exception?.GetBaseException() is { } fault) Debug.WriteLine($"Sobreiro: Copilot poll failed: {fault.GetType().Name}");
             result = new CopilotPollResult(
-                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), CopilotState.BadAnswer, null,
+                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), ProviderState.BadAnswer, null,
                 "copilot BadAnswer " + nameof(LiveOutcome.Failed));
         }
 

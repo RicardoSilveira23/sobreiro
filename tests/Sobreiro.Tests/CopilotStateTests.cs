@@ -1,5 +1,6 @@
 using System.Globalization;
 using Sobreiro.Core.Copilot;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Tests;
 
@@ -12,34 +13,34 @@ public class CopilotStateTests
     private static CopilotReading Reading(DateTimeOffset observed, CopilotSource source = CopilotSource.Live) =>
         new(15000, 2644.2, null, observed, source);
 
-    private static string? Line(CopilotState state, CopilotReading reading) =>
+    private static string? Line(ProviderState state, CopilotReading reading) =>
         CopilotStateText.Line(state, reading, Now, TimeZoneInfo.Utc, Culture);
 
     [Fact]
     public void Fresh_live_ok_has_no_line() =>
-        Assert.Null(Line(CopilotState.Ok, Reading(Now.AddMinutes(-15))));
+        Assert.Null(Line(ProviderState.Ok, Reading(Now.AddMinutes(-15))));
 
     [Fact]
     public void Old_live_ok_says_as_of() =>
-        Assert.Equal("As of 09:25.", Line(CopilotState.Ok, Reading(Seen)));
+        Assert.Equal("As of 09:25.", Line(ProviderState.Ok, Reading(Seen)));
 
     [Fact]
     public void Cache_says_from_the_copilot_cli() =>
-        Assert.Equal("From the Copilot CLI, as of 09:25.", Line(CopilotState.Ok, Reading(Seen, CopilotSource.Cache)));
+        Assert.Equal("From the Copilot CLI, as of 09:25.", Line(ProviderState.Ok, Reading(Seen, CopilotSource.Cache)));
 
     [Fact]
     public void Problem_comes_before_source() =>
         Assert.Equal(
             "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes. From the Copilot CLI, as of 09:25.",
-            Line(CopilotState.Offline, Reading(Seen, CopilotSource.Cache)));
+            Line(ProviderState.Offline, Reading(Seen, CopilotSource.Cache)));
 
     [Theory]
-    [InlineData(CopilotState.NoSignIn, "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.")]
-    [InlineData(CopilotState.Refused, "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.")]
-    [InlineData(CopilotState.RateLimited, "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.")]
-    [InlineData(CopilotState.Offline, "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.")]
-    [InlineData(CopilotState.BadAnswer, "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.")]
-    public void Each_problem_has_its_sentence(CopilotState state, string sentence) =>
+    [InlineData(ProviderState.NoSignIn, "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.")]
+    [InlineData(ProviderState.Refused, "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.")]
+    [InlineData(ProviderState.RateLimited, "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.")]
+    [InlineData(ProviderState.Offline, "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.")]
+    [InlineData(ProviderState.BadAnswer, "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.")]
+    public void Each_problem_has_its_sentence(ProviderState state, string sentence) =>
         Assert.Equal(sentence, Line(state, Reading(Now)));
 
     [Fact]

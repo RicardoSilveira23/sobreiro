@@ -2,6 +2,7 @@ using Sobreiro.Core.Copilot;
 using Sobreiro.Core.Display;
 using Sobreiro.Core.Limits;
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Tests;
 
@@ -68,7 +69,7 @@ public class PillModelTests
     public void Stopped_claude_block_carries_the_words_and_empty_rings()
     {
         var m = PillModel.From([Aged(LimitKind.Session, TimeSpan.FromMinutes(20)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(20))],
-            TimeZoneInfo.Utc, true, LiveState.Expired, 2, CopilotState.Ok, 0, WordsNow);
+            TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
         Assert.Equal(new PillWords("sign-in", "expired"), m.ClaudeWords);
         Assert.Equal(RingsModel.From([]), m.Rings);
     }
@@ -79,7 +80,7 @@ public class PillModelTests
         var credits = LimitList.FromCopilot(new CopilotReading(15000, 2644, DateTimeOffset.Parse("2026-12-01T00:00:00Z"),
             WordsNow - TimeSpan.FromDays(3), CopilotSource.Live), WordsNow)[0];
         IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromHours(3)), Aged(LimitKind.Weekly, TimeSpan.FromHours(3)), credits];
-        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, LiveState.Offline, 1, CopilotState.Offline, 1, WordsNow);
+        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, ProviderState.Offline, 1, ProviderState.Offline, 1, WordsNow);
         Assert.Null(m.ClaudeWords);
         Assert.Null(m.Copilot!.Words);
     }
@@ -88,7 +89,7 @@ public class PillModelTests
     public void Fresh_claude_block_has_no_words()
     {
         IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromMinutes(1)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(1))];
-        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, LiveState.Expired, 2, CopilotState.Ok, 0, WordsNow);
+        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
         Assert.Null(m.ClaudeWords);
         Assert.Equal(RingsModel.From(limits), m.Rings);
     }
@@ -98,7 +99,7 @@ public class PillModelTests
     {
         var credits = LimitList.FromCopilot(new CopilotReading(15000, 2644, DateTimeOffset.Parse("2026-12-01T00:00:00Z"),
             WordsNow - TimeSpan.FromHours(25), CopilotSource.Live), WordsNow)[0];
-        var c = PillModel.From([credits], TimeZoneInfo.Utc, true, LiveState.Off, 0, CopilotState.Offline, 2, WordsNow).Copilot!;
+        var c = PillModel.From([credits], TimeZoneInfo.Utc, true, ProviderState.Off, 0, ProviderState.Offline, 2, WordsNow).Copilot!;
         Assert.Equal(new PillWords("no", "network"), c.Words);
         Assert.Equal(0, c.Fraction);
     }

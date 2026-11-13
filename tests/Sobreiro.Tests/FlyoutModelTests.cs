@@ -4,6 +4,7 @@ using Sobreiro.Core.Display;
 using Sobreiro.Core.Limits;
 using Sobreiro.Core.Live;
 using Sobreiro.Core.Usage;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Tests;
 
@@ -111,27 +112,27 @@ public class FlyoutModelTests
         Assert.Equal("No numbers yet. They arrive with Claude Code's next response.", Build(null).Footer);
 
     [Theory]
-    [InlineData(LiveState.Ok, "No numbers yet.")]
-    [InlineData(LiveState.NoSignIn, "No numbers yet. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.")]
-    [InlineData(LiveState.Refused, "No numbers yet. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.")]
-    [InlineData(LiveState.Offline, "No numbers yet. Sobreiro can't reach Anthropic. Check the connection; it tries again every 2 minutes.")]
-    public void Footer_without_limits_with_live_usage_on(LiveState live, string expected) =>
+    [InlineData(ProviderState.Ok, "No numbers yet.")]
+    [InlineData(ProviderState.NoSignIn, "No numbers yet. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.")]
+    [InlineData(ProviderState.Refused, "No numbers yet. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.")]
+    [InlineData(ProviderState.Offline, "No numbers yet. Sobreiro can't reach Anthropic. Check the connection; it tries again every 2 minutes.")]
+    public void Footer_without_limits_with_live_usage_on(ProviderState live, string expected) =>
         Assert.Equal(expected, FlyoutModel.From(LimitList.From(null, Now), Now, TimeZoneInfo.Utc, En, live).Footer);
 
     [Fact]
     public void Footer_adds_the_refused_sentence_after_the_age() =>
         Assert.Equal("Updated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.",
-            FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now.AddSeconds(-180)), Now), Now, TimeZoneInfo.Utc, En, LiveState.Refused).Footer);
+            FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now.AddSeconds(-180)), Now), Now, TimeZoneInfo.Utc, En, ProviderState.Refused).Footer);
 
     [Fact]
     public void Footer_adds_the_live_sentence() =>
         Assert.Equal("Updated 3 min ago. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.",
-            FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now.AddSeconds(-180)), Now), Now, TimeZoneInfo.Utc, En, LiveState.Expired).Footer);
+            FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now.AddSeconds(-180)), Now), Now, TimeZoneInfo.Utc, En, ProviderState.Expired).Footer);
 
     [Fact]
     public void Footer_has_no_live_sentence_when_ok() =>
         Assert.Equal("Updated just now",
-            FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now), Now), Now, TimeZoneInfo.Utc, En, LiveState.Ok).Footer);
+            FlyoutModel.From(LimitList.From(new UsageSnapshot(Mockup, Now), Now), Now, TimeZoneInfo.Utc, En, ProviderState.Ok).Footer);
 
     [Fact]
     public void Title() => Assert.Equal("Claude Code", Build(null).Title);
@@ -182,7 +183,7 @@ public class FlyoutModelTests
     [Fact]
     public void Flyout_copilot_only_footer_uses_copilot_age()
     {
-        var m = FlyoutModel.From([Credits(observed: CopNow.AddMinutes(-2))], CopNow, TimeZoneInfo.Utc, En, LiveState.Ok, showClaude: false);
+        var m = FlyoutModel.From([Credits(observed: CopNow.AddMinutes(-2))], CopNow, TimeZoneInfo.Utc, En, ProviderState.Ok, showClaude: false);
         Assert.Equal("Updated 2 min ago", m.Footer);
         Assert.False(m.ShowClaude);
     }

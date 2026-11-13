@@ -2,6 +2,7 @@ using System.Globalization;
 using Sobreiro.Core.Copilot;
 using Sobreiro.Core.Limits;
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Core.Display;
 
@@ -17,11 +18,11 @@ public sealed record PillModel(PillLine Session, PillLine Weekly, RingsModel Rin
 
     public static PillModel From(IReadOnlyList<Limit> limits, TimeZoneInfo zone, bool showClaude) =>
         // Off and Ok never give words, so the placeholder time is never read.
-        From(limits, zone, showClaude, LiveState.Off, 0, CopilotState.Ok, 0, DateTimeOffset.UnixEpoch);
+        From(limits, zone, showClaude, ProviderState.Off, 0, ProviderState.Ok, 0, DateTimeOffset.UnixEpoch);
 
     /// <summary>As above, and a block whose numbers have stopped carries its two words and an empty ring or bar.</summary>
     public static PillModel From(IReadOnlyList<Limit> limits, TimeZoneInfo zone, bool showClaude,
-        LiveState live, int liveMisses, CopilotState copilot, int copilotMisses, DateTimeOffset now)
+        ProviderState live, int liveMisses, ProviderState copilot, int copilotMisses, DateTimeOffset now)
     {
         var claudeWords = PillWords.ForClaude(live, limits, now, liveMisses);
         var credits = limits.FirstOrDefault(l => l.Kind == LimitKind.Credits);

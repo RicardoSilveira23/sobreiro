@@ -1,5 +1,6 @@
 using System.Net;
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Tests;
 
@@ -60,7 +61,7 @@ public class LivePollTests : IDisposable
         var result = await Run(CredentialsPath, handler, _start);
 
         Assert.Empty(handler.Seen);
-        Assert.Equal(LiveState.NoSignIn, result.State);
+        Assert.Equal(ProviderState.NoSignIn, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(_start.AfterNoCredentials(Now), result.Schedule);
         Assert.Equal("Missing", result.Outcome);
@@ -76,7 +77,7 @@ public class LivePollTests : IDisposable
         var result = await Run(WriteCredentials(text), handler, _start);
 
         Assert.Empty(handler.Seen);
-        Assert.Equal(LiveState.NoSignIn, result.State);
+        Assert.Equal(ProviderState.NoSignIn, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(_start.AfterNoCredentials(Now), result.Schedule);
         Assert.Equal("Unreadable", result.Outcome);
@@ -91,7 +92,7 @@ public class LivePollTests : IDisposable
         var result = await Run(path, handler, _start);
 
         Assert.Empty(handler.Seen);
-        Assert.Equal(LiveState.Expired, result.State);
+        Assert.Equal(ProviderState.Expired, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(_start.AfterNoCredentials(Now), result.Schedule);
         Assert.Equal("Expired", result.Outcome);
@@ -105,7 +106,7 @@ public class LivePollTests : IDisposable
         var result = await LivePoll.RunAsync(_ => new CredentialRead(CredentialStatus.Ok, null), client, _start, Now, CancellationToken.None);
 
         Assert.Empty(handler.Seen);
-        Assert.Equal(LiveState.NoSignIn, result.State);
+        Assert.Equal(ProviderState.NoSignIn, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(_start.AfterNoCredentials(Now), result.Schedule);
         Assert.Equal("Unreadable", result.Outcome);
@@ -128,7 +129,7 @@ public class LivePollTests : IDisposable
 
         var request = Assert.Single(handler.Seen);
         Assert.Equal(Secret, request.Headers.Authorization!.Parameter);
-        Assert.Equal(LiveState.Ok, result.State);
+        Assert.Equal(ProviderState.Ok, result.State);
         Assert.Equal(27, result.Limits!.FiveHour!.UsedPercentage);
         Assert.Equal(Now, result.Schedule.LastSuccess);
         Assert.Equal(Now.AddMinutes(5), result.Schedule.NextDue);
@@ -146,7 +147,7 @@ public class LivePollTests : IDisposable
         });
         var result = await Run(ValidCredentials(), handler, _start);
 
-        Assert.Equal(LiveState.RateLimited, result.State);
+        Assert.Equal(ProviderState.RateLimited, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(Now.AddMinutes(10), result.Schedule.NextDue);
         Assert.Equal(Now.AddMinutes(10), result.Schedule.WaitUntil);
@@ -163,7 +164,7 @@ public class LivePollTests : IDisposable
         var result = await Run(path, handler, _start);
 
         Assert.Single(handler.Seen);
-        Assert.Equal(LiveState.BadAnswer, result.State);
+        Assert.Equal(ProviderState.BadAnswer, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Equal("Failed", result.Outcome);
@@ -180,7 +181,7 @@ public class LivePollTests : IDisposable
         var handler = new CountingHandler(() => Reply(HttpStatusCode.OK, "{\"unexpected\":true}"));
         var result = await Run(ValidCredentials(), handler, _start);
 
-        Assert.Equal(LiveState.BadAnswer, result.State);
+        Assert.Equal(ProviderState.BadAnswer, result.State);
         Assert.Null(result.Limits);
         Assert.Equal("Failed", result.Outcome);
     }
@@ -191,7 +192,7 @@ public class LivePollTests : IDisposable
         var handler = new CountingHandler(() => throw new TaskCanceledException("timed out"));
         var result = await Run(ValidCredentials(), handler, _start);
 
-        Assert.Equal(LiveState.Offline, result.State);
+        Assert.Equal(ProviderState.Offline, result.State);
         Assert.Null(result.Limits);
         Assert.Equal("Unreachable", result.Outcome);
     }
@@ -203,7 +204,7 @@ public class LivePollTests : IDisposable
         var handler = new CountingHandler(() => throw new HttpRequestException("no route"));
         var result = await Run(path, handler, _start);
 
-        Assert.Equal(LiveState.Offline, result.State);
+        Assert.Equal(ProviderState.Offline, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Equal("Unreachable", result.Outcome);
@@ -223,7 +224,7 @@ public class LivePollTests : IDisposable
         var result = await Run(path, refusing, _start);
 
         Assert.Single(refusing.Seen);
-        Assert.Equal(LiveState.Refused, result.State);
+        Assert.Equal(ProviderState.Refused, result.State);
         Assert.Null(result.Limits);
         Assert.Equal(new RefusedSignIn(Now.AddHours(2)), result.Schedule.Refused);
         Assert.Equal(Now.AddMinutes(1), result.Schedule.NextDue);
@@ -239,7 +240,7 @@ public class LivePollTests : IDisposable
             result = await Run(path, silent, schedule, at);
 
             Assert.Empty(silent.Seen);
-            Assert.Equal(LiveState.Refused, result.State);
+            Assert.Equal(ProviderState.Refused, result.State);
             Assert.Equal("Refused", result.Outcome);
             Assert.Equal(at.AddMinutes(1), result.Schedule.NextDue);
             schedule = result.Schedule;
@@ -251,7 +252,7 @@ public class LivePollTests : IDisposable
         result = await Run(path, ok, schedule, Now.AddMinutes(4));
 
         Assert.Single(ok.Seen);
-        Assert.Equal(LiveState.Ok, result.State);
+        Assert.Equal(ProviderState.Ok, result.State);
         Assert.Null(result.Schedule.Refused);
     }
 
@@ -265,13 +266,13 @@ public class LivePollTests : IDisposable
         var silent = MustNotBeCalled();
         result = await Run(path, silent, result.Schedule, Now.AddMinutes(1));
         Assert.Empty(silent.Seen);
-        Assert.Equal(LiveState.Refused, result.State);
+        Assert.Equal(ProviderState.Refused, result.State);
 
         CredentialsExpiring(Now.AddHours(2));
         var ok = new CountingHandler(() => Reply(HttpStatusCode.OK, Body));
         result = await Run(path, ok, result.Schedule, Now.AddMinutes(2));
         Assert.Single(ok.Seen);
-        Assert.Equal(LiveState.Ok, result.State);
+        Assert.Equal(ProviderState.Ok, result.State);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
 using Sobreiro.Core.Copilot;
 using Sobreiro.Core.Limits;
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Core.Display;
 
@@ -13,19 +14,10 @@ public sealed record PillWords(string Top, string Bottom)
     public static readonly TimeSpan ClaudeAfter = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan CopilotAfter = TimeSpan.FromHours(24);
 
-    public static PillWords? ForClaude(LiveState state, IReadOnlyList<Limit> limits, DateTimeOffset now, int misses)
+    public static PillWords? ForClaude(ProviderState state, IReadOnlyList<Limit> limits, DateTimeOffset now, int misses)
     {
         if (misses < MissesNeeded) return null;
-        var words = state switch
-        {
-            LiveState.Expired => new PillWords("sign-in", "expired"),
-            LiveState.NoSignIn => new PillWords("no", "sign-in"),
-            LiveState.Refused => new PillWords("sign-in", "refused"),
-            LiveState.Offline => new PillWords("no", "network"),
-            LiveState.BadAnswer => new PillWords("no", "answer"),
-            LiveState.RateLimited => new PillWords("asked", "to wait"),
-            _ => null,
-        };
+        var words = Of(state);
         if (words is null) return null;
 
         DateTimeOffset? newest = null;
@@ -35,17 +27,20 @@ public sealed record PillWords(string Top, string Bottom)
         return newest is null || now - newest > ClaudeAfter ? words : null;
     }
 
-    public static PillWords? ForCopilot(CopilotState state, Limit? credits, DateTimeOffset now, int misses)
+    public static PillWords? ForCopilot(ProviderState state, Limit? credits, DateTimeOffset now, int misses)
     {
         if (misses < MissesNeeded || credits is null || now - credits.ObservedAt <= CopilotAfter) return null;
-        return state switch
-        {
-            CopilotState.NoSignIn => new PillWords("no", "sign-in"),
-            CopilotState.Refused => new PillWords("sign-in", "refused"),
-            CopilotState.Offline => new PillWords("no", "network"),
-            CopilotState.BadAnswer => new PillWords("no", "answer"),
-            CopilotState.RateLimited => new PillWords("asked", "to wait"),
-            _ => null,
-        };
+        return Of(state);
     }
+
+    private static PillWords? Of(ProviderState state) => state switch
+    {
+        ProviderState.Expired => new PillWords("sign-in", "expired"),
+        ProviderState.NoSignIn => new PillWords("no", "sign-in"),
+        ProviderState.Refused => new PillWords("sign-in", "refused"),
+        ProviderState.Offline => new PillWords("no", "network"),
+        ProviderState.BadAnswer => new PillWords("no", "answer"),
+        ProviderState.RateLimited => new PillWords("asked", "to wait"),
+        _ => null,
+    };
 }

@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Sobreiro.Core.Connect;
 using Sobreiro.Core.Live;
 using Sobreiro.Core.Usage;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro;
 
@@ -35,7 +36,7 @@ internal sealed class LiveUsage : IDisposable
     private string CredentialsPath { get; } = ClaudePaths.CredentialsFile(Environment.GetEnvironmentVariable);
 
     /// <summary>Ok until the first poll answers.</summary>
-    public LiveState State { get; private set; } = LiveState.Ok;
+    public ProviderState State { get; private set; } = ProviderState.Ok;
 
     public int Misses => _schedule?.Misses ?? 0;
 
@@ -52,7 +53,7 @@ internal sealed class LiveUsage : IDisposable
     public void Stop()
     {
         _schedule = null;
-        State = LiveState.Off;
+        State = ProviderState.Off;
         _poll?.Cancel();
     }
 
@@ -103,7 +104,7 @@ internal sealed class LiveUsage : IDisposable
             // LivePoll throws only for cancellation; anything else counts as a failure. Its text stays out of the log.
             Debug.WriteLine($"Sobreiro: Live usage poll threw {task.Exception?.InnerException?.GetType().Name}");
             result = new LivePollResult(
-                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), LiveState.BadAnswer, null, nameof(LiveOutcome.Failed));
+                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), ProviderState.BadAnswer, null, nameof(LiveOutcome.Failed));
         }
 
         _schedule = result.Schedule;

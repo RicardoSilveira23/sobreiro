@@ -17,6 +17,7 @@ using HorizontalAlignment = System.Windows.HorizontalAlignment;
 using Image = System.Windows.Controls.Image;
 using Orientation = System.Windows.Controls.Orientation;
 using Size = System.Windows.Size;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro;
 
@@ -27,10 +28,10 @@ namespace Sobreiro;
 /// </summary>
 internal static class Snapshot
 {
-    private static readonly (bool Dark, BarColourOption Option, LiveState Live)[] Columns =
+    private static readonly (bool Dark, BarColourOption Option, ProviderState Live)[] Columns =
     [
-        (true, BarColourOption.Purple, LiveState.Off), (true, BarColourOption.Accent, LiveState.Refused),
-        (false, BarColourOption.Purple, LiveState.Off), (false, BarColourOption.Accent, LiveState.Refused),
+        (true, BarColourOption.Purple, ProviderState.Off), (true, BarColourOption.Accent, ProviderState.Refused),
+        (false, BarColourOption.Purple, ProviderState.Off), (false, BarColourOption.Accent, ProviderState.Refused),
     ];
 
     // (Session, Weekly) readings; null for no data.
@@ -132,12 +133,12 @@ internal static class Snapshot
         var flyouts = new StackPanel { Orientation = Orientation.Horizontal };
         foreach (var dark in new[] { true, false })
         {
-            var model = FlyoutModel.From(both, now, TimeZoneInfo.Local, CultureInfo.CurrentCulture, LiveState.Off);
+            var model = FlyoutModel.From(both, now, TimeZoneInfo.Local, CultureInfo.CurrentCulture, ProviderState.Off);
             var card = FlyoutView.Build(model, FlyoutStyle.Bars, FlyoutColours.For(dark, BarColourOption.Purple, accent));
             card.VerticalAlignment = VerticalAlignment.Top;
             flyouts.Children.Add(Cell(dark, card));
         }
-        var only = FlyoutModel.From(credits, now, TimeZoneInfo.Local, CultureInfo.CurrentCulture, LiveState.Off,
+        var only = FlyoutModel.From(credits, now, TimeZoneInfo.Local, CultureInfo.CurrentCulture, ProviderState.Off,
             copilotNote: "From the Copilot CLI, as of 09:25.", showClaude: false);
         var onlyCard = FlyoutView.Build(only, FlyoutStyle.Bars, FlyoutColours.For(true, BarColourOption.Purple, accent));
         onlyCard.VerticalAlignment = VerticalAlignment.Top;
@@ -324,12 +325,12 @@ internal static class Snapshot
         var oldCredits = LimitList.FromCopilot(CopilotSample(now) with { ObservedAt = old }, now);
         var states = new[]
         {
-            LiveState.Expired, LiveState.NoSignIn, LiveState.Refused,
-            LiveState.Offline, LiveState.BadAnswer, LiveState.RateLimited,
+            ProviderState.Expired, ProviderState.NoSignIn, ProviderState.Refused,
+            ProviderState.Offline, ProviderState.BadAnswer, ProviderState.RateLimited,
         };
         foreach (var state in states)
-            stopped.Children.Add(StoppedPill(oldReadings, state, CopilotState.Ok, colours, now));
-        stopped.Children.Add(StoppedPill(oldReadings.Concat(oldCredits).ToList(), LiveState.Refused, CopilotState.Offline, colours, now));
+            stopped.Children.Add(StoppedPill(oldReadings, state, ProviderState.Ok, colours, now));
+        stopped.Children.Add(StoppedPill(oldReadings.Concat(oldCredits).ToList(), ProviderState.Refused, ProviderState.Offline, colours, now));
 
         var rows = new StackPanel();
         rows.Children.Add(row);
@@ -338,7 +339,7 @@ internal static class Snapshot
     }
 
     private static FrameworkElement StoppedPill(
-        IReadOnlyList<Limit> limits, LiveState live, CopilotState copilot, TaskbarColours colours, DateTimeOffset now)
+        IReadOnlyList<Limit> limits, ProviderState live, ProviderState copilot, TaskbarColours colours, DateTimeOffset now)
     {
         var pill = PillView.Build(PillModel.From(limits, TimeZoneInfo.Local, true, live, PillWords.MissesNeeded, copilot, PillWords.MissesNeeded, now), colours);
         pill.Margin = new Thickness(0, 0, 24, 0);
