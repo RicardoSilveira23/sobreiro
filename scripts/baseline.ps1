@@ -14,6 +14,9 @@
   The heading in docs/baseline.md whose table gets the row: Releases (default) or Experiments.
 .PARAMETER Exe
   Measure this Sobreiro.exe instead of packaging one. Bridge then names its bridge, if any.
+.PARAMETER BridgeOnly
+  Leaves the tray unstarted and takes only the two file sizes and the bridge's run time. It takes
+  seconds, and a running Sobreiro can stay open.
 .PARAMETER NoTable
   Print the row only.
 #>
@@ -24,6 +27,7 @@ param(
     [string]$Bridge,
     [int]$IdleMinutes = 10,
     [int]$Starts = 5,
+    [switch]$BridgeOnly,
     [switch]$NoTable
 )
 
@@ -41,6 +45,7 @@ if (-not $Exe) {
 }
 
 $toolArgs = @('--exe', $Exe, '--idle-minutes', $IdleMinutes, '--starts', $Starts)
+if ($BridgeOnly) { $toolArgs += @('--tray', 'size') }
 if ($Bridge) { $toolArgs += @('--bridge', $Bridge) }
 if ($Label) { $toolArgs += @('--label', $Label) }
 if (-not $NoTable) { $toolArgs += @('--table', (Join-Path $repoRoot 'docs/baseline.md'), '--section', $Section) }

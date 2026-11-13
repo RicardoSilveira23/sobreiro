@@ -63,8 +63,15 @@ New-Item -ItemType Directory -Path $stage -Force | Out-Null
 $bridgeOut = Join-Path $stage 'bridge-out'
 $trayOut = Join-Path $stage 'tray-out'
 
-& dotnet publish "$(Join-Path $repoRoot 'src/Sobreiro.Bridge')" -c Release -r win-x64 --self-contained `
-    -p:PublishSingleFile=true -p:PublishReadyToRun=true -p:PublishTrimmed=true -o "$bridgeOut"
+# Native AOT: needs the MSVC linker (Visual Studio's "Desktop development with C++").
+# The Build Tools' environment script runs vswhere.exe by name, and its folder is not on PATH
+# after a plain install: without it the link step fails with "'vswhere.exe' is not recognized".
+$vsInstaller = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
+if ((Test-Path -LiteralPath (Join-Path $vsInstaller 'vswhere.exe')) -and -not (Get-Command vswhere.exe -ErrorAction SilentlyContinue)) {
+    $env:Path = "$env:Path;$vsInstaller"
+}
+& dotnet publish "$(Join-Path $repoRoot 'src/Sobreiro.Bridge')" -c Release -r win-x64 `
+    -p:PublishAot=true -o "$bridgeOut"
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish of the bridge failed (exit $LASTEXITCODE)" }
 
 & dotnet publish "$(Join-Path $repoRoot 'src/Sobreiro')" -c Release -r win-x64 --self-contained true `

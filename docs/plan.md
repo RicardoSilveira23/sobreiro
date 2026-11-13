@@ -143,8 +143,9 @@ Known limits, stated in the README:
 - C# on .NET 10 (LTS). WPF for the flyout, WinForms `NotifyIcon` for the tray, and no other
   UI packages.
 - `Sobreiro`: WPF app, published as a self-contained single-file `.exe`.
-- `Sobreiro.Bridge`: console app, published with Native AOT. It runs on every status line
-  refresh, so it must start in milliseconds. It is a separate exe for that reason.
+- `Sobreiro.Bridge`: console app, published with Native AOT (2.2 MB, a run takes about 9 ms;
+  see [baseline.md](baseline.md)). It runs on every status line refresh, so it must start in
+  milliseconds. It is a separate exe for that reason. Publishing it needs the MSVC linker.
 - `Sobreiro.Core`: shared library holding the `usage.json` model, parsing, window state
   (reset passed, age, colour level) and the settings.json editor. The UI consumes a
   provider-neutral list of limits (provider, label, percent, resets at, observed at), so a

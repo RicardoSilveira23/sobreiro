@@ -4,13 +4,14 @@ using Sobreiro.Baseline;
 using Sobreiro.Core.Baseline;
 
 const string Usage = """
-    sobreiro-baseline --exe <Sobreiro.exe> [--bridge <sobreiro-bridge.exe>] [--label <build>]
-                      [--idle-minutes 10] [--starts 5] [--bridge-runs 20]
+    sobreiro-baseline [--exe <Sobreiro.exe>] [--bridge <sobreiro-bridge.exe>] [--label <build>]
+                      [--tray run|size] [--idle-minutes 10] [--starts 5] [--bridge-runs 20]
                       [--table <baseline.md> --section <heading>]
 
     Starts its own copy of the tray on a scratch data folder and measures it: time to the first
     pill, memory and processor time when idle, the size of both exes and the bridge's run time.
-    Prints one table row; with --table, writes it into that file too.
+    With --tray size, or with no --exe, the tray is not started: only sizes and the bridge's run
+    time are taken. Prints one table row; with --table, writes it into that file too.
     """;
 
 var options = new Dictionary<string, string>();
@@ -23,18 +24,20 @@ for (var i = 0; i < args.Length; i += 2)
     }
     options[args[i][2..]] = args[i + 1];
 }
-if (!options.TryGetValue("exe", out var exe) || options.ContainsKey("table") != options.ContainsKey("section"))
+var exe = options.TryGetValue("exe", out var e) ? Path.GetFullPath(e) : null;
+var bridgeExe = options.TryGetValue("bridge", out var b) ? Path.GetFullPath(b) : null;
+var trayMode = options.GetValueOrDefault("tray", "run");
+if ((exe ?? bridgeExe) is not { } labelled || trayMode is not ("run" or "size")
+    || options.ContainsKey("table") != options.ContainsKey("section"))
 {
     Console.Error.WriteLine(Usage);
     return 2;
 }
-
-exe = Path.GetFullPath(exe);
-var bridgeExe = options.TryGetValue("bridge", out var b) ? Path.GetFullPath(b) : null;
+var runTray = exe is not null && trayMode == "run";
 var idleMinutes = Number("idle-minutes", 10, 2);
 var starts = Number("starts", 5, 2);
 var bridgeRuns = Number("bridge-runs", 20, 1);
-var label = options.GetValueOrDefault("label") ?? VersionOf(exe);
+var label = options.GetValueOrDefault("label") ?? VersionOf(labelled);
 
 var scratch = Path.Combine(Path.GetTempPath(), "sobreiro-baseline-" + Guid.NewGuid().ToString("N")[..8]);
 Directory.CreateDirectory(scratch);
@@ -42,7 +45,7 @@ void Say(string line) => Console.WriteLine($"{DateTime.Now:HH:mm:ss} {line}");
 
 try
 {
-    if (Native.PillOfAnotherApp() is { } other)
+    if (runTray && Native.PillOfAnotherApp() is { } other)
     {
         Console.Error.WriteLine(
             $"A pill is already in the taskbar (process {other}, {NameOf(other)}). A second one finds no room beside it and " +
@@ -51,11 +54,16 @@ try
     }
     using var timer = Native.FineTimer();
     var measure = new Measure(scratch, Say);
-    Say($"build {label}: {exe}");
-    Say($"{starts} starts, signed out");
-    var pills = measure.Starts(exe, starts);
-    Say($"idle for {idleMinutes} minutes, with this PC's sign-ins");
-    var idle = measure.Idle(exe, idleMinutes);
+    Say($"build {label}: {labelled}");
+    List<TimeSpan?> pills = [null];
+    IdleFigures? idle = null;
+    if (runTray)
+    {
+        Say($"{starts} starts, signed out");
+        pills = measure.Starts(exe!, starts);
+        Say($"idle for {idleMinutes} minutes, with this PC's sign-ins");
+        idle = measure.Idle(exe!, idleMinutes);
+    }
     TimeSpan? bridgeRun = null;
     if (bridgeExe is not null)
     {
@@ -64,9 +72,9 @@ try
     }
 
     var run = new BaselineRun(
-        label, DateOnly.FromDateTime(DateTime.Now), idle.PrivateBytes, idle.WorkingSetBytes, idle.CpuSecondsPerHour,
+        label, DateOnly.FromDateTime(DateTime.Now), idle,
         pills[0], BaselineMath.Median(pills.Skip(1).OfType<TimeSpan>().ToList()),
-        new FileInfo(exe).Length, bridgeExe is null ? null : new FileInfo(bridgeExe).Length, bridgeRun);
+        exe is null ? null : new FileInfo(exe).Length, bridgeExe is null ? null : new FileInfo(bridgeExe).Length, bridgeRun);
     Console.WriteLine(BaselineTable.Header);
     Console.WriteLine(BaselineTable.Divider);
     Console.WriteLine(BaselineTable.Row(run));
