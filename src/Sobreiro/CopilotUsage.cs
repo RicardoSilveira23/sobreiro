@@ -118,8 +118,8 @@ internal sealed class CopilotUsage : IDisposable
             // CopilotPoll throws only for cancellation; anything else counts as a failure. Its text stays out of the log.
             if (task.Exception?.GetBaseException() is { } fault) Debug.WriteLine($"Sobreiro: Copilot poll failed: {fault.GetType().Name}");
             result = new CopilotPollResult(
-                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), CopilotState.Failing, null,
-                "copilot Failing " + nameof(LiveOutcome.Failed));
+                schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now), CopilotState.BadAnswer, null,
+                "copilot BadAnswer " + nameof(LiveOutcome.Failed));
         }
 
         _schedule = result.Schedule;

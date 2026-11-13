@@ -4,7 +4,7 @@ using Sobreiro.Core.Display;
 namespace Sobreiro.Core.Copilot;
 
 /// <summary>Where the Copilot poll stands, as the footer and the flyout name it.</summary>
-public enum CopilotState { Ok, NoSignIn, Refused, RateLimited, Failing }
+public enum CopilotState { Ok, NoSignIn, Refused, RateLimited, Offline, BadAnswer }
 
 /// <summary>Which of the Live and the Copilot CLI's cached readings to show.</summary>
 public static class CopilotShown
@@ -28,10 +28,11 @@ public static class CopilotStateText
     {
         var problem = state switch
         {
-            CopilotState.NoSignIn => "No GitHub sign-in Sobreiro can use.",
-            CopilotState.Refused => "GitHub didn't accept the sign-in.",
-            CopilotState.Failing => "Can't reach GitHub.",
-            CopilotState.RateLimited => "GitHub asked Sobreiro to wait.",
+            CopilotState.NoSignIn => "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.",
+            CopilotState.Refused => "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.",
+            CopilotState.RateLimited => "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.",
+            CopilotState.Offline => "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.",
+            CopilotState.BadAnswer => "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.",
             _ => null,
         };
         string? source = null;

@@ -147,7 +147,7 @@
     <div class="row"><span class="k">When</span><span class="n">Every 5 minutes</span><p class="s">Also when you open the details on a reading over a minute old, and once as Sobreiro starts.</p></div>
     <div class="row"><span class="k">Pauses</span><span class="n">When the token can't be used</span><p class="s">If the token has expired, Live usage pauses until Claude Code renews its sign-in. If Anthropic refuses it, Live usage doesn't send it again and waits for Claude Code to save a new one.</p>
       <ul class="d">
-        <li>The last line of the details says so. It also says when Claude Code isn't signed in, when Anthropic asks it to wait, or when it can't reach Anthropic.</li>
+        <li>The last line of the details says so. It also says when Claude Code isn't signed in, when Anthropic asks it to wait, when it can't reach Anthropic, or when the answer is one it can't read.</li>
       </ul></div>
     <div class="row"><span class="k">Back-off</span><span class="n">When Anthropic says too often</span><p class="s">It waits 5 minutes, or what Anthropic asks, and doubles that up to 30.</p></div>
     <div class="row"><span class="k">Merging</span><span class="n">With the status line</span><p class="s">Its readings merge with the status line's, and within a reset period they replace them whatever the %, so the icon, the details and toasts stay current whichever app you use. If Live usage fails, the status line's readings still show.</p></div>

@@ -175,14 +175,27 @@ public class CopilotPollTests
     }
 
     [Fact]
-    public async Task Network_failure_stops_the_chain()
+    public async Task A_500_is_a_bad_answer_and_stops_the_chain()
+    {
+        var (result, handler) = await Run(
+            _ => Reply(HttpStatusCode.InternalServerError),
+            Source(CopilotSourceKind.Env, "A"),
+            Throwing(CopilotSourceKind.Gh));
+        Assert.Equal(CopilotState.BadAnswer, result.State);
+        Assert.Equal("copilot BadAnswer env=failed credential-manager=skipped gh=skipped", result.Log);
+        Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
+        Assert.Single(handler.Tokens);
+    }
+
+    [Fact]
+    public async Task Network_failure_is_offline_and_stops_the_chain()
     {
         var (result, handler) = await Run(
             _ => throw new HttpRequestException("down"),
             Source(CopilotSourceKind.Env, "A"),
             Throwing(CopilotSourceKind.Gh));
-        Assert.Equal(CopilotState.Failing, result.State);
-        Assert.Equal("copilot Failing env=failed credential-manager=skipped gh=skipped", result.Log);
+        Assert.Equal(CopilotState.Offline, result.State);
+        Assert.Equal("copilot Offline env=unreachable credential-manager=skipped gh=skipped", result.Log);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Single(handler.Tokens);
     }
