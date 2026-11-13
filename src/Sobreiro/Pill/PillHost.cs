@@ -12,8 +12,8 @@ namespace Sobreiro.Pill;
 /// Keeps one <see cref="PillWindow"/> over the taskbar, just left of the tray icons: finds the taskbar,
 /// follows it through auto-hide, DPI changes, display changes and Explorer restarts, and hides the pill
 /// while a full-screen app runs. Everything here runs on the UI thread except the UI Automation query,
-/// which a <see cref="TaskbarQuerySchedule"/> sends only on a sign of change (and every 15 seconds
-/// otherwise), not on every tick.
+/// which is sent only when a <see cref="TaskbarQuerySchedule"/> says a tick should ask: on a sign of change,
+/// and about every 16 seconds otherwise, not on every tick.
 /// </summary>
 internal sealed class PillHost : IDisposable
 {
@@ -24,6 +24,7 @@ internal sealed class PillHost : IDisposable
     private readonly TaskbarNative.WinEventProc _locationProc;
     private readonly TaskbarNative.WinEventProc _foregroundProc;
     private readonly uint _taskbarCreated = TaskbarNative.RegisterMessage("TaskbarCreated");
+    private readonly long _clockStart = Stopwatch.GetTimestamp();
 
     private HwndSource? _messages;
     private PillWindow? _window;
@@ -37,7 +38,6 @@ internal sealed class PillHost : IDisposable
     private bool _requery;
     private int _generation;
     private TaskbarQuerySchedule _schedule;
-    private readonly long _clockStart = Stopwatch.GetTimestamp();
     private bool _enabled;
     private bool _disposed;
 
