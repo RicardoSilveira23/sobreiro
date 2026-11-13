@@ -2,18 +2,22 @@ using System.Globalization;
 
 namespace Sobreiro.Core.Baseline;
 
-/// <summary>One measured build: a row of docs/baseline.md.</summary>
+/// <summary>
+/// One measured build: a row of docs/baseline.md. <see cref="Idle"/> is null when the tray was not
+/// started at all (a bridge-only run); a pill time is null when the tray ran and no pill was seen.
+/// </summary>
 public sealed record BaselineRun(
     string Build,
     DateOnly Date,
-    long PrivateBytes,
-    long WorkingSetBytes,
-    double CpuSecondsPerIdleHour,
+    IdleFigures? Idle,
     TimeSpan? FirstPillFirstStart,
     TimeSpan? FirstPillLaterStarts,
-    long TrayExeBytes,
+    long? TrayExeBytes,
     long? BridgeExeBytes,
     TimeSpan? BridgeRun);
+
+/// <summary>The tray after its idle run: memory at the end, processor time scaled to an hour.</summary>
+public sealed record IdleFigures(long PrivateBytes, long WorkingSetBytes, double CpuSecondsPerHour);
 
 public static class BaselineTable
 {
@@ -23,6 +27,7 @@ public static class BaselineTable
     public const string Divider = "|---|---|---|---|---|---|---|---|---|---|";
 
     private const double BytesPerMb = 1024 * 1024;
+    private const string NotMeasured = "not measured";
 
     public static string Row(BaselineRun run)
     {
@@ -31,18 +36,19 @@ public static class BaselineTable
         [
             run.Build,
             run.Date.ToString("yyyy-MM-dd", inv),
-            (run.PrivateBytes / BytesPerMb).ToString("0", inv) + " MB",
-            (run.WorkingSetBytes / BytesPerMb).ToString("0", inv) + " MB",
-            run.CpuSecondsPerIdleHour.ToString("0.0", inv) + " s",
+            run.Idle is { } i ? (i.PrivateBytes / BytesPerMb).ToString("0", inv) + " MB" : NotMeasured,
+            run.Idle is { } j ? (j.WorkingSetBytes / BytesPerMb).ToString("0", inv) + " MB" : NotMeasured,
+            run.Idle is { } k ? k.CpuSecondsPerHour.ToString("0.0", inv) + " s" : NotMeasured,
             Seconds(run.FirstPillFirstStart),
             Seconds(run.FirstPillLaterStarts),
-            (run.TrayExeBytes / BytesPerMb).ToString("0.0", inv) + " MB",
+            run.TrayExeBytes is { } tray ? (tray / BytesPerMb).ToString("0.0", inv) + " MB" : NotMeasured,
             run.BridgeExeBytes is { } bridge ? (bridge / BytesPerMb).ToString("0.0", inv) + " MB" : "none",
             run.BridgeRun is { } time ? time.TotalMilliseconds.ToString("0", inv) + " ms" : "none",
         ];
         return "| " + string.Join(" | ", cells) + " |";
 
-        string Seconds(TimeSpan? time) => time is { } t ? t.TotalSeconds.ToString("0.00", inv) + " s" : "not seen";
+        string Seconds(TimeSpan? time) =>
+            time is { } t ? t.TotalSeconds.ToString("0.00", inv) + " s" : run.Idle is null ? NotMeasured : "not seen";
     }
 
     /// <summary>

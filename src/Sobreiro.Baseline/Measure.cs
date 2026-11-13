@@ -3,8 +3,6 @@ using Sobreiro.Core.Baseline;
 
 namespace Sobreiro.Baseline;
 
-internal sealed record IdleResult(long PrivateBytes, long WorkingSetBytes, double CpuSecondsPerHour);
-
 /// <summary>The runs themselves. Every copy started here gets the scratch folders in <paramref name="scratch"/>.</summary>
 internal sealed class Measure(string scratch, Action<string> say)
 {
@@ -87,7 +85,7 @@ internal sealed class Measure(string scratch, Action<string> say)
     /// One run with this PC's sign-ins, left alone for <paramref name="minutes"/>: memory at the end, and
     /// the processor time from the end of the first minute on, scaled to an hour.
     /// </summary>
-    public IdleResult Idle(string exe, int minutes)
+    public IdleFigures Idle(string exe, int minutes)
     {
         var clock = Stopwatch.StartNew();
         using var tray = StartTray(exe, signedOut: false);
@@ -107,7 +105,7 @@ internal sealed class Measure(string scratch, Action<string> say)
                 say($"  minute {minute}: private {Mb(tray.PrivateMemorySize64)} MB, working set {Mb(tray.WorkingSet64)} MB, " +
                     $"cpu {tray.TotalProcessorTime.TotalSeconds:0.00} s");
             }
-            return new IdleResult(tray.PrivateMemorySize64, tray.WorkingSet64, BaselineMath.CpuSecondsPerHour(
+            return new IdleFigures(tray.PrivateMemorySize64, tray.WorkingSet64, BaselineMath.CpuSecondsPerHour(
                 cpuAfterFirstMinute, tray.TotalProcessorTime, TimeSpan.FromMinutes(minutes - 1)));
         }
         finally

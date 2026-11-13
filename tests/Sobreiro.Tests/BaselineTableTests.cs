@@ -7,7 +7,7 @@ public class BaselineTableTests
     private const long Mb = 1024 * 1024;
 
     private static readonly BaselineRun Run = new(
-        "0.10.0", new DateOnly(2026, 11, 13), 171 * Mb + 300_000, 301 * Mb, 4.24,
+        "0.10.0", new DateOnly(2026, 11, 13), new IdleFigures(171 * Mb + 300_000, 301 * Mb, 4.24),
         TimeSpan.FromMilliseconds(2314), TimeSpan.FromMilliseconds(1118), 80 * Mb + 100_000, 17 * Mb + 800_000,
         TimeSpan.FromMilliseconds(61.6));
 
@@ -33,6 +33,15 @@ public class BaselineTableTests
     {
         var row = BaselineTable.Row(Run with { FirstPillFirstStart = null, FirstPillLaterStarts = null, BridgeExeBytes = null, BridgeRun = null });
         Assert.Equal("| 0.10.0 | 2026-11-13 | 171 MB | 301 MB | 4.2 s | not seen | not seen | 80.1 MB | none | none |", row);
+    }
+
+    [Fact]
+    public void Row_of_a_bridge_only_run_leaves_the_tray_unmeasured()
+    {
+        var row = BaselineTable.Row(Run with { Idle = null, FirstPillFirstStart = null, FirstPillLaterStarts = null, TrayExeBytes = null });
+        Assert.Equal(
+            "| 0.10.0 | 2026-11-13 | not measured | not measured | not measured | not measured | not measured | not measured | 17.8 MB | 62 ms |",
+            row);
     }
 
     [Fact]
