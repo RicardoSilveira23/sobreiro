@@ -66,10 +66,14 @@ schedule in `Sobreiro.Core/Taskbar`, plain logic on a clock the host passes in. 
 when any of these holds:
 
 - nothing has been asked yet since the pill attached to this taskbar;
-- the foreground window has switched since the last question was sent (new: the host already
-  hears this event, and today only re-places the pill on it);
+- the foreground window has switched (new: the host already hears this event, and today only
+  re-places the pill on it). A switch is followed by two questions, at the next two ticks: the
+  first can come before the new window's task button or tray icon is there;
 - the last two answers differ, or there has been only one. "No answer" (a hidden or restarting
-  taskbar) counts as an answer, so two of them in a row settle it;
+  taskbar) counts as an answer, so two of them in a row settle it. One exception: until the
+  taskbar has been read once since the pill attached to it, "no answer" settles nothing for
+  the first 30 questions (a minute), so a tray that Explorer is still building at sign-in does
+  not leave the pill hidden until the slow check;
 - 15 seconds have passed since the last question. With ticks 2 seconds apart, that is every
   16 seconds.
 
@@ -77,8 +81,8 @@ The questions asked at once today stay as they are and are not part of the sched
 decision, though it hears of them: a move of the tray area, a move of the taskbar while no
 anchors are known, a display change, a DPI change.
 
-So, in use: opening, closing or switching a window is seen at the next tick, as today, and one
-more question follows if the answer changed. Left alone: 225 questions an hour instead of
+So, in use: opening, closing or switching a window is seen at the next tick, as today, or at
+the one after it, and one more question follows whenever an answer changed. Left alone: 225 questions an hour instead of
 1,800, which is about 3.5 s per idle hour by the figures above.
 
 What it costs: a tray icon that appears or leaves while no window is switched can leave the
@@ -89,6 +93,11 @@ pill out of place for up to 16 seconds.
 - A foreground switch is seen at the next tick, not at once: the task button of a new window
   appears a moment after the switch, and up to 2 seconds is what every change waits today.
 - The clock is a monotonic one, so a change of the PC's time cannot delay a check.
+- Added after the code review of 2026-11-13, which found two holes in the rules as first
+  approved: the two questions after a switch, and the exception for a taskbar not yet read.
+  Neither changes the idle cost.
+- A question whose answer never comes is asked again after the 15 seconds; nothing waits on
+  an answer for good.
 - The measurement goes into `docs/baseline.md` under Experiments, as "1.0.0, taskbar asked on
   change", with the finding in a note; the roadmap's paragraph points at it. No version bump in
   this change: when to release it is Ricardo's call.
