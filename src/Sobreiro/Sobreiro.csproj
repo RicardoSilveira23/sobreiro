@@ -7,6 +7,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Sobreiro</AssemblyName>
     <ApplicationIcon>Assets\sobreiro.ico</ApplicationIcon>
+    <!-- Code is compiled once. With tiering on, the runtime kept recompiling in the background for as long as the tray ran: docs/baseline.md, under Experiments. -->
+    <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Fonts\*.ttf" />
