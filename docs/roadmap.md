@@ -35,7 +35,6 @@ Checked on 2026-11-13 against 0.10.0. The process figures are its row in
 
 Stays on C#, WPF and .NET 10.
 
-- Signed builds and a winget manifest (open in [plan.md](plan.md), milestone 5).
 - A baseline script that records, on a clean start: private memory and working set after
   10 minutes idle, CPU seconds per idle hour, time from start to the first drawn pill, and both
   exe sizes. Results go in `docs/baseline.md`, one row per release.
@@ -56,8 +55,6 @@ Stays on C#, WPF and .NET 10.
 | CPU per idle hour | 13.9 s | 5 s or less |
 | Start to first pill | 0.55 s | 1 s or less, the first start included |
 | Bridge exe | 17.0 MB, runs in 43 ms | 5 MB or less, runs in 15 ms or less (met with Native AOT: 2.2 MB, 9 ms) |
-| SmartScreen warning on a fresh PC | yes | none |
-| `winget install` | no | works |
 
 The targets were checked against the first baseline row on 2026-11-13:
 
@@ -70,6 +67,16 @@ The targets were checked against the first baseline row on 2026-11-13:
   start get three times slower unnoticed.
 - **Bridge: the 50 ms line is dropped.** The 0.10.0 bridge already ran in 43 ms, so that line
   could not tell the two ways of publishing apart. The Native AOT measurement set it to 15 ms.
+
+**Nice to have, not a condition for 1.0**
+
+Decided on 2026-11-13: 1.0 waits for neither. Both are open in [plan.md](plan.md),
+milestone 5.
+
+- Signed builds, so Windows stops warning about an unknown publisher. Until a build is signed,
+  the README and the manual keep the step that gets past the warning. When signing comes, it
+  goes into the release workflow and that step comes out.
+- A winget manifest, so installing and updating is one command.
 
 ## 1.x: choose the next shell on numbers
 
