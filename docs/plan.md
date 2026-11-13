@@ -391,6 +391,7 @@ Secret scanning and push protection are on as well.
 ### 5. After release
 
 - Signed builds, winget.
+- From here to 3.0: [roadmap.md](roadmap.md).
 
 ## GitHub Copilot (chosen 2026-11-10)
 
