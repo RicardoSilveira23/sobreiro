@@ -100,12 +100,11 @@ internal sealed class TrayController : IDisposable
     private static (ProviderHost Host, CopilotProvider Provider) CopilotHost(Action changed, Action<string> log)
     {
         var http = new HttpClient(LiveUsageClient.CreateHandler());
-        IReadOnlyList<CopilotSignIn> signIns =
-        [
-            new(CopilotSourceKind.Env, () => new TokenSearch(CopilotToken.FromEnvironment(Environment.GetEnvironmentVariable))),
-            new(CopilotSourceKind.CredentialManager, CredentialStore.CopilotTokens),
-            new(CopilotSourceKind.Gh, () => new TokenSearch(GhCli.Token())),
-        ];
+        var signIns = CopilotSignIn.InOrder(
+            env: () => new TokenSearch(CopilotToken.FromEnvironment(Environment.GetEnvironmentVariable)),
+            credentialManager: CredentialStore.CopilotTokens,
+            languageServer: CredentialStore.LanguageServerTokens,
+            gh: () => new TokenSearch(GhCli.Token()));
         var provider = new CopilotProvider(
             new CopilotUsageClient(http, ProviderHost.UserAgent()), signIns,
             CopilotCache.DefaultPath(Environment.GetEnvironmentVariable), log);

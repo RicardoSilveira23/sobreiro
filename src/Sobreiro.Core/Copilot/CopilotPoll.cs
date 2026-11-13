@@ -80,7 +80,8 @@ public static class CopilotPoll
     {
         string Of(CopilotSourceKind kind) => results.GetValueOrDefault(kind, "skipped");
         var log = $"copilot {state} env={Of(CopilotSourceKind.Env)} " +
-                  $"credential-manager={Of(CopilotSourceKind.CredentialManager)} gh={Of(CopilotSourceKind.Gh)}";
+                  $"credential-manager={Of(CopilotSourceKind.CredentialManager)} " +
+                  $"language-server={Of(CopilotSourceKind.LanguageServer)} gh={Of(CopilotSourceKind.Gh)}";
         return new CopilotPollResult(schedule, state, reading, log);
     }
 }

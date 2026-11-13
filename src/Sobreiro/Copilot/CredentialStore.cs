@@ -5,8 +5,8 @@ using Sobreiro.Core.Copilot;
 namespace Sobreiro.Copilot;
 
 /// <summary>
-/// Reads the Copilot CLI's sign-in from Windows Credential Manager. Target names are never logged or returned, and
-/// each blob copy is zeroed after use.
+/// Reads a GitHub sign-in from Windows Credential Manager: the Copilot CLI's entry, or the Copilot language
+/// server's. Target names are never logged or returned, and each blob copy is zeroed after use.
 /// </summary>
 internal static class CredentialStore
 {
@@ -37,16 +37,25 @@ internal static class CredentialStore
     [DllImport("advapi32.dll")]
     private static extern void CredFree(IntPtr buffer);
 
-    public static TokenSearch CopilotTokens()
+    /// <summary>
+    /// The Copilot CLI's sign-in. When no target name starts with its name, older versions of the CLI may name
+    /// it differently, so every entry is listed and matched here: but only on a PC where the CLI has left its folder.
+    /// </summary>
+    public static TokenSearch CopilotTokens() =>
+        Tokens(CopilotCredentialName.CliFilter, CopilotCredentialName.IsCli, listAllWhenNotFound: CopilotCliHasBeenUsed);
+
+    /// <summary>The Copilot language server's sign-in, asked for by name. The other entries are never listed for it.</summary>
+    public static TokenSearch LanguageServerTokens() =>
+        Tokens(CopilotCredentialName.LanguageServerFilter, CopilotCredentialName.IsLanguageServer, listAllWhenNotFound: null);
+
+    private static TokenSearch Tokens(string filter, Func<string?, bool> isOurs, Func<bool>? listAllWhenNotFound)
     {
         var tokens = new List<string>();
         var entryFound = false;
-        if (!CredEnumerateW("copilot-cli*", 0, out var count, out var list))
+        if (!CredEnumerateW(filter, 0, out var count, out var list))
         {
             if (Marshal.GetLastWin32Error() != ErrorNotFound) return tokens;
-            // No target name starts with copilot-cli. Older versions of the CLI may name it differently, so list
-            // everything and match here: but only on a PC where the Copilot CLI has left its folder.
-            if (!CopilotCliHasBeenUsed()) return tokens;
+            if (listAllWhenNotFound is null || !listAllWhenNotFound()) return tokens;
             if (!CredEnumerateW(null, 0, out count, out list)) return tokens;
         }
 
@@ -57,8 +66,7 @@ internal static class CredentialStore
                 var entry = Marshal.ReadIntPtr(list, i * IntPtr.Size);
                 var credential = Marshal.PtrToStructure<Credential>(entry);
                 if (credential.Type != CredTypeGeneric) continue;
-                var name = Marshal.PtrToStringUni(credential.TargetName);
-                if (name is null || !name.Contains("copilot-cli", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!isOurs(Marshal.PtrToStringUni(credential.TargetName))) continue;
                 entryFound = true;
                 if (credential.CredentialBlob == IntPtr.Zero || credential.CredentialBlobSize == 0) continue;
 

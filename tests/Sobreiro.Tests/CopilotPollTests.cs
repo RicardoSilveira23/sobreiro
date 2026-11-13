@@ -70,7 +70,7 @@ public class CopilotPollTests
             Throwing(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.Ok, result.State);
         Assert.NotNull(result.Reading);
-        Assert.Equal("copilot Ok env=ok credential-manager=skipped gh=skipped", result.Log);
+        Assert.Equal("copilot Ok env=ok credential-manager=skipped language-server=skipped gh=skipped", result.Log);
         Assert.Equal(Now, result.Schedule.LastSuccess);
         Assert.Equal(["A"], handler.Tokens);
     }
@@ -90,7 +90,7 @@ public class CopilotPollTests
             Source(CopilotSourceKind.CredentialManager, "B"),
             Source(CopilotSourceKind.Gh, "C"));
         Assert.Equal(ProviderState.Ok, result.State);
-        Assert.Equal("copilot Ok env=refused credential-manager=no-budget gh=ok", result.Log);
+        Assert.Equal("copilot Ok env=refused credential-manager=no-budget language-server=skipped gh=ok", result.Log);
         Assert.Equal(["A", "B", "C"], handler.Tokens);
     }
 
@@ -103,7 +103,7 @@ public class CopilotPollTests
             Source(CopilotSourceKind.Gh, "C"));
         Assert.Equal(ProviderState.Refused, result.State);
         Assert.Null(result.Reading);
-        Assert.Equal("copilot Refused env=refused credential-manager=skipped gh=refused", result.Log);
+        Assert.Equal("copilot Refused env=refused credential-manager=skipped language-server=skipped gh=refused", result.Log);
         Assert.Equal(Now.AddMinutes(5), result.Schedule.NextDue);
         Assert.False(result.Schedule.FetchOnOpen(Now.AddMinutes(2)));
     }
@@ -117,7 +117,7 @@ public class CopilotPollTests
             Source(CopilotSourceKind.CredentialManager),
             Source(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.NoSignIn, result.State);
-        Assert.Equal("copilot NoSignIn env=none credential-manager=none gh=none", result.Log);
+        Assert.Equal("copilot NoSignIn env=none credential-manager=none language-server=skipped gh=none", result.Log);
         Assert.Empty(handler.Tokens);
         Assert.Equal(Now.AddMinutes(5), result.Schedule.NextDue);
     }
@@ -131,7 +131,7 @@ public class CopilotPollTests
             EntryWithoutToken(CopilotSourceKind.CredentialManager),
             Source(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.NoSignIn, result.State);
-        Assert.Equal("copilot NoSignIn env=none credential-manager=no-token gh=none", result.Log);
+        Assert.Equal("copilot NoSignIn env=none credential-manager=no-token language-server=skipped gh=none", result.Log);
         Assert.Empty(handler.Tokens);
     }
 
@@ -144,7 +144,7 @@ public class CopilotPollTests
             Throwing(CopilotSourceKind.CredentialManager),
             Source(CopilotSourceKind.Gh, "C"));
         Assert.Equal(ProviderState.Ok, result.State);
-        Assert.Equal("copilot Ok env=none credential-manager=error gh=ok", result.Log);
+        Assert.Equal("copilot Ok env=none credential-manager=error language-server=skipped gh=ok", result.Log);
         Assert.DoesNotContain("boom", result.Log);
         Assert.Equal(["C"], handler.Tokens);
     }
@@ -154,7 +154,7 @@ public class CopilotPollTests
     {
         var (result, _) = await Run(_ => Reply(HttpStatusCode.OK, Business), Throwing(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.NoSignIn, result.State);
-        Assert.Equal("copilot NoSignIn env=skipped credential-manager=skipped gh=error", result.Log);
+        Assert.Equal("copilot NoSignIn env=skipped credential-manager=skipped language-server=skipped gh=error", result.Log);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class CopilotPollTests
             Source(CopilotSourceKind.Env, "A"),
             Throwing(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.RateLimited, result.State);
-        Assert.Equal("copilot RateLimited env=rate-limited credential-manager=skipped gh=skipped", result.Log);
+        Assert.Equal("copilot RateLimited env=rate-limited credential-manager=skipped language-server=skipped gh=skipped", result.Log);
         Assert.Equal(Now.AddMinutes(10), result.Schedule.NextDue);
         Assert.Single(handler.Tokens);
     }
@@ -183,7 +183,7 @@ public class CopilotPollTests
             Source(CopilotSourceKind.Env, "A"),
             Throwing(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.BadAnswer, result.State);
-        Assert.Equal("copilot BadAnswer env=failed credential-manager=skipped gh=skipped", result.Log);
+        Assert.Equal("copilot BadAnswer env=failed credential-manager=skipped language-server=skipped gh=skipped", result.Log);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Single(handler.Tokens);
     }
@@ -196,7 +196,7 @@ public class CopilotPollTests
             Source(CopilotSourceKind.Env, "A"),
             Throwing(CopilotSourceKind.Gh));
         Assert.Equal(ProviderState.Offline, result.State);
-        Assert.Equal("copilot Offline env=unreachable credential-manager=skipped gh=skipped", result.Log);
+        Assert.Equal("copilot Offline env=unreachable credential-manager=skipped language-server=skipped gh=skipped", result.Log);
         Assert.Equal(Now.AddMinutes(2), result.Schedule.NextDue);
         Assert.Single(handler.Tokens);
     }
@@ -211,7 +211,7 @@ public class CopilotPollTests
         };
         var (result, _) = await Run(r => Answer(answers, r), Source(CopilotSourceKind.Gh, "A", "B"));
         Assert.Equal(ProviderState.Refused, result.State);
-        Assert.Equal("copilot Refused env=skipped credential-manager=skipped gh=no-budget", result.Log);
+        Assert.Equal("copilot Refused env=skipped credential-manager=skipped language-server=skipped gh=no-budget", result.Log);
     }
 
     [Fact]
@@ -233,5 +233,92 @@ public class CopilotPollTests
         await cts.CancelAsync();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CopilotPoll.RunAsync(
             [Source(CopilotSourceKind.Env, "A")], client, LiveSchedule.Start(Now), Now, cts.Token));
+    }
+
+    [Fact]
+    public async Task An_accepted_cli_sign_in_leaves_the_language_server_unread()
+    {
+        var (result, handler) = await Run(
+            _ => Reply(HttpStatusCode.OK, Business),
+            Source(CopilotSourceKind.Env),
+            Source(CopilotSourceKind.CredentialManager, "B"),
+            Throwing(CopilotSourceKind.LanguageServer),
+            Throwing(CopilotSourceKind.Gh));
+        Assert.Equal(ProviderState.Ok, result.State);
+        Assert.Equal("copilot Ok env=none credential-manager=ok language-server=skipped gh=skipped", result.Log);
+        Assert.Equal(["B"], handler.Tokens);
+    }
+
+    [Fact]
+    public async Task The_language_server_sign_in_is_used_when_the_cli_has_none()
+    {
+        var (result, handler) = await Run(
+            _ => Reply(HttpStatusCode.OK, Business),
+            Source(CopilotSourceKind.Env),
+            Source(CopilotSourceKind.CredentialManager),
+            Source(CopilotSourceKind.LanguageServer, "L"),
+            Throwing(CopilotSourceKind.Gh));
+        Assert.Equal(ProviderState.Ok, result.State);
+        Assert.NotNull(result.Reading);
+        Assert.Equal("copilot Ok env=none credential-manager=none language-server=ok gh=skipped", result.Log);
+        Assert.Equal(["L"], handler.Tokens);
+    }
+
+    [Fact]
+    public async Task A_refused_language_server_sign_in_goes_on_to_gh()
+    {
+        var answers = new Dictionary<string, (HttpStatusCode, string)>
+        {
+            ["L"] = (HttpStatusCode.Unauthorized, ""),
+            ["C"] = (HttpStatusCode.OK, Business),
+        };
+        var (result, handler) = await Run(
+            r => Answer(answers, r),
+            Source(CopilotSourceKind.Env),
+            Source(CopilotSourceKind.CredentialManager),
+            Source(CopilotSourceKind.LanguageServer, "L"),
+            Source(CopilotSourceKind.Gh, "C"));
+        Assert.Equal(ProviderState.Ok, result.State);
+        Assert.Equal("copilot Ok env=none credential-manager=none language-server=refused gh=ok", result.Log);
+        Assert.Equal(["L", "C"], handler.Tokens);
+    }
+
+    [Fact]
+    public async Task A_refused_language_server_sign_in_alone_is_Refused()
+    {
+        var (result, _) = await Run(
+            _ => Reply(HttpStatusCode.Unauthorized),
+            Source(CopilotSourceKind.Env),
+            Source(CopilotSourceKind.CredentialManager),
+            Source(CopilotSourceKind.LanguageServer, "L"),
+            Source(CopilotSourceKind.Gh));
+        Assert.Equal(ProviderState.Refused, result.State);
+        Assert.Equal("copilot Refused env=none credential-manager=none language-server=refused gh=none", result.Log);
+    }
+
+    [Fact]
+    public async Task A_language_server_entry_without_a_token_is_no_sign_in()
+    {
+        var (result, handler) = await Run(
+            _ => Reply(HttpStatusCode.OK, Business),
+            Source(CopilotSourceKind.Env),
+            Source(CopilotSourceKind.CredentialManager),
+            EntryWithoutToken(CopilotSourceKind.LanguageServer),
+            Source(CopilotSourceKind.Gh));
+        Assert.Equal(ProviderState.NoSignIn, result.State);
+        Assert.Equal("copilot NoSignIn env=none credential-manager=none language-server=no-token gh=none", result.Log);
+        Assert.Empty(handler.Tokens);
+    }
+
+    [Fact]
+    public void The_sources_come_in_order()
+    {
+        var signIns = CopilotSignIn.InOrder(
+            env: () => new[] { "e" }, credentialManager: () => new[] { "c" },
+            languageServer: () => new[] { "l" }, gh: () => new[] { "g" });
+        Assert.Equal(
+            [CopilotSourceKind.Env, CopilotSourceKind.CredentialManager, CopilotSourceKind.LanguageServer, CopilotSourceKind.Gh],
+            signIns.Select(s => s.Kind));
+        Assert.Equal(["e", "c", "l", "g"], signIns.Select(s => s.Tokens().Tokens.Single()));
     }
 }

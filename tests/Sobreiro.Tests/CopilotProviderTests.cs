@@ -23,7 +23,7 @@ public class CopilotProviderTests
         }
         """;
 
-    private const string OkLog = "copilot Ok env=ok credential-manager=skipped gh=skipped";
+    private const string OkLog = "copilot Ok env=ok credential-manager=skipped language-server=skipped gh=skipped";
 
     private static CopilotReading Live(DateTimeOffset at) => new(15000, 2645, Now.AddDays(18), at, CopilotSource.Live);
 
@@ -77,7 +77,7 @@ public class CopilotProviderTests
         var poll = await rig.Provider.PollAsync(LiveSchedule.Start(Now), Now, CancellationToken.None);
         Assert.Same(schedule, poll.Schedule);
         Assert.Equal(ProviderState.Ok, poll.State);
-        Assert.Equal("copilot Ok env=ok credential-manager=skipped gh=skipped", poll.Log);
+        Assert.Equal("copilot Ok env=ok credential-manager=skipped language-server=skipped gh=skipped", poll.Log);
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class CopilotProviderTests
         await rig.Kept();
         Assert.Single(rig.Logged);
 
-        rig.Returns(Poll(ProviderState.NoSignIn, null, "copilot NoSignIn env=none credential-manager=none gh=none"));
+        rig.Returns(Poll(ProviderState.NoSignIn, null, "copilot NoSignIn env=none credential-manager=none language-server=skipped gh=none"));
         await rig.Kept();
         Assert.Equal(2, rig.Logged.Count);
     }
@@ -156,7 +156,7 @@ public class CopilotProviderTests
         var live = Live(Now);
         rig.Returns(Poll(ProviderState.Ok, live, OkLog));
         await rig.Kept();
-        rig.Returns(Poll(ProviderState.Offline, null, "copilot Offline env=unreachable credential-manager=skipped gh=skipped"));
+        rig.Returns(Poll(ProviderState.Offline, null, "copilot Offline env=unreachable credential-manager=skipped language-server=skipped gh=skipped"));
         await rig.Kept();
         Assert.Same(live, rig.Provider.Shown);
     }
@@ -166,7 +166,7 @@ public class CopilotProviderTests
     {
         var rig = new Rig();
         var cache = Cache(Now);
-        rig.Returns(Poll(ProviderState.Offline, null, "copilot Offline env=unreachable credential-manager=skipped gh=skipped"), cache);
+        rig.Returns(Poll(ProviderState.Offline, null, "copilot Offline env=unreachable credential-manager=skipped language-server=skipped gh=skipped"), cache);
         await rig.Kept();
         rig.CacheFunc = () => null;
         await rig.Kept();
@@ -182,7 +182,7 @@ public class CopilotProviderTests
 
         var held = new Rig();
         var newer = Cache(Now.AddMinutes(5));
-        held.Returns(Poll(ProviderState.Offline, null, "copilot Offline env=unreachable credential-manager=skipped gh=skipped"), newer);
+        held.Returns(Poll(ProviderState.Offline, null, "copilot Offline env=unreachable credential-manager=skipped language-server=skipped gh=skipped"), newer);
         await held.Kept();
         held.Provider.TakeEarly(Cache(Now.AddMinutes(-60)));
         Assert.Same(newer, held.Provider.Shown);

@@ -3,7 +3,8 @@ using System.Text.RegularExpressions;
 
 namespace Sobreiro.Core.Copilot;
 
-public enum CopilotSourceKind { Env, CredentialManager, Gh }
+/// <summary>Where a GitHub token can come from. <c>CredentialManager</c> is the Copilot CLI's entry there, <c>LanguageServer</c> the Copilot language server's.</summary>
+public enum CopilotSourceKind { Env, CredentialManager, LanguageServer, Gh }
 
 /// <summary>What one source found. <c>EntryFound</c> is for a source that saw a sign-in entry but no token in it.</summary>
 public sealed record TokenSearch(IReadOnlyList<string> Tokens, bool EntryFound = false)
@@ -13,7 +14,18 @@ public sealed record TokenSearch(IReadOnlyList<string> Tokens, bool EntryFound =
 }
 
 /// <summary>One place to look for a GitHub token. <c>Tokens</c> runs only when the poll reaches this source and may throw (the poll treats that as no token).</summary>
-public sealed record CopilotSignIn(CopilotSourceKind Kind, Func<TokenSearch> Tokens);
+public sealed record CopilotSignIn(CopilotSourceKind Kind, Func<TokenSearch> Tokens)
+{
+    /// <summary>The four sources in the order a poll tries them: the variables, the Copilot CLI's sign-in, the language server's, then <c>gh</c>.</summary>
+    public static IReadOnlyList<CopilotSignIn> InOrder(
+        Func<TokenSearch> env, Func<TokenSearch> credentialManager, Func<TokenSearch> languageServer, Func<TokenSearch> gh) =>
+    [
+        new(CopilotSourceKind.Env, env),
+        new(CopilotSourceKind.CredentialManager, credentialManager),
+        new(CopilotSourceKind.LanguageServer, languageServer),
+        new(CopilotSourceKind.Gh, gh),
+    ];
+}
 
 public static partial class CopilotToken
 {
