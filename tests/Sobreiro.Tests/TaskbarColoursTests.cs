@@ -59,4 +59,19 @@ public class TaskbarColoursTests
         var c = TaskbarColours.For(lightTaskbar: false, accentTaskbar: false, BarColourOption.Purple, null);
         Assert.True(Contrast.Ratio(c.Base, WhiteOverDark(TaskbarColours.IconTrackAlpha)) >= 2.0);
     }
+
+    // A stopped block's fill: the ink at half strength, as drawn in the variant Ricardo picked.
+    [Fact]
+    public void The_stale_fill_is_the_ink_at_half_strength() => Assert.Equal(0x80, TaskbarColours.StaleAlpha);
+
+    [Fact]
+    public void The_stale_fill_reads_on_the_dark_track() =>
+        Assert.True(Contrast.Ratio(WhiteOverDark(TaskbarColours.StaleAlpha), WhiteOverDark(TaskbarColours.TrackAlpha)) >= 3.0);
+
+    // On a light taskbar (#F0F0F0) the ink is #1A1A1A.
+    private static Rgb InkOverLight(byte alpha) => new(Over(0x1A, 0xF0, alpha), Over(0x1A, 0xF0, alpha), Over(0x1A, 0xF0, alpha));
+
+    [Fact]
+    public void The_stale_fill_reads_on_the_light_track() =>
+        Assert.True(Contrast.Ratio(InkOverLight(TaskbarColours.StaleAlpha), InkOverLight(TaskbarColours.TrackAlpha)) >= 2.0);
 }

@@ -16,7 +16,7 @@ the tray without single-file compression. The process figures are the newest row
 | Code | 8,304 lines of C#: Core 4,220, tray app 4,059, bridge 25 |
 | Core | Plain `net10.0`, no native calls, no runtime packages. Its only Windows ties are paths |
 | Tray app | WPF and WinForms, native calls in 12 files (pill, flyout, autostart, Credential Manager, theme) |
-| Tests | 925, all against Core. CI runs on Windows only |
+| Tests | 937, all against Core. CI runs on Windows only |
 | Polling | Every 5 minutes, 2-minute retry, stepped back-off on rate limits |
 | Memory | 98 MB private, 174 MB working set, after 10 minutes idle and still rising slowly |
 | CPU | 1.1 s in the first minute, then 13.0 s per idle hour |
@@ -48,10 +48,11 @@ Stays on C#, WPF and .NET 10.
     memory went from 181 MB to 98 MB and a later start from 0.54 s to 0.38 s, for an exe of
     168.9 MB where it was 73.7 MB.
 - Defined, tested behaviour for each way the data can stop: an endpoint that changes or
-  refuses, an expired Claude Code token, no sign-in at all. The pill says which one it is.
-  Done on 2026-11-13: each cause has its own state in Core, and the pill names it in two
-  words once two polls in a row have brought nothing and the last figures are over
-  15 minutes old for Claude Code, a day old for Copilot.
+  refuses, an expired Claude Code token, no sign-in at all. The flyout says which one it is.
+  Done on 2026-11-13: each cause has its own state in Core and its own sentence in the
+  flyout, and the pill keeps its last figures, marked with `*` and a grey fill, once two
+  polls in a row have brought nothing and those figures are over 15 minutes old for Claude
+  Code, a day old for Copilot.
 - A provider interface in Core, now that there are two providers. Done on 2026-11-13: both
   sit behind one interface, and the polling loop they shared is in Core with tests.
 - The Copilot test on a work PC.
@@ -99,7 +100,7 @@ the others, first on paper and then in running code.
 
 A short table in `docs/shell-comparison.md`, a day or two of work. The candidates to start from:
 
-- **C# with Avalonia, published with Native AOT.** Keeps Core and its 925 tests untouched; only
+- **C# with Avalonia, published with Native AOT.** Keeps Core and its 937 tests untouched; only
   the shell is ported.
 - **Rust with Slint.** Low expected memory; licence fits GPL-3.0-or-later. Its tray element
   shipped in June 2026 and offers a menu only, so the pill and flyout need raw window handles.

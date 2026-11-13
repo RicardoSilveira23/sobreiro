@@ -4,6 +4,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using Sobreiro.Core.Colours;
 using Sobreiro.Core.Display;
+using Sobreiro.Core.Limits;
 using Brush = System.Windows.Media.Brush;
 using Color = System.Windows.Media.Color;
 using FontFamily = System.Windows.Media.FontFamily;
@@ -17,7 +18,8 @@ namespace Sobreiro.Pill;
 
 /// <summary>
 /// Draws a <see cref="PillModel"/> for the taskbar: two right-aligned lines (label in Inter, figure
-/// in Unbounded) and two concentric rings, in DIPs and in the taskbar's ink.
+/// in Unbounded) and two concentric rings, in DIPs and in the taskbar's ink. A block whose numbers
+/// have stopped keeps its figures, each followed by <c>*</c>, and its fill turns grey.
 /// </summary>
 public static class PillView
 {
@@ -50,18 +52,10 @@ public static class PillView
         if (model.ShowClaude)
         {
             var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            if (model.ClaudeWords is { } words)
-            {
-                lines.Children.Add(Word(words.Top, ink));
-                lines.Children.Add(Word(words.Bottom, ink));
-            }
-            else
-            {
-                lines.Children.Add(Line(model.Session, ink));
-                lines.Children.Add(Line(model.Weekly, ink));
-            }
+            lines.Children.Add(Line(model.Session, ink));
+            lines.Children.Add(Line(model.Weekly, ink));
 
-            var rings = Rings(model.Rings, colours);
+            var rings = Rings(model.Rings, colours, model.ClaudeStale);
             rings.Margin = new Thickness(TextToRings, 0, 0, 0);
 
             row.Children.Add(lines);
@@ -88,24 +82,16 @@ public static class PillView
     {
         var ink = colours.Ink;
         var lines = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        if (copilot.Words is { } words)
+        lines.Children.Add(Line(copilot.Credits, ink));
+        lines.Children.Add(new TextBlock
         {
-            lines.Children.Add(Word(words.Top, ink));
-            lines.Children.Add(Word(words.Bottom, ink));
-        }
-        else
-        {
-            lines.Children.Add(Line(copilot.Credits, ink));
-            lines.Children.Add(new TextBlock
-            {
-                Text = copilot.ResetDate,
-                Foreground = Solid(ink, ResetAlpha),
-                FontFamily = Inter,
-                FontSize = ResetSize,
-                TextAlignment = TextAlignment.Right,
-                HorizontalAlignment = HorizontalAlignment.Right,
-            });
-        }
+            Text = copilot.ResetDate,
+            Foreground = Solid(ink, ResetAlpha),
+            FontFamily = Inter,
+            FontSize = ResetSize,
+            TextAlignment = TextAlignment.Right,
+            HorizontalAlignment = HorizontalAlignment.Right,
+        });
 
         var bar = LevelBar(copilot, colours);
         bar.Margin = new Thickness(TextToRings, 0, 0, 0);
@@ -140,24 +126,18 @@ public static class PillView
         var height = BarHeight * Math.Clamp(copilot.Fraction, 0, 1);
         if (height > 0)
         {
-            var fill = new System.Windows.Shapes.Rectangle { Width = BarWidth, Height = height, Fill = Solid(colours.Fill(copilot.Level)) };
+            var fill = new System.Windows.Shapes.Rectangle { Width = BarWidth, Height = height, Fill = Fill(colours, copilot.Level, copilot.Stale) };
             Canvas.SetTop(fill, BarHeight - height);
             canvas.Children.Add(fill);
         }
         return canvas;
     }
 
-    // One word of a stopped block, in the label's font and size.
-    private static TextBlock Word(string text, Rgb ink) => new()
-    {
-        Text = text,
-        Foreground = Solid(ink),
-        FontFamily = Inter,
-        FontSize = LabelSize,
-        TextAlignment = TextAlignment.Right,
-        HorizontalAlignment = HorizontalAlignment.Right,
-    };
+    // A stopped block's fill is the ink at half strength: the level's colour goes, the amount stays.
+    private static Brush Fill(TaskbarColours colours, UsageLevel level, bool stale) =>
+        stale ? Solid(colours.Ink, TaskbarColours.StaleAlpha) : Solid(colours.Fill(level));
 
+    // The label, the figure, and "*" in the label's font after a figure that is no longer updated.
     private static TextBlock Line(PillLine line, Rgb ink)
     {
         var text = new TextBlock
@@ -168,20 +148,21 @@ public static class PillView
         };
         text.Inlines.Add(new Run(line.Label + " ") { FontFamily = Inter, FontSize = LabelSize });
         text.Inlines.Add(new Run(line.Figure) { FontFamily = Unbounded, FontWeight = FontWeights.Bold, FontSize = FigureSize });
+        if (line.Stale) text.Inlines.Add(new Run("*") { FontFamily = Inter, FontSize = LabelSize });
         return text;
     }
 
-    private static Canvas Rings(RingsModel model, TaskbarColours colours)
+    private static Canvas Rings(RingsModel model, TaskbarColours colours, bool stale)
     {
         var canvas = new Canvas { Width = RingsSize, Height = RingsSize, VerticalAlignment = VerticalAlignment.Center };
         var outer = RingsSize / 2 - Stroke / 2;
-        Ring(canvas, model.Outer, colours, outer);
-        Ring(canvas, model.Inner, colours, outer - Stroke - RingGap);
+        Ring(canvas, model.Outer, colours, outer, stale);
+        Ring(canvas, model.Inner, colours, outer - Stroke - RingGap, stale);
         return canvas;
     }
 
     // The track as a full circle at the track alpha, then the arc clockwise from 12 o'clock.
-    private static void Ring(Canvas canvas, Ring ring, TaskbarColours colours, double radius)
+    private static void Ring(Canvas canvas, Ring ring, TaskbarColours colours, double radius, bool stale)
     {
         var centre = new Point(RingsSize / 2, RingsSize / 2);
         canvas.Children.Add(new Path
@@ -193,7 +174,7 @@ public static class PillView
 
         var sweep = ring.CappedSweep(radius, Stroke);
         if (sweep <= 0) return;
-        var fill = Solid(colours.Fill(ring.Level));
+        var fill = Fill(colours, ring.Level, stale);
         if (sweep >= 360)
         {
             canvas.Children.Add(new Path { Data = new EllipseGeometry(centre, radius, radius), Stroke = fill, StrokeThickness = Stroke });
