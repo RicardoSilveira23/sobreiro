@@ -65,53 +65,99 @@ public class PillModelTests
     private static Limit Aged(LimitKind kind, TimeSpan age) =>
         new("Claude Code", kind, kind.ToString(), 40, null, WordsNow - age, false);
 
-    [Fact]
-    public void Stopped_claude_block_carries_the_words_and_empty_rings()
-    {
-        var m = PillModel.From([Aged(LimitKind.Session, TimeSpan.FromMinutes(20)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(20))],
-            TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
-        Assert.Equal(new PillWords("sign-in", "expired"), m.ClaudeWords);
-        Assert.Equal(RingsModel.From([]), m.Rings);
-    }
+    private static Limit OldCredits(TimeSpan age) =>
+        LimitList.FromCopilot(new CopilotReading(15000, 2644, DateTimeOffset.Parse("2026-12-01T00:00:00Z"),
+            WordsNow - age, CopilotSource.Live), WordsNow)[0];
 
     [Fact]
-    public void One_missed_poll_keeps_the_figures()
+    public void Stopped_claude_block_keeps_its_figures_and_rings()
     {
-        var credits = LimitList.FromCopilot(new CopilotReading(15000, 2644, DateTimeOffset.Parse("2026-12-01T00:00:00Z"),
-            WordsNow - TimeSpan.FromDays(3), CopilotSource.Live), WordsNow)[0];
-        IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromHours(3)), Aged(LimitKind.Weekly, TimeSpan.FromHours(3)), credits];
-        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, ProviderState.Offline, 1, ProviderState.Offline, 1, WordsNow);
-        Assert.Null(m.ClaudeWords);
-        Assert.Null(m.Copilot!.Words);
-    }
-
-    [Fact]
-    public void Fresh_claude_block_has_no_words()
-    {
-        IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromMinutes(1)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(1))];
+        IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromMinutes(20)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(20))];
         var m = PillModel.From(limits, TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
-        Assert.Null(m.ClaudeWords);
+        Assert.True(m.ClaudeStale);
+        Assert.Equal(new PillLine("5h", "40%", true), m.Session);
+        Assert.Equal(new PillLine("7d", "40%", true), m.Weekly);
         Assert.Equal(RingsModel.From(limits), m.Rings);
     }
 
     [Fact]
-    public void Stopped_copilot_block_carries_the_words_and_an_empty_bar()
+    public void A_stopped_block_marks_only_the_figures_it_has()
     {
-        var credits = LimitList.FromCopilot(new CopilotReading(15000, 2644, DateTimeOffset.Parse("2026-12-01T00:00:00Z"),
-            WordsNow - TimeSpan.FromHours(25), CopilotSource.Live), WordsNow)[0];
-        var c = PillModel.From([credits], TimeZoneInfo.Utc, true, ProviderState.Off, 0, ProviderState.Offline, 2, WordsNow).Copilot!;
-        Assert.Equal(new PillWords("no", "network"), c.Words);
-        Assert.Equal(0, c.Fraction);
+        var m = PillModel.From([Aged(LimitKind.Session, TimeSpan.FromMinutes(20))],
+            TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
+        Assert.True(m.ClaudeStale);
+        Assert.True(m.Session.Stale);
+        Assert.Equal(new PillLine("7d", "–"), m.Weekly);
     }
 
     [Fact]
-    public void The_three_argument_From_never_has_words()
+    public void Nothing_to_keep_reads_plain_dashes()
     {
-        var credits = LimitList.FromCopilot(new CopilotReading(15000, 2644, DateTimeOffset.Parse("2026-12-01T00:00:00Z"),
-            WordsNow - TimeSpan.FromDays(3), CopilotSource.Live), WordsNow)[0];
-        var m = PillModel.From([Aged(LimitKind.Session, TimeSpan.FromDays(3)), credits], TimeZoneInfo.Utc, true);
-        Assert.Null(m.ClaudeWords);
-        Assert.Null(m.Copilot!.Words);
+        var m = PillModel.From([], TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
+        Assert.False(m.ClaudeStale);
+        Assert.Equal(new PillLine("5h", "–"), m.Session);
+        Assert.Equal(new PillLine("7d", "–"), m.Weekly);
+        Assert.Equal(RingsModel.From([]), m.Rings);
+    }
+
+    [Fact]
+    public void One_missed_poll_marks_nothing()
+    {
+        IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromHours(3)), Aged(LimitKind.Weekly, TimeSpan.FromHours(3)), OldCredits(TimeSpan.FromDays(3))];
+        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, ProviderState.Offline, 1, ProviderState.Offline, 1, WordsNow);
+        Assert.False(m.ClaudeStale);
+        Assert.False(m.Session.Stale);
+        Assert.False(m.Weekly.Stale);
+        Assert.False(m.Copilot!.Stale);
+        Assert.False(m.Copilot.Credits.Stale);
+    }
+
+    [Fact]
+    public void Fresh_claude_block_is_not_stale()
+    {
+        IReadOnlyList<Limit> limits = [Aged(LimitKind.Session, TimeSpan.FromMinutes(1)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(1))];
+        var m = PillModel.From(limits, TimeZoneInfo.Utc, true, ProviderState.Expired, 2, ProviderState.Ok, 0, WordsNow);
+        Assert.False(m.ClaudeStale);
+        Assert.Equal(new PillLine("5h", "40%"), m.Session);
+        Assert.Equal(new PillLine("7d", "40%"), m.Weekly);
+        Assert.Equal(RingsModel.From(limits), m.Rings);
+    }
+
+    [Fact]
+    public void Stopped_copilot_block_keeps_its_figure_and_bar()
+    {
+        var c = PillModel.From([OldCredits(TimeSpan.FromHours(25))], TimeZoneInfo.Utc, true, ProviderState.Off, 0, ProviderState.Offline, 2, WordsNow).Copilot!;
+        Assert.True(c.Stale);
+        Assert.Equal(new PillLine("AI", "17%", true), c.Credits);
+        Assert.Equal("1 Dec", c.ResetDate);
+        Assert.Equal(.176, c.Fraction, 3);
+    }
+
+    [Fact]
+    public void Each_block_decides_alone()
+    {
+        var copilotOnly = PillModel.From(
+            [Aged(LimitKind.Session, TimeSpan.FromMinutes(1)), Aged(LimitKind.Weekly, TimeSpan.FromMinutes(1)), OldCredits(TimeSpan.FromDays(3))],
+            TimeZoneInfo.Utc, true, ProviderState.Ok, 0, ProviderState.NoSignIn, 2, WordsNow);
+        Assert.False(copilotOnly.ClaudeStale);
+        Assert.False(copilotOnly.Session.Stale);
+        Assert.True(copilotOnly.Copilot!.Stale);
+
+        var claudeOnly = PillModel.From(
+            [Aged(LimitKind.Session, TimeSpan.FromHours(3)), Aged(LimitKind.Weekly, TimeSpan.FromHours(3)), OldCredits(TimeSpan.FromHours(1))],
+            TimeZoneInfo.Utc, true, ProviderState.Refused, 2, ProviderState.Ok, 0, WordsNow);
+        Assert.True(claudeOnly.ClaudeStale);
+        Assert.False(claudeOnly.Copilot!.Stale);
+        Assert.False(claudeOnly.Copilot.Credits.Stale);
+    }
+
+    [Fact]
+    public void The_three_argument_From_marks_nothing()
+    {
+        var m = PillModel.From([Aged(LimitKind.Session, TimeSpan.FromDays(3)), OldCredits(TimeSpan.FromDays(3))], TimeZoneInfo.Utc, true);
+        Assert.False(m.ClaudeStale);
+        Assert.False(m.Session.Stale);
+        Assert.False(m.Copilot!.Stale);
     }
 
     [Fact]

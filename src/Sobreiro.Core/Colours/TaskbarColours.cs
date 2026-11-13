@@ -11,6 +11,9 @@ public sealed record TaskbarColours(Rgb Ink, Rgb Base, Rgb Warning, Rgb Error)
     /// <summary>Alpha of the tray icon's ring track (the ink at about 35%): at 16 px the pill's 15% vanishes.</summary>
     public const byte IconTrackAlpha = 0x59;
 
+    /// <summary>Alpha of a stopped block's ring or bar fill on the pill (the ink at half strength, in place of the level colour).</summary>
+    public const byte StaleAlpha = 0x80;
+
     public static TaskbarColours For(bool lightTaskbar, bool accentTaskbar, BarColourOption option, AccentPalette? accent)
     {
         var ink = lightTaskbar ? Rgb.Parse("#1A1A1A") : Rgb.Parse("#FFFFFF");
