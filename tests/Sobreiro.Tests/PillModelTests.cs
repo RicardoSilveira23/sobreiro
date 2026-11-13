@@ -144,7 +144,7 @@ public class PillModelTests
         Assert.True(copilotOnly.Copilot!.Stale);
 
         var claudeOnly = PillModel.From(
-            [Aged(LimitKind.Session, TimeSpan.FromHours(3)), Aged(LimitKind.Weekly, TimeSpan.FromHours(3)), OldCredits(TimeSpan.FromHours(1))],
+            [Aged(LimitKind.Session, TimeSpan.FromHours(3)), Aged(LimitKind.Weekly, TimeSpan.FromHours(3)), OldCredits(TimeSpan.FromMinutes(1))],
             TimeZoneInfo.Utc, true, ProviderState.Refused, 2, ProviderState.Ok, 0, WordsNow);
         Assert.True(claudeOnly.ClaudeStale);
         Assert.False(claudeOnly.Copilot!.Stale);
