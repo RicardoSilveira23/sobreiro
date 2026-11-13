@@ -75,6 +75,7 @@ Changes that were tried, each beside the release it was tried on, kept or not.
 | 0.10.0, tray without compression | 2026-11-13 | 98 MB | 174 MB | 13.0 s | 0.84 s | 0.38 s | 168.9 MB | 2.2 MB | 9 ms |
 | 1.0.0, taskbar asked on change | 2026-11-13 | 94 MB | 170 MB | 7.3 s | 0.48 s | 0.39 s | 168.9 MB | 2.2 MB | 9 ms |
 | 1.0.0, pill on a plain window (spike) | 2026-11-13 | 27 MB | 96 MB | 5.4 s | 0.33 s | 0.25 s | 170.2 MB | 2.2 MB | 8 ms |
+| 1.0.0, tiered compilation off | 2026-11-13 | 103 MB | 173 MB | 3.0 s | 0.57 s | 0.47 s | 168.9 MB | 2.2 MB | 9 ms |
 
 Notes on an experiment:
 
@@ -143,3 +144,48 @@ Notes on an experiment:
   - `Sobreiro.exe` is 1.3 MB larger because the spike carries its fonts twice.
   - The code is on the branch `spike/shell-f-plain-window`, cut from `main` at `f6c7df4`: the
     row above it is the same code without the spike.
+- **Tiered compilation off: kept. 7.3 s to 3.0 s of processor time per idle hour; the 5 s
+  target is met, on one run.** The row is the "taskbar asked on change" build plus one line in
+  the tray's project file (`main` at `c205007`, WPF pill, no spike), measured the same evening.
+  - What a second profile found. A copy of the "taskbar asked on change" build, signed in and
+    showing its pill, used 7.4 s per idle hour, so the 7.3 s repeated. By thread, with someone
+    at the PC (2 to 6 window switches a minute):
+
+    | Where | s per idle hour |
+    |---|---|
+    | The runtime recompiling in the background | 3.2 |
+    | Thread-pool workers (the taskbar questions, the usage poll) | 2.1 |
+    | UI Automation's own thread | 0.6 |
+    | UI thread | 0.5 |
+    | Threads that came and went between samples | about 1 |
+
+    By default the runtime compiles code quickly the first time it runs and again, optimised,
+    in the background once it has run often. Sobreiro's code runs a little every few seconds
+    and every five minutes, so pieces of it kept crossing that line for as long as the tray ran.
+  - What was tried. Four copies side by side for 30 minutes, signed out, pills hidden, nobody
+    at the PC, the settings given through environment variables. Processor time from the end of
+    minute 1 to the end of minute 30, scaled to an hour:
+
+    | Copy | CPU per idle hour | Of it, recompiling | CPU in minute 1 |
+    |---|---|---|---|
+    | As shipped | 2.6 s | 1.2 s | 0.86 s |
+    | Profile-guided recompiling off | 2.3 s | 0.6 s | 0.83 s |
+    | Tiered compilation off | 1.7 s | 0 | 0.78 s |
+    | Precompiled when published, settings as shipped | 2.8 s | 1.3 s | 0.67 s |
+
+    The recompiling fades slowly and was not gone at 30 minutes: 0.25 s in minutes 2 to 10,
+    0.19 s in 11 to 20, 0.16 s in 21 to 30. Precompiling alone does not cut it, since
+    precompiled code is recompiled too once it runs often, and it made `Sobreiro.exe` 186.8 MB.
+    Another session's test copies ran beside these for their first seven minutes.
+  - What changed. `<TieredCompilation>false</TieredCompilation>` in `src/Sobreiro/Sobreiro.csproj`:
+    code is compiled once, optimised, the first time it runs. Built that way and run beside the
+    as-shipped exe for 10 minutes, signed out and hidden: 1.3 s per idle hour against 3.3 s.
+  - What it costs. The start is slower by 0.06 s to 0.09 s on each of the five timed starts:
+    later starts 0.39 s to 0.47 s, the first start 0.48 s to 0.57 s, inside the 1 s target.
+    Private memory was 103 MB against 94 MB at the end of the run, and 95 MB against 80 MB
+    after its first minute; one run of each, and it was still rising in both.
+  - Minute by minute, this run used 0.08, 0.02, 0.01, 0.05, 0.06, 0.03, 0.07, 0.07 and 0.07 s;
+    the run before the change 0.14, 0.10, 0.09, 0.05, 0.25, 0.06, 0.17, 0.06 and 0.18 s.
+  - It is one run. Two baseline runs of one build have differed by 1.9 s on this PC (13.9 s and
+    15.8 s, above), which is less than the 4.3 s between these two rows, and the copies run
+    side by side point the same way.

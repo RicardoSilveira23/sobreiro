@@ -116,9 +116,15 @@ shell decision: whatever lowers it on the current shell is worth having in a 1.x
 - **First change: 7.3 s, not yet 5 s.** The pill now asks on a sign of change and every 15
   seconds otherwise ([the design](superpowers/specs/2026-11-13-idle-cpu-taskbar-query-design.md)).
   The baseline run measured 7.3 s per idle hour, half of 1.0's figure and still over the target.
-- **Next.** What is left has not been profiled the way the baseline measures it: signed in,
-  with the pill shown. Copies run signed out with the pill hidden measured 3.1 s to 3.7 s, so
-  the usage polls and the shown pill are the suspects, not the finding.
+- **Second profile, 2026-11-13.** Signed in and showing its pill, the tray used 7.4 s per idle
+  hour, and 3.2 s of it was the runtime recompiling code in the background, which it kept doing
+  for as long as the tray ran.
+- **Second change: 3.0 s, the target is met.** The tray's code is now compiled once, when it
+  first runs (tiered compilation off, one line in the project file). The baseline run measured
+  3.0 s per idle hour against 7.3 s. The price is a start about 0.08 s slower (first pill after
+  0.47 s, first start 0.57 s) and 9 MB more private memory (103 MB), both inside their targets.
+- **What is left.** That is one run, on `main` and not yet in a release: the next release's row
+  under Releases in [baseline.md](baseline.md) is the check that it holds.
 
 ### Step 1: compare on paper
 
