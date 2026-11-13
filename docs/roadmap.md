@@ -122,12 +122,13 @@ shell decision: whatever lowers it on the current shell is worth having in a 1.x
 
 ### Step 1: compare on paper
 
-A short table in `docs/shell-comparison.md`, a day or two of work. The candidates to start from:
+A short table, a day or two of work. It is written: [shell-comparison.md](shell-comparison.md),
+with its shortlist and what it leaves open for step 2. The candidates it started from:
 
 - **C# with Avalonia, published with Native AOT.** Keeps Core and its 956 tests untouched; only
   the shell is ported.
 - **Rust with Slint.** Low expected memory; licence fits GPL-3.0-or-later. Its tray element
-  shipped in June 2026 and offers a menu only, so the pill and flyout need raw window handles.
+  shipped in June 2026 and is still young; the pill and flyout need raw window handles.
 - **C++ with Qt.** The longest-proven tray support on all three systems and low memory; a
   heavier build and manual memory management.
 - **Go with a small native tray and window library.** Simple toolchain and one binary; thin UI
