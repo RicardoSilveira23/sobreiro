@@ -74,6 +74,7 @@ Changes that were tried, each beside the release it was tried on, kept or not.
 | 0.10.0, tray compressed | 2026-11-13 | 181 MB | 314 MB | 15.8 s | 0.64 s | 0.54 s | 73.7 MB | 2.2 MB | 8 ms |
 | 0.10.0, tray without compression | 2026-11-13 | 98 MB | 174 MB | 13.0 s | 0.84 s | 0.38 s | 168.9 MB | 2.2 MB | 9 ms |
 | 1.0.0, taskbar asked on change | 2026-11-13 | 94 MB | 170 MB | 7.3 s | 0.48 s | 0.39 s | 168.9 MB | 2.2 MB | 9 ms |
+| 1.0.0, pill on a plain window (spike) | 2026-11-13 | 27 MB | 96 MB | 5.4 s | 0.33 s | 0.25 s | 170.2 MB | 2.2 MB | 8 ms |
 
 Notes on an experiment:
 
@@ -129,3 +130,16 @@ Notes on an experiment:
     5-minute usage poll falls in. That run has not been profiled.
   - Memory, start time and sizes did not move: 94 MB against 97 MB is inside what two runs of
     the same build differ by.
+- **Pill on a plain window: a spike, not merged.** The first spike of the next shell
+  ([shell-comparison.md](shell-comparison.md#f-c-the-pill-on-a-plain-system-window)): the row
+  above it with only the pill window taken off WPF, drawn by hand on a plain system window,
+  and the taskbar asked through UI Automation's own interface. Measured the same evening.
+  - Private memory 94 MB to 27 MB, working set 170 MB to 96 MB, later starts 0.39 s to 0.25 s.
+  - 7.3 s to 5.4 s of processor time per idle hour, one run of each. Minute by minute: 0.06,
+    0.17, 0.06, 0.07, 0.15, 0.08, 0.08, 0.04 and 0.10 s.
+  - The run never opens the flyout, which is still WPF. In a separate copy, opening it once
+    took private memory from 24.5 MB to 94 MB, and it stayed at 92 to 94 MB for the five
+    minutes it was watched. The row is an app whose flyout has not been opened yet.
+  - `Sobreiro.exe` is 1.3 MB larger because the spike carries its fonts twice.
+  - The code is on the branch `spike/shell-f-plain-window`, cut from `main` at `f6c7df4`: the
+    row above it is the same code without the spike.
