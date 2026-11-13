@@ -65,7 +65,7 @@ Notes on a row:
 
 ## Experiments
 
-Packaging changes that were tried, each beside the release it was tried on, kept or not.
+Changes that were tried, each beside the release it was tried on, kept or not.
 
 | Build | Date | Private memory | Working set | CPU per idle hour | First pill, first start | First pill, later starts | Sobreiro.exe | Bridge exe | Bridge run |
 |---|---|---|---|---|---|---|---|---|---|
@@ -73,6 +73,7 @@ Packaging changes that were tried, each beside the release it was tried on, kept
 | 0.10.0, bridge with Native AOT | 2026-11-13 | not measured | not measured | not measured | not measured | not measured | 73.7 MB | 2.2 MB | 9 ms |
 | 0.10.0, tray compressed | 2026-11-13 | 181 MB | 314 MB | 15.8 s | 0.64 s | 0.54 s | 73.7 MB | 2.2 MB | 8 ms |
 | 0.10.0, tray without compression | 2026-11-13 | 98 MB | 174 MB | 13.0 s | 0.84 s | 0.38 s | 168.9 MB | 2.2 MB | 9 ms |
+| 1.0.0, taskbar asked on change | 2026-11-13 | 94 MB | 170 MB | 7.3 s | 0.48 s | 0.39 s | 168.9 MB | 2.2 MB | 9 ms |
 
 Notes on an experiment:
 
@@ -98,3 +99,33 @@ Notes on an experiment:
   The two CPU figures, 15.8 s and 13.0 s, are not a finding: two runs of compressed builds on
   this day gave 13.9 s and 15.8 s. Memory was still rising slowly at the end of both runs.
   `scripts/package.ps1` now publishes without compression unless told otherwise.
+- **Taskbar asked on change: kept. 14.9 s to 7.3 s of processor time per idle hour; the 5 s
+  target is not met.** The row is `main` at 1.0.0 plus this one change, measured the same day
+  as the 1.0.0 row.
+  - What the profile found. Copies of 1.0.0 were run beside an installed one, each on its own
+    data folder, signed out of Claude, their pills hidden because the installed pill had the
+    place. Processor time from the end of minute 1 to the end of minute 7, scaled to an hour:
+
+    | Copy | CPU per idle hour | Private memory |
+    |---|---|---|
+    | As shipped, three runs | 12.2 s, 15.2 s, 8.4 s | 91 MB, 105 MB, 93 MB |
+    | Same exe, pill switched off in its config | 1.4 s | 19 MB |
+    | The tick as shipped, without its question to UI Automation | 1.9 s | 76 MB |
+    | With this change, two runs | 3.7 s, 3.1 s | 77 MB, 81 MB |
+
+    So the question the pill put to UI Automation on every 2-second tick (where the tray icons
+    and the task buttons are) was 85 to 90% of the idle time: 1,800 questions an hour. The
+    window-event hooks cost nothing when nobody is at the PC, and one question costs the same
+    whether it fetches the taskbar in one call or in several. The second as-shipped run leaves
+    out one minute of 1.27 s that looks like a flyout opening and was not checked.
+  - What changed. The pill keeps its 2-second tick for the cheap checks and asks UI Automation
+    only on a sign of change (start, a display or taskbar change, a foreground switch, an
+    answer that differs from the last) and every 15 seconds otherwise.
+  - What it costs. A tray icon that appears or leaves while no window is switched can leave
+    the pill out of place for up to 16 seconds.
+  - Why 7.3 s and not the 3 s to 4 s of the hidden copies is not known. The baseline run is
+    signed in and shows its pill; the copies were neither. Its quiet minutes used 0.05 s to
+    0.10 s and four of its nine minutes used 0.14 s to 0.25 s, one of them the minute the
+    5-minute usage poll falls in. That run has not been profiled.
+  - Memory, start time and sizes did not move: 94 MB against 97 MB is inside what two runs of
+    the same build differ by.

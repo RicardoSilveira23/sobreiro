@@ -11,7 +11,9 @@ namespace Sobreiro.Pill;
 /// <summary>
 /// Keeps one <see cref="PillWindow"/> over the taskbar, just left of the tray icons: finds the taskbar,
 /// follows it through auto-hide, DPI changes, display changes and Explorer restarts, and hides the pill
-/// while a full-screen app runs. Everything here runs on the UI thread except the UI Automation query.
+/// while a full-screen app runs. Everything here runs on the UI thread except the UI Automation query,
+/// which is sent only when a <see cref="TaskbarQuerySchedule"/> says a tick should ask: on a sign of change,
+/// and about every 16 seconds otherwise, not on every tick.
 /// </summary>
 internal sealed class PillHost : IDisposable
 {
@@ -22,6 +24,7 @@ internal sealed class PillHost : IDisposable
     private readonly TaskbarNative.WinEventProc _locationProc;
     private readonly TaskbarNative.WinEventProc _foregroundProc;
     private readonly uint _taskbarCreated = TaskbarNative.RegisterMessage("TaskbarCreated");
+    private readonly long _clockStart = Stopwatch.GetTimestamp();
 
     private HwndSource? _messages;
     private PillWindow? _window;
@@ -34,6 +37,7 @@ internal sealed class PillHost : IDisposable
     private bool _querying;
     private bool _requery;
     private int _generation;
+    private TaskbarQuerySchedule _schedule;
     private bool _enabled;
     private bool _disposed;
 
@@ -93,6 +97,9 @@ internal sealed class PillHost : IDisposable
 
     private bool Active => _enabled && !_disposed;
 
+    // Monotonic, so a change of the wall clock cannot make a question early or late.
+    private TimeSpan Now => Stopwatch.GetElapsedTime(_clockStart);
+
     private void Start()
     {
         if (_messages is null)
@@ -118,6 +125,7 @@ internal sealed class PillHost : IDisposable
         CloseWindow();
         _anchors = null;
         _generation++;
+        _schedule = default;
         _taskbar = IntPtr.Zero;
         _trayNotify = IntPtr.Zero;
         _requery = false;
@@ -135,7 +143,8 @@ internal sealed class PillHost : IDisposable
         if (taskbar != _taskbar) AttachTo(taskbar);
         if (_window is not null && !WindowAlive(_window)) CloseWindow();
         if (_window is null) CreateWindow();
-        AskUiAutomation();
+        // Conditional: asking UI Automation every tick (1,800 times an hour) was most of the idle processor time.
+        if (_schedule.Due(Now)) AskUiAutomation();
         Place();
     }
 
@@ -145,6 +154,7 @@ internal sealed class PillHost : IDisposable
         CloseWindow();
         _anchors = null;
         _generation++;
+        _schedule = default;
         _taskbar = taskbar;
         _trayNotify = TaskbarNative.FindTrayNotify(taskbar);
         var (pid, thread) = TaskbarNative.ProcessAndThread(taskbar);
@@ -190,6 +200,7 @@ internal sealed class PillHost : IDisposable
             return;
         }
         _querying = true;
+        _schedule = _schedule.Asked(Now);
         var taskbar = _taskbar;
         var generation = _generation;
         _ = Task.Run(() =>
@@ -207,6 +218,7 @@ internal sealed class PillHost : IDisposable
         // A null answer (auto-hidden taskbar, restarting) keeps the last good anchors.
         if (taskbar == _taskbar && generation == _generation)
         {
+            _schedule = _schedule.Answered(answer);
             if (answer is not null)
             {
                 _anchors = answer;
@@ -244,6 +256,7 @@ internal sealed class PillHost : IDisposable
             // anchors are in the old scale, so drop them and ask again.
             _anchors = null;
             _generation++;
+            _schedule = default;
             window.HideNow();
             AskUiAutomation();
             return;
@@ -279,7 +292,13 @@ internal sealed class PillHost : IDisposable
         });
 
     private void OnForeground(IntPtr hook, uint eventId, IntPtr hwnd, int idObject, int idChild, uint thread, uint time) =>
-        Guard("foreground", Place);
+        Guard("foreground", () =>
+        {
+            if (!Active) return;
+            // No question sent here: the schedule notes the switch and the next due tick asks.
+            _schedule = _schedule.ForegroundSwitched();
+            Place();
+        });
 
     // Raised on another thread: marshal to the dispatcher.
     private void OnDisplaySettingsChanged(object? sender, EventArgs e) =>
@@ -288,6 +307,7 @@ internal sealed class PillHost : IDisposable
             if (!Active) return;
             _anchors = null;
             _generation++;
+            _schedule = default;
             AskUiAutomation();
             Place();
         }));
