@@ -55,14 +55,21 @@ Stays on C#, WPF and .NET 10.
   Code, a day old for Copilot.
 - A provider interface in Core, now that there are two providers. Done on 2026-11-13: both
   sit behind one interface, and the polling loop they shared is in Core with tests.
-- The Copilot test on a work PC.
+- The Copilot test on a work PC. Done on 2026-11-13. A PC where Copilot is used only inside an
+  editor has no sign-in Sobreiro can use: it shows the figure in the Copilot CLI's cache file
+  and says so, and the install notes already say to sign in with the Copilot CLI or `gh`. A
+  coworker's PC signed in with `gh` showed its numbers. What was found is in
+  [the credential reader's design note](superpowers/specs/2026-11-13-copilot-credential-reader-design.md).
+
+Version 1.0.0 was cut on 2026-11-13 with every item above done and the one unmet target below
+given up in writing.
 
 **Done when**
 
 | Measure | Baseline (0.10.0) | Target |
 |---|---|---|
 | Private memory, 10 min idle | 184 MB | 150 MB or less (met without compression: 98 MB) |
-| CPU per idle hour | 13.9 s | 5 s or less |
+| CPU per idle hour | 13.9 s | 5 s or less (not met: given up for 1.0, carried to 1.x) |
 | Start to first pill | 0.55 s | 1 s or less, the first start included (without compression: 0.38 s, first start 0.84 s) |
 | Bridge exe | 17.0 MB, runs in 43 ms | 5 MB or less, runs in 15 ms or less (met with Native AOT: 2.2 MB, 9 ms) |
 
@@ -71,11 +78,12 @@ The targets were checked against the first baseline row on 2026-11-13:
 - **Memory: kept, and met on 2026-11-13.** Publishing the tray without compression brought it
   to 98 MB. That was not expected when the targets were checked: the packaging experiments were
   thought to change size and start time only.
-- **CPU: kept, and not yet covered.** No item in the list above lowers it; the tray measured
-  13.0 s to 15.8 s per idle hour on 2026-11-13 whichever way it was packaged. The target needs
-  a change of its own, measured the same way, or it is given up in writing before 1.0. The
-  steady processor time, about 0.2 s a minute, most likely comes from checking the taskbar
-  every 2 seconds; it has not been profiled.
+- **CPU: given up for 1.0, in writing, on 2026-11-13 (Ricardo's call).** No item in the list
+  above lowers it; the tray measured 13.0 s to 15.8 s per idle hour on 2026-11-13 whichever way
+  it was packaged, which is under half a percent of one processor core. 1.0 ships with that.
+  The 5 s target is not dropped: it is the first item of 1.x, below. The steady processor
+  time, about 0.2 s a minute, most likely comes from checking the taskbar every 2 seconds; it
+  has not been profiled.
 - **Start to first pill: tightened.** The first run measured 0.55 s, so 2 s would have let the
   start get three times slower unnoticed.
 - **Bridge: the 50 ms line is dropped.** The 0.10.0 bridge already ran in 43 ms, so that line
@@ -95,6 +103,13 @@ milestone 5.
 
 Rust is one candidate, not the answer. No language is chosen until it has been compared with
 the others, first on paper and then in running code.
+
+### Carried over from 1.0: idle CPU
+
+5 s of processor time or less per idle hour, measured with the baseline script as before. 1.0
+shipped at 13.0 s to 15.8 s. Profile the idle tray first; the taskbar check every 2 seconds is
+the suspect, not the finding. It does not wait for the shell decision: whatever lowers it on
+the current shell is worth having in a 1.x release.
 
 ### Step 1: compare on paper
 
