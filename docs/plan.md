@@ -192,9 +192,9 @@ tests/Sobreiro.Tests/
 - GitHub Actions builds, tests and publishes `Sobreiro.exe` (one file, bridge and fonts inside) on each tag.
 - An unsigned `.exe` triggers SmartScreen warnings. Apply to SignPath Foundation (free code
   signing for open-source projects) once the repo is public. Fallback: Azure Trusted Signing.
-  Since 2026-11-13 signing is a nice-to-have and no release waits for it
-  ([roadmap.md](roadmap.md)).
 - winget manifest after the first signed release.
+- Since 2026-11-13 signing and winget are nice-to-haves and no release waits for either
+  ([roadmap.md](roadmap.md)).
 - Licence: GPL-3.0-or-later, chosen 2026-11-10 so copies stay open; MIT up to 0.8.1.
 - The site is the user docs: install, setup, what it shows and the known limits (see the Site
   entry under milestone 4).
