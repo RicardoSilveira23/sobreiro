@@ -49,6 +49,33 @@ public class CopilotTokenTests
     }
 
     [Fact]
+    public void The_decoded_text_is_cleared_and_only_the_token_is_kept()
+    {
+        var blob = Encoding.UTF8.GetBytes($"{{\"key\":\"other-material\",\"oauth_token\":\"{Fake}\"}}");
+        var scratch = new char[blob.Length + 1];
+        Assert.Equal(Fake, CopilotToken.FromBlob(blob, scratch));
+        Assert.All(scratch, c => Assert.Equal('\0', c));
+    }
+
+    [Fact]
+    public void The_decoded_text_is_cleared_when_it_holds_no_token()
+    {
+        var blob = Encoding.Unicode.GetBytes("a key, not a token");
+        var scratch = new char[blob.Length + 1];
+        Assert.Null(CopilotToken.FromBlob(blob, scratch));
+        Assert.All(scratch, c => Assert.Equal('\0', c));
+    }
+
+    [Fact]
+    public void A_utf16_token_is_found_after_the_utf8_pass_and_the_text_is_cleared()
+    {
+        var blob = Encoding.Unicode.GetBytes($"{{\"oauth_token\":\"{Fake}\"}}");
+        var scratch = new char[blob.Length + 1];
+        Assert.Equal(Fake, CopilotToken.FromBlob(blob, scratch));
+        Assert.All(scratch, c => Assert.Equal('\0', c));
+    }
+
+    [Fact]
     public void Environment_order_is_copilot_gh_github()
     {
         var env = new Dictionary<string, string> { ["GITHUB_TOKEN"] = "c", ["GH_TOKEN"] = "b", ["COPILOT_GITHUB_TOKEN"] = "a" };
