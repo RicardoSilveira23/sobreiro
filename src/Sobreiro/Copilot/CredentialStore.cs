@@ -10,8 +10,8 @@ namespace Sobreiro.Copilot;
 /// </summary>
 internal static class CredentialStore
 {
-    private const int ErrorNotFound = 1168;
     private const uint CredTypeGeneric = 1;
+    private const string ListingFailed = "Credential Manager did not list its entries.";
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Credential
@@ -41,22 +41,31 @@ internal static class CredentialStore
     /// The Copilot CLI's sign-in. When no target name starts with its name, older versions of the CLI may name
     /// it differently, so every entry is listed and matched here: but only on a PC where the CLI has left its folder.
     /// </summary>
-    public static TokenSearch CopilotTokens() =>
-        Tokens(CopilotCredentialName.CliFilter, CopilotCredentialName.IsCli, listAllWhenNotFound: CopilotCliHasBeenUsed);
+    public static TokenSearch CopilotTokens() => Tokens(CopilotCredentialQuery.Cli);
 
     /// <summary>The Copilot language server's sign-in, asked for by name. The other entries are never listed for it.</summary>
-    public static TokenSearch LanguageServerTokens() =>
-        Tokens(CopilotCredentialName.LanguageServerFilter, CopilotCredentialName.IsLanguageServer, listAllWhenNotFound: null);
+    public static TokenSearch LanguageServerTokens() => Tokens(CopilotCredentialQuery.LanguageServer);
 
-    private static TokenSearch Tokens(string filter, Func<string?, bool> isOurs, Func<bool>? listAllWhenNotFound)
+    // Throws when Credential Manager refuses a listing, so the poll logs "error" and not "none". The
+    // message is fixed text: nothing read from Credential Manager is ever in it.
+    private static TokenSearch Tokens(CopilotCredentialQuery query)
     {
         var tokens = new List<string>();
         var entryFound = false;
-        if (!CredEnumerateW(filter, 0, out var count, out var list))
+        if (!CredEnumerateW(query.Filter, 0, out var count, out var list))
         {
-            if (Marshal.GetLastWin32Error() != ErrorNotFound) return tokens;
-            if (listAllWhenNotFound is null || !listAllWhenNotFound()) return tokens;
-            if (!CredEnumerateW(null, 0, out count, out list)) return tokens;
+            switch (query.AfterFailure(Marshal.GetLastWin32Error(), CopilotCliHasBeenUsed()))
+            {
+                case ListingAnswer.NoEntry:
+                    return tokens;
+                case ListingAnswer.ListEverything:
+                    if (CredEnumerateW(null, 0, out count, out list)) break;
+                    // An empty Credential Manager is not a failure; anything else is.
+                    if (query.AfterFailure(Marshal.GetLastWin32Error(), cliHasBeenUsed: false) == ListingAnswer.NoEntry) return tokens;
+                    throw new InvalidOperationException(ListingFailed);
+                default:
+                    throw new InvalidOperationException(ListingFailed);
+            }
         }
 
         try
@@ -66,7 +75,7 @@ internal static class CredentialStore
                 var entry = Marshal.ReadIntPtr(list, i * IntPtr.Size);
                 var credential = Marshal.PtrToStructure<Credential>(entry);
                 if (credential.Type != CredTypeGeneric) continue;
-                if (!isOurs(Marshal.PtrToStringUni(credential.TargetName))) continue;
+                if (!query.IsOurs(Marshal.PtrToStringUni(credential.TargetName))) continue;
                 entryFound = true;
                 if (credential.CredentialBlob == IntPtr.Zero || credential.CredentialBlobSize == 0) continue;
 

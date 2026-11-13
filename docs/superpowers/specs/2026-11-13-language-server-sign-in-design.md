@@ -55,6 +55,8 @@ sign-in if it does.
 - The log line gains one word: `copilot <state> env=… credential-manager=…
   language-server=… gh=…`, with the same values as the others (`ok`, `refused`, `no-budget`,
   `none`, `no-token`, `error`, `skipped`).
+- A listing that Credential Manager refuses is logged as `error`, for either entry, so it
+  cannot pass for "no entry" (`none`). Before, the CLI's entry logged `none` for both.
 - The project rule in `CLAUDE.md` widens from "the sign-in the Copilot CLI would use" to name
   this entry too. README, SECURITY and the manual list the new source.
 
@@ -62,7 +64,9 @@ sign-in if it does.
 
 - `CopilotSourceKind` gains `LanguageServer`.
 - A new type holds the two entry names: the filter for each and whether a target name is the
-  CLI's or the language server's. `CredentialStore` (the native calls, in the tray app) asks it.
+  CLI's or the language server's. A second holds how each is looked for, and what a failed
+  listing means: no entry, list everything (the CLI's entry only), or a failure.
+  `CredentialStore` (the native calls, in the tray app) asks them.
 - The order of the four sources is built in Core, so it has a test.
 
 ## Calls made here, not by Ricardo
