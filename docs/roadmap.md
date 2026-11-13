@@ -6,8 +6,8 @@ see [Not in this roadmap](#not-in-this-roadmap).
 
 ## Where it stands
 
-Checked on 2026-11-13 against 0.10.0, except the process figures, which are one sample of the
-installed 0.8.0 build five minutes after start.
+Checked on 2026-11-13 against 0.10.0. The process figures are its row in
+[baseline.md](baseline.md), which also says how each one is taken.
 
 | What | Value |
 |---|---|
@@ -16,14 +16,15 @@ installed 0.8.0 build five minutes after start.
 | Tray app | WPF and WinForms, native calls in 12 files (pill, flyout, autostart, Credential Manager, theme) |
 | Tests | 660, all against Core. CI runs on Windows only |
 | Polling | Every 5 minutes, 2-minute retry, stepped back-off on rate limits |
-| Memory | 178 MB private, 323 MB working set |
-| CPU | 2.3 s in the first 5 minutes, startup included |
-| Files | `Sobreiro.exe` 80 MB, `sobreiro-bridge.exe` 17.8 MB |
+| Memory | 184 MB private, 331 MB working set, after 10 minutes idle and still rising slowly |
+| CPU | 1.5 s in the first minute, then 13.9 s per idle hour |
+| Start | 0.55 s from launch to the first pill; 0.62 s on the first start |
+| Files | `Sobreiro.exe` 80.4 MB, `sobreiro-bridge.exe` 17.0 MB; one bridge run takes 43 ms |
 
 ## What decides the order
 
 - **The memory is the runtime and the UI toolkit, not the logic.** Core does one HTTP call per
-  provider every 5 minutes. Moving Core alone to another language leaves the 178 MB where it is.
+  provider every 5 minutes. Moving Core alone to another language leaves the 184 MB where it is.
 - **Core is small and nearly OS-neutral.** Sharing it across systems is the easy part.
 - **The pill is the product, and the part most tied to Windows.** Any new shell is judged on
   the pill first.
@@ -49,14 +50,26 @@ Stays on C#, WPF and .NET 10.
 
 **Done when**
 
-| Measure | Baseline | Target (confirm after the first baseline run) |
+| Measure | Baseline (0.10.0) | Target |
 |---|---|---|
-| Private memory, 10 min idle | 178 MB (0.8.0) | 150 MB or less |
-| CPU per idle hour | not measured | 5 s or less |
-| Start to first pill | not measured | 2 s or less |
-| Bridge exe | 17.8 MB | 5 MB or less, starts in under 50 ms |
+| Private memory, 10 min idle | 184 MB | 150 MB or less |
+| CPU per idle hour | 13.9 s | 5 s or less |
+| Start to first pill | 0.55 s | 1 s or less, the first start included |
+| Bridge exe | 17.0 MB, runs in 43 ms | 5 MB or less, and a faster run; the Native AOT measurement sets the figure |
 | SmartScreen warning on a fresh PC | yes | none |
 | `winget install` | no | works |
+
+The targets were checked against the first baseline row on 2026-11-13:
+
+- **Memory and CPU: kept, and not yet covered.** No item in the list above lowers either. The
+  two packaging experiments change size and start time only. Each target needs a change of its
+  own, measured the same way, or it is given up in writing before 1.0. The steady processor
+  time, about 0.2 s a minute, most likely comes from checking the taskbar every 2 seconds; it
+  has not been profiled.
+- **Start to first pill: tightened.** The first run measured 0.55 s, so 2 s would have let the
+  start get three times slower unnoticed.
+- **Bridge: the 50 ms line is dropped.** Today's bridge already runs in 43 ms, so that line
+  could not tell the two ways of publishing apart.
 
 ## 1.x: choose the next shell on numbers
 
