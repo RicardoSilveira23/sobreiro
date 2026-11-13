@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Sobreiro/Sobreiro.csproj" />
+    <Project Path="src/Sobreiro.Baseline/Sobreiro.Baseline.csproj" />
     <Project Path="src/Sobreiro.Bridge/Sobreiro.Bridge.csproj" />
     <Project Path="src/Sobreiro.Core/Sobreiro.Core.csproj" />
   </Folder>

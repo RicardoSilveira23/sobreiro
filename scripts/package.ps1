@@ -9,10 +9,13 @@
   Where Sobreiro.exe (and a throwaway stage folder) go. Default: dist.
 .PARAMETER Tag
   Optional git tag. Must be v<version> or v<version>-<suffix>, else the script fails.
+.PARAMETER KeepBridge
+  Also leaves sobreiro-bridge.exe in OutputDir, for scripts/baseline.ps1 to measure.
 #>
 param(
     [string]$OutputDir = 'dist',
-    [string]$Tag
+    [string]$Tag,
+    [switch]$KeepBridge
 )
 
 Set-StrictMode -Version Latest
@@ -73,5 +76,8 @@ $extra = @(Get-ChildItem -LiteralPath $trayOut -Force | Where-Object { $_.Name -
 if ($extra.Count -gt 0) { throw "Unexpected files in the tray publish output: $($extra.Name -join ', ')" }
 
 Copy-Item -LiteralPath (Join-Path $trayOut 'Sobreiro.exe') -Destination $exe
+if ($KeepBridge) {
+    Copy-Item -LiteralPath (Join-Path $bridgeOut 'sobreiro-bridge.exe') -Destination (Join-Path $OutputDir 'sobreiro-bridge.exe') -Force
+}
 Remove-Item -LiteralPath $stage -Recurse -Force
 Write-Output $exe

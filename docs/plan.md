@@ -151,6 +151,8 @@ Known limits, stated in the README:
   second provider adds a source rather than a new UI. Build no provider interface until a
   second provider exists.
 - `Sobreiro.Tests`: xUnit tests for Core.
+- `Sobreiro.Baseline`: console tool, not shipped. It measures a release build for
+  [baseline.md](baseline.md); `scripts/baseline.ps1` runs it.
 - Install the SDK with `winget install Microsoft.DotNet.SDK.10`.
 
 ```text
