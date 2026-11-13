@@ -17,6 +17,11 @@ takes about 12 minutes. An experiment gets a name and goes under [Experiments](#
 ./scripts/baseline.ps1 -Label '0.10.0, what was tried' -Section Experiments
 ```
 
+Packaging needs the MSVC linker, for the bridge (see the README's "Building from source"). On a
+PC without it, download the two exes CI built and pass them with `-Exe` and `-Bridge`. With
+`-BridgeOnly` the tray is not started: only the two sizes and the bridge's run time are taken,
+in seconds.
+
 Quit any running Sobreiro first, and start it again afterwards. A second pill finds no room
 beside the first one and stays hidden, so the script stops when it sees a pill in the taskbar.
 The copy it starts keeps its data in a scratch folder: an installed copy's data, its
@@ -63,3 +68,13 @@ Packaging changes that were tried, each beside the release it was tried on, kept
 
 | Build | Date | Private memory | Working set | CPU per idle hour | First pill, first start | First pill, later starts | Sobreiro.exe | Bridge exe | Bridge run |
 |---|---|---|---|---|---|---|---|---|---|
+| 0.10.0, bridge as a trimmed single file | 2026-11-13 | not measured | not measured | not measured | not measured | not measured | 80.4 MB | 17.0 MB | 43 ms |
+| 0.10.0, bridge with Native AOT | 2026-11-13 | not measured | not measured | not measured | not measured | not measured | 73.7 MB | 2.2 MB | 9 ms |
+
+Notes on an experiment:
+
+- **Bridge with Native AOT: kept.** Both figures improved: 17.0 MB to 2.2 MB, and a run from
+  43 ms to 9 ms. `Sobreiro.exe`, which carries the bridge, went from 80.4 MB to 73.7 MB. The
+  Native AOT bridge was built by CI and timed on the PC above, which has no MSVC linker; the
+  73.7 MB is the size CI printed for its own build. Both rows are bridge-only runs: the tray was
+  not started, since the change does not touch it.
