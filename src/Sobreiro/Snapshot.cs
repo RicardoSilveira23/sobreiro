@@ -189,7 +189,7 @@ internal static class Snapshot
     }
 
     // A card per theme listing every badge: on the left as a bar row draws it, on the right as a
-    // column does, between hairlines at the column's width. Spend is only ever a bar row.
+    // column does, between hairlines at the column's width. Spend and credits are only ever a bar row.
     private static FrameworkElement Badges(DateTimeOffset now, bool dark)
     {
         var colours = FlyoutColours.For(dark, BarColourOption.Purple, null);
@@ -202,7 +202,7 @@ internal static class Snapshot
             line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
             line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             line.Children.Add(FlyoutView.Lines(view, colours, column: false));
-            if (view.Kind != LimitKind.Spend)
+            if (view.Kind is not (LimitKind.Spend or LimitKind.Credits))
             {
                 var column = new Border
                 {
@@ -244,6 +244,11 @@ internal static class Snapshot
         yield return View(Session(60, TimeSpan.FromMinutes(150)), now, culture);                       // Ends today
         yield return View(weekly, now, culture);                                                       // Ends another day
         yield return View(weekly, now, us);                                                            // Ends, 12-hour clock
+        // Copilot's month: two-digit days to the reset beside an Ends badge, the widest pair a row can get.
+        var credits = LimitList.FromCopilot(
+            new CopilotReading(15000, 9000, now.AddDays(17).AddHours(10), observed, CopilotSource.Live), now)[0];
+        yield return View(credits, now, culture);                                                      // Ends, far reset
+        yield return View(credits, now, us);                                                           // Ends, far reset, 12-hour clock
         yield return View(Session(95, TimeSpan.FromMinutes(60), now.AddMinutes(-90)), now, culture);   // Likely used up
         yield return View(Session(100, TimeSpan.FromMinutes(42)), now, culture);                       // Used up
         yield return View(Session(1, TimeSpan.FromHours(4)), now, culture);                            // Not used yet
