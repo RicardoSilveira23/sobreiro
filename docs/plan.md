@@ -403,7 +403,8 @@ Secret scanning and push protection are on as well.
 Most colleagues have Copilot through the company, with a monthly AI Credits limit, and GitHub
 has no documented per-user source for it. So Sobreiro asks the address VS Code's Copilot and the
 Copilot CLI use, `GET https://api.github.com/copilot_internal/user`, every 5 minutes, with the
-sign-in the Copilot CLI would use, and falls back on the CLI's cache file. The token is never
+sign-in the Copilot CLI would use or the Copilot language server's, and falls back on the CLI's
+cache file. The token is never
 stored, logged or renewed. Copilot Free has no credit budget and isn't shown. Design:
 [superpowers/specs/2026-11-10-copilot-usage-design.md](superpowers/specs/2026-11-10-copilot-usage-design.md).
 

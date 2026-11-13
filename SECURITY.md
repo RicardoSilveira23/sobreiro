@@ -18,7 +18,8 @@ Sobreiro reads two sign-ins it doesn't own, so these matter most:
   sent only to `api.anthropic.com`. It is never renewed, logged or stored.
 - A GitHub token is looked for in this order: the `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` and
   `GITHUB_TOKEN` variables, the Copilot CLI's sign-in in Windows Credential Manager (finding it
-  may mean listing the Credential Manager entries), then `gh auth token`. It is sent only to
+  may mean listing the Credential Manager entries), the Copilot language server's sign-in there
+  (asked for by name), then `gh auth token`. It is sent only to
   `api.github.com`, and is never renewed, logged or stored.
 - Those two addresses, every 5 minutes and when the details open on a reading over a minute
   old, are its only network calls.

@@ -146,10 +146,11 @@ install it.
 
 - It looks for a GitHub sign-in in this order and stops at the first GitHub accepts: the
   `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` and `GITHUB_TOKEN` variables, the Copilot CLI's sign-in in
-  Windows Credential Manager, then `gh auth token --hostname github.com`. It sends any it finds
+  Windows Credential Manager, the Copilot language server's sign-in there (the one editor
+  plug-ins leave), then `gh auth token --hostname github.com`. It sends any it finds
   only to `GET https://api.github.com/copilot_internal/user`. To find the Copilot CLI's sign-in it
   may list the Credential Manager entries, but only on a PC where the Copilot CLI has been used,
-  and it keeps only that one. The request says it is Sobreiro, follows no redirects and keeps no
+  and it keeps only that one; the language server's is asked for by name. The request says it is Sobreiro, follows no redirects and keeps no
   cookies. Copilot shows only for a plan with a credit budget.
 - It also reads the Copilot CLI's cache file, `%LOCALAPPDATA%\copilot\copilot-user-cache.json`,
   which holds no tokens, for a reading before the first answer and while GitHub can't be reached.

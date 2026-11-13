@@ -12,8 +12,8 @@ background: [docs/brief.md](docs/brief.md). The landing page's design:
 - Data comes from the status line JSON via the bridge and from `GET
   https://api.anthropic.com/api/oauth/usage`, which the tray asks every 5 minutes with Claude
   Code's access token. Copilot's numbers come from `GET https://api.github.com/copilot_internal/user`,
-  every 5 minutes, with the sign-in the Copilot CLI would use, and from the CLI's cache file. No
-  other network calls.
+  every 5 minutes, with the sign-in the Copilot CLI would use or the Copilot language server's
+  entry in Credential Manager, and from the CLI's cache file. No other network calls.
 - Read only the access token from `.credentials.json` (in the Claude config dir), into memory,
   per request, and send it to that one address. The same goes for a GitHub token, sent only to
   `api.github.com`. Never renew either, and never log, print, store, cache or commit any token.
