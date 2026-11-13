@@ -107,9 +107,18 @@ the others, first on paper and then in running code.
 ### Carried over from 1.0: idle CPU
 
 5 s of processor time or less per idle hour, measured with the baseline script as before. 1.0
-shipped at 14.9 s (13.0 s to 15.8 s across the runs of 2026-11-13). Profile the idle tray
-first; the taskbar check every 2 seconds is the suspect, not the finding. It does not wait for
-the shell decision: whatever lowers it on the current shell is worth having in a 1.x release.
+shipped at 14.9 s (13.0 s to 15.8 s across the runs of 2026-11-13). It does not wait for the
+shell decision: whatever lowers it on the current shell is worth having in a 1.x release.
+
+- **Profiled, 2026-11-13.** 85 to 90% of the idle time was the pill asking UI Automation where
+  the taskbar's parts are, on every 2-second tick. The figures are in
+  [baseline.md](baseline.md), under Experiments.
+- **First change: 7.3 s, not yet 5 s.** The pill now asks on a sign of change and every 15
+  seconds otherwise ([the design](superpowers/specs/2026-11-13-idle-cpu-taskbar-query-design.md)).
+  The baseline run measured 7.3 s per idle hour, half of 1.0's figure and still over the target.
+- **Next.** What is left has not been profiled the way the baseline measures it: signed in,
+  with the pill shown. Copies run signed out with the pill hidden measured 3.1 s to 3.7 s, so
+  the usage polls and the shown pill are the suspects, not the finding.
 
 ### Step 1: compare on paper
 
