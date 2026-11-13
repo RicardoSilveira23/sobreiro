@@ -1,10 +1,8 @@
 using System.Globalization;
 using Sobreiro.Core.Display;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Core.Copilot;
-
-/// <summary>Where the Copilot poll stands, as the footer and the flyout name it.</summary>
-public enum CopilotState { Ok, NoSignIn, Refused, RateLimited, Offline, BadAnswer }
 
 /// <summary>Which of the Live and the Copilot CLI's cached readings to show.</summary>
 public static class CopilotShown
@@ -24,15 +22,15 @@ public static class CopilotStateText
     private static readonly TimeSpan Stale = TimeSpan.FromMinutes(15);
 
     public static string? Line(
-        CopilotState state, CopilotReading reading, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture)
+        ProviderState state, CopilotReading reading, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture)
     {
         var problem = state switch
         {
-            CopilotState.NoSignIn => "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.",
-            CopilotState.Refused => "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.",
-            CopilotState.RateLimited => "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.",
-            CopilotState.Offline => "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.",
-            CopilotState.BadAnswer => "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.",
+            ProviderState.NoSignIn => "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.",
+            ProviderState.Refused => "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.",
+            ProviderState.RateLimited => "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.",
+            ProviderState.Offline => "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.",
+            ProviderState.BadAnswer => "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.",
             _ => null,
         };
         string? source = null;

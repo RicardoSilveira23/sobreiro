@@ -1,6 +1,7 @@
 using System.Globalization;
 using Sobreiro.Core.Limits;
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Core.Display;
 
@@ -22,7 +23,7 @@ public sealed record CopilotSection(LimitView Credits, string? Note);
 public sealed record FlyoutModel(string Title, LimitView Session, LimitView Weekly, LimitView? Spend, string Footer,
     CopilotSection? Copilot = null, bool ShowClaude = true)
 {
-    public static FlyoutModel From(IReadOnlyList<Limit> all, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, LiveState live = LiveState.Off, bool legacyConnection = false,
+    public static FlyoutModel From(IReadOnlyList<Limit> all, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, ProviderState live = ProviderState.Off, bool legacyConnection = false,
         string? copilotNote = null, bool showClaude = true, PaceDays days = PaceDays.EveryDay)
     {
         var credits = all.FirstOrDefault(l => l.Kind == LimitKind.Credits);
@@ -84,22 +85,22 @@ public sealed record FlyoutModel(string Title, LimitView Session, LimitView Week
 
     private static string Money(double v) => "$" + v.ToString("#,0.00", CultureInfo.InvariantCulture);
 
-    private static string FooterText(IReadOnlyList<Limit> limits, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, LiveState live, bool legacyConnection, bool showClaude)
+    private static string FooterText(IReadOnlyList<Limit> limits, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, ProviderState live, bool legacyConnection, bool showClaude)
     {
         if (showClaude && limits.Count == 0 && legacyConnection)
             return "No numbers yet. The status line still runs the old OpenHeadroom bridge: choose Reconnect in the tray menu.";
         var sentence = showClaude ? LiveStateText.Footer(live) : null;
         // Only Claude's numbers wait for Claude Code's next response.
-        var age = AgeText(limits, now, zone, culture, showClaude ? live : LiveState.Ok);
+        var age = AgeText(limits, now, zone, culture, showClaude ? live : ProviderState.Ok);
         if (sentence is null) return age;
         return age + (age.EndsWith('.') ? " " : ". ") + sentence;
     }
 
     // With Live usage on, the numbers may come from Anthropic before Claude Code's next response.
-    private static string AgeText(IReadOnlyList<Limit> limits, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, LiveState live)
+    private static string AgeText(IReadOnlyList<Limit> limits, DateTimeOffset now, TimeZoneInfo zone, CultureInfo culture, ProviderState live)
     {
         if (limits.Count == 0)
-            return live == LiveState.Off ? "No numbers yet. They arrive with Claude Code's next response." : "No numbers yet.";
+            return live == ProviderState.Off ? "No numbers yet. They arrive with Claude Code's next response." : "No numbers yet.";
         var newest = limits.Max(l => l.ObservedAt);
         var age = now - newest;
         if (age < TimeSpan.FromMinutes(1)) return "Updated just now";

@@ -7,6 +7,7 @@ using Sobreiro.Core.Live;
 using Sobreiro.Core.Media;
 using Sobreiro.Flyout;
 using Sobreiro.Pill;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Media;
 
@@ -16,7 +17,7 @@ internal static class MediaViews
     /// <summary>The details at <paramref name="now"/> (the pinned clock unless the hero uses the plate's).</summary>
     public static FrameworkElement Details(Scene s, BarColourOption colour, DateTimeOffset? now = null)
     {
-        var model = FlyoutModel.From(s.Limits, now ?? MediaPins.Now, MediaPins.Zone, MediaPins.Culture, LiveState.Off,
+        var model = FlyoutModel.From(s.Limits, now ?? MediaPins.Now, MediaPins.Zone, MediaPins.Culture, ProviderState.Off,
             showClaude: SampleReadings.ShowClaude(s.Services));
         return FlyoutView.Build(model, s.Style, FlyoutColours.For(s.Dark, colour, MediaPins.Accent));
     }

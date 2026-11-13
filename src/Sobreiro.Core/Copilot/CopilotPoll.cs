@@ -1,9 +1,10 @@
 using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 
 namespace Sobreiro.Core.Copilot;
 
 /// <summary>One poll's answer. <see cref="Log"/> names outcomes only; nothing in it holds a token.</summary>
-public sealed record CopilotPollResult(LiveSchedule Schedule, CopilotState State, CopilotReading? Reading, string Log);
+public sealed record CopilotPollResult(LiveSchedule Schedule, ProviderState State, CopilotReading? Reading, string Log);
 
 /// <summary>
 /// One Copilot poll: go through the sign-ins in order and ask GitHub with each token until one is accepted. A
@@ -44,7 +45,7 @@ public static class CopilotPoll
                         results[signIn.Kind] = "ok";
                         return Done(
                             schedule.AfterFetch(new LiveResult(LiveOutcome.Ok, null, null), now),
-                            CopilotState.Ok, reading, results);
+                            ProviderState.Ok, reading, results);
                     case CopilotOutcome.Refused:
                         results[signIn.Kind] = "refused";
                         break;
@@ -55,27 +56,27 @@ public static class CopilotPoll
                         results[signIn.Kind] = "rate-limited";
                         return Done(
                             schedule.AfterFetch(new LiveResult(LiveOutcome.RateLimited, null, fetch.RetryAfter), now),
-                            CopilotState.RateLimited, null, results);
+                            ProviderState.RateLimited, null, results);
                     case CopilotOutcome.Unreachable:
                         results[signIn.Kind] = "unreachable";
                         return Done(
                             schedule.AfterFetch(new LiveResult(LiveOutcome.Unreachable, null, null), now),
-                            CopilotState.Offline, null, results);
+                            ProviderState.Offline, null, results);
                     default:
                         results[signIn.Kind] = "failed";
                         return Done(
                             schedule.AfterFetch(new LiveResult(LiveOutcome.Failed, null, null), now),
-                            CopilotState.BadAnswer, null, results);
+                            ProviderState.BadAnswer, null, results);
                 }
             }
         }
 
         return Done(
-            schedule.AfterNoReading(now), anyToken ? CopilotState.Refused : CopilotState.NoSignIn, null, results);
+            schedule.AfterNoReading(now), anyToken ? ProviderState.Refused : ProviderState.NoSignIn, null, results);
     }
 
     private static CopilotPollResult Done(
-        LiveSchedule schedule, CopilotState state, CopilotReading? reading, Dictionary<CopilotSourceKind, string> results)
+        LiveSchedule schedule, ProviderState state, CopilotReading? reading, Dictionary<CopilotSourceKind, string> results)
     {
         string Of(CopilotSourceKind kind) => results.GetValueOrDefault(kind, "skipped");
         var log = $"copilot {state} env={Of(CopilotSourceKind.Env)} " +

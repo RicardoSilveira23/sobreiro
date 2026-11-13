@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Threading;
@@ -12,9 +13,11 @@ using Sobreiro.Core.Colours;
 using Sobreiro.Core.Config;
 using Sobreiro.Core.Connect;
 using Sobreiro.Core.Copilot;
+using Sobreiro.Copilot;
 using Sobreiro.Core.Display;
 using Sobreiro.Core.Limits;
-using Sobreiro.Core.Usage;
+using Sobreiro.Core.Live;
+using Sobreiro.Core.Polling;
 using Sobreiro.Flyout;
 using Sobreiro.Pill;
 
@@ -30,14 +33,14 @@ internal sealed class TrayController : IDisposable
     private readonly TrayMenu _menu;
     private readonly FlyoutWindow _flyout = new();
     private readonly PillHost _pill = new();
-    private readonly LiveUsage _live;
-    private readonly CopilotUsage _copilot;
+    private readonly ProviderHost _claude;
+    private readonly ProviderHost _copilot;
+    private readonly CopilotProvider _copilotProvider;
     private readonly FileSystemWatcher _watcher;
     private readonly DispatcherTimer _debounce;
     private readonly DispatcherTimer _tick;
     private readonly string _usagePath = AppPaths.UsageFile();
     private readonly string _alertsPath = AppPaths.AlertsFile();
-    private UsageSnapshot? _last;
     private AlertState _alerts;
     private Icon? _icon;
     private Icon? _copilotIconImage;
@@ -49,8 +52,8 @@ internal sealed class TrayController : IDisposable
         Directory.CreateDirectory(dataDir);
         _alerts = AlertState.Load(_alertsPath);
 
-        _live = new LiveUsage(_usagePath, () => Refresh());
-        _copilot = new CopilotUsage(() => Refresh(), log ?? (_ => { }));
+        _claude = ClaudeHost(() => Refresh());
+        (_copilot, _copilotProvider) = CopilotHost(() => Refresh(), log ?? (_ => { }));
         _menu = new TrayMenu(() => Refresh());
         _notifyIcon = new NotifyIcon { ContextMenuStrip = _menu.Strip, Visible = true };
         _notifyIcon.MouseClick += OnMouseClick;
@@ -79,9 +82,48 @@ internal sealed class TrayController : IDisposable
 
         Refresh();
         _tick.Start();
-        _live.Start(DateTimeOffset.Now);
+        _claude.Start(DateTimeOffset.Now);
         _copilot.Start(DateTimeOffset.Now);
+        ReadEarlyCache();
     }
+
+    private ProviderHost ClaudeHost(Action changed)
+    {
+        var http = new HttpClient(LiveUsageClient.CreateHandler());
+        var provider = new ClaudeProvider(
+            new LiveUsageClient(http, ProviderHost.UserAgent()),
+            ClaudePaths.CredentialsFile(Environment.GetEnvironmentVariable), _usagePath,
+            line => Debug.WriteLine("Sobreiro: " + line));
+        return new ProviderHost(http, provider, changed);
+    }
+
+    private static (ProviderHost Host, CopilotProvider Provider) CopilotHost(Action changed, Action<string> log)
+    {
+        var http = new HttpClient(LiveUsageClient.CreateHandler());
+        IReadOnlyList<CopilotSignIn> signIns =
+        [
+            new(CopilotSourceKind.Env, () => new TokenSearch(CopilotToken.FromEnvironment(Environment.GetEnvironmentVariable))),
+            new(CopilotSourceKind.CredentialManager, CredentialStore.CopilotTokens),
+            new(CopilotSourceKind.Gh, () => new TokenSearch(GhCli.Token())),
+        ];
+        var provider = new CopilotProvider(
+            new CopilotUsageClient(http, ProviderHost.UserAgent()), signIns,
+            CopilotCache.DefaultPath(Environment.GetEnvironmentVariable), log);
+        return (new ProviderHost(http, provider, changed), provider);
+    }
+
+    // Off the UI thread; the first poll reads the cache again, so this only shows it sooner.
+    private void ReadEarlyCache() =>
+        Task.Run(_copilotProvider.ReadCache).ContinueWith(task =>
+        {
+            _ = task.Exception; // observed: a fault here only means no early cache
+            if (task.IsCompletedSuccessfully && task.Result is { } cache)
+                OnDispatcher(() =>
+                {
+                    _copilotProvider.TakeEarly(cache);
+                    Refresh();
+                });
+        }, TaskScheduler.Default);
 
     /// <summary>
     /// config.json for drawing. A config that can't be read, or isn't valid JSON, draws as the default and
@@ -113,7 +155,7 @@ internal sealed class TrayController : IDisposable
     // A Live usage poll this starts redraws the open flyout when it answers.
     private void OpenFlyout(Point at)
     {
-        Guard("live usage", () => _live.FlyoutOpened(DateTimeOffset.Now));
+        Guard("live usage", () => _claude.FlyoutOpened(DateTimeOffset.Now));
         Guard("copilot usage", () => _copilot.FlyoutOpened(DateTimeOffset.Now));
         Refresh(at);
     }
@@ -157,10 +199,7 @@ internal sealed class TrayController : IDisposable
 
     private void OnTick(object? sender, EventArgs e)
     {
-        Guard("live usage", () =>
-        {
-            _live.Tick(DateTimeOffset.Now);
-        });
+        Guard("live usage", () => _claude.Tick(DateTimeOffset.Now));
         Guard("copilot usage", () => _copilot.Tick(DateTimeOffset.Now));
         Refresh();
     }
@@ -210,10 +249,8 @@ internal sealed class TrayController : IDisposable
         DateTimeOffset now;
         try
         {
-            // A read that loses a race with the bridge returns null: keep the previous snapshot.
-            _last = UsageFile.Read(_usagePath) ?? _last;
             now = DateTimeOffset.Now;
-            claude = LimitList.From(_last, now);
+            claude = _claude.Limits(now);
         }
         catch (Exception ex)
         {
@@ -222,7 +259,7 @@ internal sealed class TrayController : IDisposable
         }
         // Copilot fails on its own: with no reading, Claude draws as it always did.
         IReadOnlyList<Limit> copilot = [];
-        Guard("copilot limits", () => copilot = LimitList.FromCopilot(_copilot.Shown, now));
+        Guard("copilot limits", () => copilot = _copilot.Limits(now));
         var showClaude = true;
         var legacy = false;
         Guard("connection", () =>
@@ -329,7 +366,7 @@ internal sealed class TrayController : IDisposable
         if (showClaude) parts.Add(TooltipText.Render(limits, now, zone, culture, legacy));
         if (limits.FirstOrDefault(l => l.Kind == LimitKind.Credits) is { } credits)
             parts.Add(TooltipText.RenderCopilot(credits, now, zone, culture));
-        _pill.Update(PillModel.From(limits, zone, showClaude, _live.State, _live.Misses, _copilot.State, _copilot.Misses, now), colours, string.Join("\n", parts));
+        _pill.Update(PillModel.From(limits, zone, showClaude, _claude.State, _claude.Misses, _copilot.State, _copilot.Misses, now), colours, string.Join("\n", parts));
     }
 
     private void UpdateFlyout(
@@ -338,11 +375,11 @@ internal sealed class TrayController : IDisposable
     {
         if (showAt is null && !_flyout.IsVisible) return;
         var colours = FlyoutColours.For(!WindowsTheme.IsLight(), config.BarColour, WindowsTheme.Accent());
-        var note = _copilot.Shown is { } reading
+        var note = _copilotProvider.Shown is { } reading
             ? CopilotStateText.Line(_copilot.State, reading, now, zone, culture)
             : null;
         _flyout.Render(
-            FlyoutModel.From(limits, now, zone, culture, _live.State, legacy, note, showClaude, config.PaceDays), config.Style, colours);
+            FlyoutModel.From(limits, now, zone, culture, _claude.State, legacy, note, showClaude, config.PaceDays), config.Style, colours);
         if (showAt is { } at) _flyout.ShowNear(at.X, at.Y);
     }
 
@@ -373,7 +410,7 @@ internal sealed class TrayController : IDisposable
 
         _tick.Stop();
         _tick.Tick -= OnTick;
-        _live.Dispose();
+        _claude.Dispose();
         _copilot.Dispose();
         _debounce.Stop();
         _debounce.Tick -= OnDebounceTick;
