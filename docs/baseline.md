@@ -49,6 +49,13 @@ The rows below were measured on one PC: Ryzen 7 7700X, 32 GB, Windows 11 Pro 262
 
 | Build | Date | Private memory | Working set | CPU per idle hour | First pill, first start | First pill, later starts | Sobreiro.exe | Bridge exe | Bridge run |
 |---|---|---|---|---|---|---|---|---|---|
+| 0.10.0 | 2026-11-13 | 184 MB | 331 MB | 13.9 s | 0.62 s | 0.55 s | 80.4 MB | 17.0 MB | 43 ms |
+
+Notes on a row:
+
+- **0.10.0:** private memory was still rising at the end, from 169 MB after the first minute to
+  184 MB after the tenth, so 10 minutes is not yet its resting level. Processor time was steady
+  at about 0.2 s a minute, with a little more in the minute that held a poll.
 
 ## Experiments
 
