@@ -42,9 +42,10 @@ Three things that stand without the fourth source:
    contents, which cannot be cleared; only the byte copy was zeroed. It now decodes into a
    rented buffer, searches it in place, makes one string (the token, if there is one) and
    clears the buffer.
-3. **The listing rule is in Core, with tests.** When nothing is named `copilot-cli*`, every
+3. **The listing decision is in Core, with tests.** When nothing is named `copilot-cli*`, every
    entry is listed and matched, but only on a PC where the Copilot CLI has left its folder.
-   That rule was inline in the tray app's native reader.
+   That decision was inline in the tray app's native reader. Which two folders count as "the
+   CLI has been used" is still checked in the tray app, without a test.
 
 ## Not goals
 

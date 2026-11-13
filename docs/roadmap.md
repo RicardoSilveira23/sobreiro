@@ -16,7 +16,7 @@ the tray without single-file compression. The process figures are the newest row
 | Code | 8,304 lines of C#: Core 4,220, tray app 4,059, bridge 25 |
 | Core | Plain `net10.0`, no native calls, no runtime packages. Its only Windows ties are paths |
 | Tray app | WPF and WinForms, native calls in 12 files (pill, flyout, autostart, Credential Manager, theme) |
-| Tests | 954, all against Core. CI runs on Windows only |
+| Tests | 956, all against Core. CI runs on Windows only |
 | Polling | Every 5 minutes, 2-minute retry, stepped back-off on rate limits |
 | Memory | 98 MB private, 174 MB working set, after 10 minutes idle and still rising slowly |
 | CPU | 1.1 s in the first minute, then 13.0 s per idle hour |
@@ -100,7 +100,7 @@ the others, first on paper and then in running code.
 
 A short table in `docs/shell-comparison.md`, a day or two of work. The candidates to start from:
 
-- **C# with Avalonia, published with Native AOT.** Keeps Core and its 954 tests untouched; only
+- **C# with Avalonia, published with Native AOT.** Keeps Core and its 956 tests untouched; only
   the shell is ported.
 - **Rust with Slint.** Low expected memory; licence fits GPL-3.0-or-later. Its tray element
   shipped in June 2026 and offers a menu only, so the pill and flyout need raw window handles.

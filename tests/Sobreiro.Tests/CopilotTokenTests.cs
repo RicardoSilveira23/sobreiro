@@ -75,6 +75,39 @@ public class CopilotTokenTests
         Assert.All(scratch, c => Assert.Equal('\0', c));
     }
 
+    // A rented buffer can hold someone else's old text after the part this read decoded.
+    [Fact]
+    public void Text_already_in_the_buffer_is_never_searched()
+    {
+        var blob = Encoding.UTF8.GetBytes("a key, not a token");
+        var scratch = new char[blob.Length + 1 + Fake.Length];
+        Fake.CopyTo(0, scratch, blob.Length + 1, Fake.Length);
+        Assert.Null(CopilotToken.FromBlob(blob, scratch));
+        Assert.All(scratch, c => Assert.Equal('\0', c));
+    }
+
+    // One character more than the blob has bytes is always room enough, whatever the bytes are.
+    [Fact]
+    public void Odd_contents_fit_the_buffer_and_are_cleared()
+    {
+        (byte[] Blob, string? Token)[] cases =
+        [
+            ([], null),
+            ([0xFF], null),
+            (Encoding.UTF8.GetBytes(Fake).Append((byte)0).ToArray(), Fake),
+            (Encoding.UTF8.GetBytes("😀 " + Fake), Fake),
+            (new byte[] { 0x00, 0xD8 }.Concat(Encoding.Unicode.GetBytes(" " + Fake)).ToArray(), Fake),
+            (Encoding.Unicode.GetBytes(Fake).Append((byte)0x41).ToArray(), Fake),
+        ];
+        foreach (var (blob, token) in cases)
+        {
+            var scratch = new char[blob.Length + 1];
+            Assert.Equal(token, CopilotToken.FromBlob(blob, scratch));
+            Assert.All(scratch, c => Assert.Equal('\0', c));
+            Assert.Equal(token, CopilotToken.FromBlob(blob));
+        }
+    }
+
     [Fact]
     public void Environment_order_is_copilot_gh_github()
     {
