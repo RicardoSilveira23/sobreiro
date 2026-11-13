@@ -2,6 +2,10 @@
 
 Issue 14, part of 1.0. Written 2026-11-13.
 
+The pill half of this design was replaced the same day: a stopped block keeps its figures with
+a cue, see [the pill keeps its figures](2026-11-13-pill-keeps-figures-design.md). The states,
+the rule for when and the flyout's sentences below still hold.
+
 ## Why
 
 Both usage addresses are undocumented and can change, and Claude Code's sign-in expires when no
