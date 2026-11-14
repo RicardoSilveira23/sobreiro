@@ -251,6 +251,10 @@ In this order:
    of different scale, a tooltip above the taskbar, and an owner that does not lean on the
    toolkit's unstable hook (or that hook pinned to a version, with a test that fails when it
    changes). If one has no answer, the decision is opened again before more is built.
+   Answered on 2026-11-14, in [a note of their own](shell-comparison.md#b-for-20-the-pills-three-open-questions): the owner
+   needs nothing unstable of the toolkit's, the tooltip is a window of its own, and the size
+   and place are right at 100% and 150% and through a change between them. Two displays at
+   different scales at once could not be tried: no PC here has them.
 2. **Core, one area at a time, with its tests.** The spike's rewrite is read, not taken over.
 3. **The shell to parity:** pill, flyout, tray icons and menu, Connect, alerts, start at
    sign-in, the migration.

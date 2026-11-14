@@ -585,7 +585,8 @@ renders of itself at 100%, 150% and 200%, in both themes, match A's pictures wit
 pixels of width over four pills; the flyout card is 479 pixels high where A's is 472. They
 were compared by eye, not pixel by pixel.
 
-**Where it fell short.**
+**Where it fell short.** The tooltip, mixed scaling and the unstable hook were taken up again
+for 2.0 and have their answers in [the note below](#b-for-20-the-pills-three-open-questions).
 
 - The tooltip opens inside the pill's own window, which is 76 by 38 pixels: it covers the pill
   and is cut off, where today's opens above the taskbar. The toolkit's tooltip is drawn in
@@ -616,6 +617,165 @@ were compared by eye, not pixel by pixel.
 Screen readers get nearly what they get today: UI Automation finds the pill as a window with
 four texts, each label and each figure by itself ("5h", its figure, "7d", its figure), where
 today's gives two lines.
+
+### B, for 2.0: the pill's three open questions
+
+Tried on 2026-11-14, on the same PC, for the first step of
+[2.0](roadmap.md#20-the-new-shell-on-windows-at-parity): the three things the note above leaves
+open about the pill itself. In short: all three have an answer. The pill is owned by the
+taskbar and never activated with nothing unstable of the toolkit's in the build, its tooltip
+opens above the taskbar, and it is the right size in the right place at 100% and at 150%,
+also when the scale changes while it is up. Two faults turned up on the real pill and are
+fixed. What stays untried is two displays at different scales at once: no PC here has them.
+
+The trials are on the branch `spike/shell-b-pill-questions`, cut from the spike's and never
+merged. Most were made on the spike's test window, a half-clear red pill placed inside the
+taskbar, because a second pill finds no room beside the installed one. The last ones were made
+on the spike's own pill, signed out of Claude, with the installed Sobreiro closed twice: for
+five minutes and for one.
+
+**Owned by the taskbar and not activated, without the unstable hook.** The spike's pill was
+born owned and inactive through the toolkit's hook on a window's attributes, which the toolkit
+marks unstable. The answer does without it.
+
+- The toolkit's stable interface leaves no moment to reach a window before it is seen. Asked
+  to show a window, the toolkit only notes it; a turn of the event loop later it makes the
+  window and shows it in one step, also when it is asked from inside the loop. The window's
+  handle exists only after that.
+- So the window is taken at its birth with Windows' own means. A hook Windows offers on the
+  windows a thread makes (`WH_CBT`, set for the UI thread only) hands over the next top-level
+  window before it has had a message. On that window goes a window procedure of the shell's,
+  read before the toolkit's, and it does four things: it keeps the two style bits (tool
+  window, not activated) and drops the bit that asks for a taskbar button, whatever the
+  toolkit writes; it gives the window its owner right before it is first shown; it adds "do
+  not activate" to every show, move and raise; and the one activation Windows still asks for
+  is refused in the hook.
+- Five ways were tried on the test window. Each time a small window of the test's own held
+  the keyboard focus and its process started the test window, which is the case where Windows
+  lets a new window take the foreground:
+
+| How the window is born | Its owner when first shown | The keyboard focus | Active window of the app's thread |
+|---|---|---|---|
+| Plain, owner and style bits put on 0.3 s later | none | taken by the test window | the test window |
+| Plain, the activation refused in the hook | none | lost: no window had it any more | none |
+| A window procedure of the shell's from birth | the taskbar | stayed where it was | the test window |
+| The same, and the activation refused | the taskbar | stayed where it was | none |
+| The toolkit's hook, for comparison | the taskbar | stayed where it was | none |
+
+- The fourth row is the answer, and it ends where the toolkit's hook does: same owner, same
+  extended style, never active. It is a little better in one point: the two style bits are
+  there from birth, where with the hook they went on 0.3 s after the window was shown.
+- Three things were found on the way. An owner written at the hook's moment is lost, because
+  Windows has not settled the window's owner yet: it is given at the first show instead.
+  Refusing the activation alone is worse than doing nothing: the window that had the focus
+  loses it and no window gets it. And the toolkit writes the window's whole extended style
+  five times while it makes the window, and again each time one of its own window settings
+  changes (tried by switching "always on top" off and on): each time the two bits stayed.
+- The spike's exe was then built without the toolkit's unstable feature at all. Its flyout
+  used the same feature twice, to take the focus and to hear the focus leave: both are native
+  calls now. A hidden copy of the whole exe showed its pill born as the test window was, and
+  its flyout, opened by itself, took the focus as a tool window from birth.
+- One fault came with it and is fixed: at exit Windows still calls the hook after the
+  thread's own values are gone, and the exe ended with an error code until every read from
+  there allowed for that.
+- **What this leans on in the toolkit** is not in its interface either, but it is less: that
+  the window the shell asked for is the next top-level window the UI thread makes, so the
+  shell shows one new window at a time and waits for it; and that the toolkit's own window
+  procedure does not undo the four things. Two tests run the test window for three seconds,
+  owned by a stand-in window so they need no taskbar, and fail when an upgrade of the toolkit
+  changes either (`cargo test --release --test born`). The toolkit stays pinned to one
+  version, as in the spike.
+- On the spike's own pill, in four starts with the installed Sobreiro closed, the pill was
+  born owned by the taskbar and not active each time, and the focus stayed where it was when
+  the pointer came onto it.
+- The cost: about 240 more lines in the file that holds it, the comparison's other ways and
+  a trace among them, and one hook that Windows calls for every window of the UI thread that
+  is made, activated, moved or sized. What that adds to the idle processor time was not
+  measured.
+- Not seen: the flyout closing when the focus leaves it, a click by hand, a restart of the
+  taskbar.
+
+**A tooltip above the taskbar.** The toolkit's tooltip is drawn inside the window it belongs
+to, and the pill's window is the pill. The answer is a window of the shell's own.
+
+- It is a second small window of the toolkit, born as the pill is: never activated, owned by
+  the taskbar, made the first time it opens and hidden afterwards through the toolkit, so the
+  repaint fault in the note above does not come back. 166 lines of Rust and 33 in the
+  toolkit's language.
+- It opens when the pointer has rested on the pill for half a second, with its bottom edge 8
+  units above the taskbar's band and its left edge on the pill's, kept inside the monitor: as
+  today's does. It closes when the pointer leaves, on a click, and after five seconds.
+- Seen on the test window at 100%, opened by the test itself: three lines of text, 191 by 56
+  pixels, its bottom 8 pixels above the taskbar, the focus where it was.
+- Seen on the spike's own pill, under the real pointer, put there by a script for 2.5
+  seconds: at 150% three times, 207 by 41 pixels with its bottom 12 pixels above the taskbar,
+  which is 8 units; at 100% twice, 138 by 27 pixels and 8 pixels above. Each time its left
+  edge was on the pill's, the focus stayed where it was, and it was gone 0.7 s after the
+  pointer left.
+- On one copy at 100% it did not open in two tries, and the pill showed no lighter ground
+  either: the pill did not have the pointer. Why is not known. A hand was near the mouse in
+  those seconds, waiting to change the scale; the two later copies at 100% opened it.
+- One fault was found on the real pill, and it was the tooltip's. In the first run the
+  tooltip was put above the other windows in the usual way, which carries a window's owner
+  along in the z-order, and the owner is the taskbar. From the moment that tooltip closed,
+  the pill had no owner at each of the tracker's checks, seven in a row, and putting it back
+  did not hold. The tooltip now leaves its owner where it is (one flag on the same call). In
+  the second run the pill kept its owner after each of its three tooltips, through nine
+  seconds of checks at 150% after one of them. The test window never showed the fault, in
+  either way, so the cause is likely and not proven.
+- Not tried: the system's own tooltip control. It would draw in the system's font and look,
+  not the app's, and needs an application manifest to look current. It stays the fallback.
+- Not done: its look. It is the dark box the spike's tooltip was, in both themes. What the
+  second window costs in memory was not measured; the spike's other windows cost about half
+  a megabyte each.
+
+**The right size and place on monitors of different scale.** The PC still has one display.
+Its scale was changed by hand in Settings, 100% to 150% and back, with the spike's own pill in
+the installed pill's place. So what was tried is one display at two scales, and the change
+between them while the pill is up.
+
+- Born at either scale, the pill is the right size in the right place:
+
+| | At 100% | At 150% |
+|---|---|---|
+| The taskbar | 48 pixels high | 72 pixels high |
+| The pill | 76 by 38 pixels | 114 by 57 pixels |
+| From the pill to the tray icons | 4 pixels | 6 pixels |
+| Above and below the pill | 5 and 5 pixels | 7 and 8 pixels |
+| The tooltip, one line | 138 by 27 pixels, 8 pixels above the taskbar | 207 by 41 pixels, 12 pixels above |
+
+- The toolkit does the scaling. The face is written in units; when Windows tells a window its
+  new scale, the toolkit keeps the window's size in units, resizes it and draws it again. The
+  tracker goes on working in pixels, as today's does, and needed no scale of its own beyond
+  the 4-unit gap it already had.
+- **A change of scale while the pill is up did not work at first.** In the first run, at the
+  change from 150% to 100%, the pill went away and never came back. The tracker hides the
+  pill when the taskbar's scale changes, as today's does, until the taskbar has been asked
+  again where its icons are. Windows does not tell a hidden window about a new scale. So the
+  pill's window stayed 57 pixels high, as it was read three minutes later, which does not fit
+  a taskbar of 48, and the tracker kept it hidden for good. Whether today's WPF pill comes
+  through the same change was not tried.
+- The fix is in the tracker: when the pill's window is at another scale than the taskbar, the
+  fit and the place are worked out for the size the pill will have at the taskbar's scale,
+  and it is shown. Windows tells the window its new scale inside that very call, the toolkit
+  resizes it there, and the tracker, which sees the size change under its own move, places
+  it once more.
+- In the second run the pill came through both changes, 100% to 150% and back: seven seconds
+  after each it stood at the size and place in the table, with its owner, and its tooltip
+  opened. The trace shows the steps above in that order. How long the pill was away was not
+  timed.
+- A hidden tooltip is not told either. After the change to 100% it opened once at its old
+  size, 207 by 41 pixels, and was put right 40 ms later at 138 by 27. That is in the trace;
+  it was not seen by eye. It wants the same treatment as the pill.
+- **Two displays at different scales** is the case of a pill born off the screen, at the
+  scale of whichever monitor is nearest, and then moved onto the taskbar's. It takes the same
+  path as the change above: a window at one scale, shown at another. It could only be acted
+  out: the test window, sent the message Windows sends for a new scale, went from 140 by 36
+  to 210 by 54 pixels inside the call and kept its owner and its style bits.
+- Not tried, because no PC here has it: two displays at different scales, with the taskbar on
+  one. Also not tried: 125%, 175% and 200% on the screen (the spike drew the faces at 150%
+  and 200% as pictures only), the flyout at 150%, and a change of scale while the flyout or
+  the tooltip is open.
 
 ## Notes on each point
 
@@ -660,7 +820,9 @@ right size on monitors of different scale; and a way to put questions to UI Auto
   a feature its documentation says may change between minor releases. Its software renderer is
   selectable on desktop and leaves out some effects (P). B's spike built all three on Windows
   as well: the transparency works in both ways of rendering, and the unstable feature turned
-  out to be needed for the window's owner and for not activating it, not for its handle.
+  out to be needed for the window's owner and for not activating it, not for its handle. For
+  2.0 both were moved onto Windows' own means, and the size was checked at 100% and 150% on
+  one display ([note](#b-for-20-the-pills-three-open-questions)).
 - **D** has the calls and nothing above them: the window procedure, the drawing, the text and
   the questions to UI Automation would all be written by hand, in a language that is not the
   usual one for them.
@@ -794,7 +956,8 @@ For [step 2](roadmap.md#step-2-build-the-shortlist) (issue 18). The table settle
   within three pixels of A's pictures, with square ends on Copilot's bar); the tray element's
   age (answered: it works, with one fault at start that the spike steps around). Still open
   for B: mixed scaling, a tooltip above the taskbar, a menu on the pill's right click, and
-  who reads the Rust.
+  who reads the Rust. The first two were answered for 2.0, with the owner at birth
+  ([note](#b-for-20-the-pills-three-open-questions)); two displays at different scales at once are still untried.
 - **F:** how much drawing code the pill takes, with the app's own fonts (answered: 241 lines);
   whether the exe can shrink while the flyout stays WPF (answered: by 17 MB safely); what a
   hand-drawn flyout would cost in accessibility if it ever followed (answered in part: a
