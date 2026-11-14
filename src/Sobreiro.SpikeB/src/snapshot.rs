@@ -54,6 +54,8 @@ pub fn run(folder: &str) -> Result<(), slint::PlatformError> {
     let mut stale = claude(now, old);
     stale.extend(LimitList::from_copilot(Some(&reading(old)), now));
 
+    // The windows are only rendered to pictures, far off the screen: none of them takes the focus.
+    shell::no_window_is_activated();
     let mut windows: Vec<(String, Box<dyn Fn() -> Option<slint::SharedPixelBuffer<slint::Rgba8Pixel>>>)> = Vec::new();
     for light in [false, true] {
         let colours = TaskbarColours::for_taskbar(light, false, BarColourOption::Purple, None);
@@ -76,7 +78,6 @@ pub fn run(folder: &str) -> Result<(), slint::PlatformError> {
                 "",
             ),
         ];
-        shell::next_window_inactive();
         let sheet = Sheet::new()?;
         sheet.set_faces(ModelRc::new(VecModel::from(list)));
         sheet.set_ground(if light { Color::from_rgb_u8(0xF0, 0xF0, 0xF0) } else { Color::from_rgb_u8(0x1C, 0x1C, 0x1C) });
@@ -89,7 +90,6 @@ pub fn run(folder: &str) -> Result<(), slint::PlatformError> {
     for style in [FlyoutStyle::Bars, FlyoutStyle::Battery, FlyoutStyle::Thermometer] {
         let model = FlyoutModel::from(&both, now, Zone::Local, ProviderState::Ok, false, None, true, PaceDays::EveryDay);
         let fill = BarColour::pick(BarColourOption::Purple, None, true).colour;
-        shell::next_window_inactive();
         let flyout = Flyout::new()?;
         flyout.set_card(faces::flyout(&model, style, &NightPalette::for_dark(true), fill));
         flyout.window().set_position(slint::PhysicalPosition::new(-32000, -32000));

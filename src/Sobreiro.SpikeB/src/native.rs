@@ -10,6 +10,7 @@ use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::w;
 
 pub const WS_EX_OURS: isize = (WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) as isize;
+pub const WS_EX_TOOL: isize = WS_EX_TOOLWINDOW.0 as isize;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct PixelRect {
@@ -36,6 +37,16 @@ impl From<RECT> for PixelRect {
 
 pub fn find_taskbar() -> HWND {
     unsafe { FindWindowW(w!("Shell_TrayWnd"), None).unwrap_or_default() }
+}
+
+/// A bare window of this process, shown without being activated: a stand-in for the taskbar in a test.
+pub fn plain_window() -> HWND {
+    unsafe {
+        let hwnd = CreateWindowExW(WS_EX_TOOLWINDOW, w!("Static"), None, WS_POPUP, 200, 200, 900, 48, None, None, None, None);
+        let hwnd = hwnd.unwrap_or_default();
+        let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        hwnd
+    }
 }
 
 pub fn window_rect(hwnd: HWND) -> Option<PixelRect> {
@@ -84,6 +95,16 @@ pub fn is_above(hwnd: HWND, other: HWND) -> bool {
 
 pub fn foreground() -> HWND {
     unsafe { GetForegroundWindow() }
+}
+
+/// The active window of this thread, if it has one.
+pub fn active() -> HWND {
+    unsafe { windows::Win32::UI::Input::KeyboardAndMouse::GetActiveWindow() }
+}
+
+/// Asks Windows to make a window the foreground window. Windows may refuse.
+pub fn focus(hwnd: HWND) -> bool {
+    unsafe { SetForegroundWindow(hwnd).as_bool() }
 }
 
 pub fn is_visible(hwnd: HWND) -> bool {

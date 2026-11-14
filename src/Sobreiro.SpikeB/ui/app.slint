@@ -8,9 +8,10 @@ export { Tray }
 // SPIKE (shell candidate B). Step 1's test window: half-clear red with a solid white dot. The taskbar must
 // show through the red and around the round corners.
 export component Probe inherits Window {
+    in property <bool> on-top: true;
     title: "Sobreiro pill";
     no-frame: true;
-    always-on-top: true;
+    always-on-top: on-top;
     background: transparent;
     width: 140px;
     height: 36px;

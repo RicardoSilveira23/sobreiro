@@ -33,6 +33,8 @@ struct Host {
     shown_face: Option<PillFace>,
     prepared: bool,
     showing: bool,
+    born: shell::Born,
+    born_done: bool,
     left_clicked: Option<Rc<dyn Fn()>>,
     right_clicked: Option<Rc<dyn Fn()>>,
 }
@@ -57,6 +59,8 @@ thread_local! {
         shown_face: None,
         prepared: false,
         showing: false,
+        born: shell::Born::Ours,
+        born_done: false,
         left_clicked: None,
         right_clicked: None,
     });
@@ -172,14 +176,17 @@ impl Host {
 
     // Makes the window when there is a face to show and none yet, or when Windows has destroyed the old one.
     fn ensure_window(&mut self) {
-        if self.window.is_some() && self.hwnd().is_none() && self.shown_face.is_some() {
+        if self.window.is_some() && self.hwnd().is_none() && self.born_done {
             self.close_window();
         }
         if self.window.is_some() || self.face.is_none() || self.taskbar.is_invalid() {
             return;
         }
-        // Born owned by the taskbar and inactive: the toolkit's hook reads this when it makes the window.
-        shell::next_window_owned_by(self.taskbar);
+        self.born = shell::Born::chosen();
+        #[cfg(feature = "toolkit-hook")]
+        if self.born == shell::Born::Hook {
+            shell::next_window_owned_by(self.taskbar);
+        }
         let window = match Pill::new() {
             Ok(window) => window,
             Err(error) => {
@@ -201,6 +208,7 @@ impl Host {
         });
         window.window().set_position(slint::PhysicalPosition::new(-32000, -32000));
         self.window = Some(window);
+        self.born_done = false;
         self.shown_face = None;
         self.render();
     }
@@ -221,12 +229,23 @@ impl Host {
         self.shown_face = Some(face.clone());
         if first {
             self.prepared = false;
-            if let Err(error) = window.show() {
-                trace!("pill show failed: {error}");
-            }
-            // Before the event loop runs the toolkit only notes the window; it is made on the loop's first turn.
-            slint::Timer::single_shot(Duration::ZERO, || with_host("first place", Host::place));
+            // Before the event loop runs the toolkit only notes a window it is asked to show. Shown from
+            // inside the loop, it is made during the call, where Windows hands it to us at its birth.
+            slint::Timer::single_shot(Duration::ZERO, || with_host("first show", Host::show_first));
         }
+    }
+
+    // Owned by the taskbar and never activated from the moment Windows makes the window.
+    fn show_first(&mut self) {
+        let Some(window) = &self.window else { return };
+        let want = shell::Want { owner: self.taskbar, ex_style: native::WS_EX_OURS, inactive: true };
+        if !shell::show_born(self.born, want, || window.show()) {
+            // Another window is being made: once it is there.
+            slint::Timer::single_shot(Duration::from_millis(50), || with_host("first show", Host::show_first));
+            return;
+        }
+        // The toolkit makes the window on the loop's next turn.
+        slint::Timer::single_shot(Duration::ZERO, || with_host("first place", Host::place));
     }
 
     // Once per window, as soon as Windows has it: our style bits, and the message that asks the app to leave.
@@ -235,15 +254,23 @@ impl Host {
             return;
         }
         self.prepared = true;
-        native::add_ex_style(hwnd, native::WS_EX_OURS);
-        shell::quit_on_end_session(hwnd);
+        self.born_done = true;
+        // Written before anything is put on afterwards: it shows the window as it was born.
         trace!(
-            "pill window {:?} made, owner-is-taskbar={} exstyle=0x{:x} dpi={}",
+            "pill window {:?} made, born={:?} birth={:?} owner-is-taskbar={} exstyle=0x{:x} active={} dpi={}",
             hwnd.0,
+            self.born,
+            shell::birth_of(hwnd),
             native::owner(hwnd) == self.taskbar,
             native::ex_style(hwnd),
+            native::active() == hwnd,
             native::dpi(hwnd)
         );
+        if self.born.owned_afterwards() {
+            native::set_owner(hwnd, self.taskbar);
+            native::add_ex_style(hwnd, native::WS_EX_OURS);
+        }
+        shell::quit_on_end_session(hwnd);
     }
 
     fn close_window(&mut self) {

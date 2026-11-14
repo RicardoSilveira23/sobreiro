@@ -3,7 +3,6 @@
 //! is made the first time the flyout is opened, not at start, and is hidden afterwards, not closed.
 use crate::{Flyout, FlyoutCard, native, shell, trace};
 use slint::ComponentHandle;
-use slint::winit_030::{WinitWindowAccessor, EventResult, winit};
 use sobreiro_core::display::{FlyoutPlacement, PixelRect};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -17,6 +16,8 @@ pub struct FlyoutWindow {
     visible: Rc<Cell<bool>>,
     hidden_at: Rc<Cell<Option<Instant>>>,
     cursor: Cell<(i32, i32)>,
+    born: Cell<bool>,
+    listening: Cell<isize>,
 }
 
 impl FlyoutWindow {
@@ -57,23 +58,52 @@ impl FlyoutWindow {
             let Some(window) = borrowed.as_ref() else { return };
             if !self.is_visible() {
                 window.window().set_position(slint::PhysicalPosition::new(-32000, -32000));
-                if let Err(error) = window.show() {
-                    trace!("flyout show failed: {error}");
-                    return;
+                if self.born.replace(true) {
+                    if let Err(error) = window.show() {
+                        trace!("flyout show failed: {error}");
+                        return;
+                    }
+                } else {
+                    // A tool window from its birth: no taskbar button and no Alt+Tab entry. It may be activated.
+                    let want = shell::Want { owner: Default::default(), ex_style: native::WS_EX_TOOL, inactive: false };
+                    if !shell::show_born(shell::Born::Ours, want, || window.show()) {
+                        self.born.set(false);
+                        return;
+                    }
                 }
                 self.visible.set(true);
-                native::add_ex_style(shell::hwnd_of(window.window()), 0x80); // a tool window: no Alt+Tab entry
             }
-            window.window().with_winit_window(|w| w.focus_window());
         }
-        self.place();
-        // Once more after the toolkit has settled its own size.
+        self.focus_and_place();
+        // Once more after the toolkit has made the window, or settled its own size.
         let again = Rc::downgrade(self);
         slint::Timer::single_shot(Duration::from_millis(30), move || {
             if let Some(flyout) = again.upgrade() {
-                flyout.place();
+                flyout.focus_and_place();
             }
         });
+    }
+
+    // The window is given the focus and its place once Windows has it, which is a turn of the loop after it
+    // was first shown.
+    fn focus_and_place(&self) {
+        let hwnd = {
+            let borrowed = self.window.borrow();
+            let Some(window) = borrowed.as_ref() else { return };
+            let hwnd = shell::hwnd_of(window.window());
+            if !native::is_window(hwnd) || !self.is_visible() {
+                return;
+            }
+            if self.listening.replace(hwnd.0 as isize) != hwnd.0 as isize {
+                trace!("flyout window {:?} made, birth={:?} exstyle=0x{:x}", hwnd.0, shell::birth_of(hwnd), native::ex_style(hwnd));
+                self.hide_when_deactivated(hwnd, window);
+            }
+            hwnd
+        };
+        if native::foreground() != hwnd {
+            trace!("flyout focus: asked={} foreground-is-flyout={}", native::focus(hwnd), native::foreground() == hwnd);
+        }
+        self.place();
     }
 
     fn ensure_window(&self) {
@@ -95,27 +125,28 @@ impl FlyoutWindow {
                 let _ = window.hide();
             }
         });
+        *self.window.borrow_mut() = Some(window);
+    }
+
+    // Windows says when the window stops being the active one; the toolkit's stable API does not.
+    fn hide_when_deactivated(&self, hwnd: windows::Win32::Foundation::HWND, window: &Flyout) {
         let weak = window.as_weak();
         let visible = self.visible.clone();
         let hidden_at = self.hidden_at.clone();
-        window.window().on_winit_window_event(move |_, event| {
-            if let winit::event::WindowEvent::Focused(false) = event {
-                if visible.get() {
-                    visible.set(false);
-                    hidden_at.set(Some(Instant::now()));
-                    trace!("flyout hidden: lost focus");
-                    let weak = weak.clone();
-                    // Not from inside the toolkit's own handling of the event.
-                    slint::Timer::single_shot(Duration::ZERO, move || {
-                        if let Some(window) = weak.upgrade() {
-                            let _ = window.hide();
-                        }
-                    });
-                }
+        shell::on_deactivated(hwnd, move || {
+            if visible.get() {
+                visible.set(false);
+                hidden_at.set(Some(Instant::now()));
+                trace!("flyout hidden: lost focus");
+                let weak = weak.clone();
+                // Not from inside the window's own handling of the message.
+                slint::Timer::single_shot(Duration::ZERO, move || {
+                    if let Some(window) = weak.upgrade() {
+                        let _ = window.hide();
+                    }
+                });
             }
-            EventResult::Propagate
         });
-        *self.window.borrow_mut() = Some(window);
     }
 
     fn place(&self) {

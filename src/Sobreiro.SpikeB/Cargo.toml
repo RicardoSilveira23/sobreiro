@@ -15,7 +15,7 @@ path = "src/main.rs"
 [dependencies]
 slint = { version = "=1.18.1", default-features = false, features = [
     "std", "compat-1-2", "backend-winit", "renderer-software",
-    "software-renderer-path", "system-tray", "accessibility", "raw-window-handle-06", "unstable-winit-030",
+    "software-renderer-path", "system-tray", "accessibility", "raw-window-handle-06",
 ] }
 raw-window-handle = "0.6"
 sobreiro-core = { path = "core" }
@@ -24,11 +24,15 @@ windows = { version = "0.62", features = [
     "Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_UI_HiDpi",
     "Win32_UI_Accessibility", "Win32_UI_Shell", "Win32_System_Com", "Win32_System_Threading",
     "Win32_System_Ole", "Win32_System_Variant", "Win32_Storage_FileSystem", "Win32_Security",
+    "Win32_UI_Input_KeyboardAndMouse",
 ] }
 
 [features]
 # The toolkit's OpenGL renderer, for the comparison with software rendering (SOBREIRO_SPIKE_RENDER=gpu).
 gpu = ["slint/renderer-femtovg"]
+# The toolkit's hook on a window's attributes, which it marks unstable: only for the comparison with a
+# window taken over by Windows' own means (SOBREIRO_SPIKE_BORN=hook).
+toolkit-hook = ["slint/unstable-winit-030"]
 
 [build-dependencies]
 slint-build = "=1.18.1"
