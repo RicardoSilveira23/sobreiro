@@ -5,14 +5,15 @@ them. An earlier draft made "a Rust core under the C# UI" its own version. That 
 see [Not in this roadmap](#not-in-this-roadmap).
 
 The next shell was chosen on 2026-11-14: Rust, for 2.0. [The decision](#the-decision) has its
-numbers. 1.1 comes first: [today's shell, tuned](#11-todays-shell-tuned).
+numbers. 1.1 came first, released the same day: [today's shell, tuned](#11-todays-shell-tuned).
 
 ## Where it stands
 
 Checked on 2026-11-13 against 1.0.0, which publishes the bridge with Native AOT and the tray
-without single-file compression. The process figures are the newest row in
-[baseline.md](baseline.md), which also says how each one is taken. 0.10.0 as released measured
-184 MB private memory, an 80.4 MB `Sobreiro.exe` and a 17.0 MB bridge.
+without single-file compression. The memory, CPU, start and file rows are the newest row in
+[baseline.md](baseline.md), 1.1.0's, measured on 2026-11-14; it also says how each one is
+taken. 0.10.0 as released measured 184 MB private memory, an 80.4 MB `Sobreiro.exe` and a
+17.0 MB bridge.
 
 | What | Value |
 |---|---|
@@ -21,9 +22,9 @@ without single-file compression. The process figures are the newest row in
 | Tray app | WPF and WinForms, native calls in 12 files (pill, flyout, autostart, Credential Manager, theme) |
 | Tests | 956, all against Core. CI runs on Windows only |
 | Polling | Every 5 minutes, 2-minute retry, stepped back-off on rate limits |
-| Memory | 97 MB private, 173 MB working set, after 10 minutes idle and still rising slowly |
-| CPU | 1.1 s in the first minute, then 14.9 s per idle hour |
-| Start | 0.40 s from launch to the first pill; 0.43 s on the first start |
+| Memory | 96 MB private, 167 MB working set, after 10 minutes idle and still rising slowly |
+| CPU | 0.8 s in the first minute, then 2.0 s per idle hour |
+| Start | 0.47 s from launch to the first pill; 0.54 s on the first start |
 | Files | `Sobreiro.exe` 168.9 MB, `sobreiro-bridge.exe` 2.2 MB; one bridge run takes 9 ms |
 
 ## What decides the order
@@ -128,9 +129,9 @@ shell decision: whatever lowers it on the current shell is worth having in a 1.x
   first runs (tiered compilation off, one line in the project file). The baseline run measured
   3.0 s per idle hour against 7.3 s. The price is a start about 0.08 s slower (first pill after
   0.47 s, first start 0.57 s) and 9 MB more private memory (103 MB), both inside their targets.
-- **What is left.** That is one run, on `main` and not yet in a release. The release is
-  [1.1](#11-todays-shell-tuned): its row under Releases in [baseline.md](baseline.md) is the
-  check that it holds.
+- **Released, and it holds.** [1.1.0](#11-todays-shell-tuned) came out on 2026-11-14 with both
+  changes. Its row under Releases in [baseline.md](baseline.md), measured on the released exe,
+  shows 2.0 s per idle hour: a second run under the target, after the 3.0 s on `main`.
 
 ### Step 1: compare on paper
 
@@ -222,18 +223,23 @@ The release of the current shell with the idle-CPU work in it: the best the curr
 measured. It is what is on `main`, 1.0.0 with the two changes under
 [idle CPU](#carried-over-from-10-idle-cpu).
 
-| | 1.0.0 | 1.1, as measured on `main` |
-|---|---|---|
-| Private memory, 10 minutes idle | 97 MB | 103 MB |
-| CPU per idle hour | 14.9 s | 3.0 s |
-| Start to first pill | 0.40 s, first start 0.43 s | 0.47 s, first start 0.57 s |
-| `Sobreiro.exe` | 168.9 MB | 168.9 MB |
+| | 1.0.0 | 1.1, as measured on `main` | 1.1.0, the released exe |
+|---|---|---|---|
+| Private memory, 10 minutes idle | 97 MB | 103 MB | 96 MB |
+| CPU per idle hour | 14.9 s | 3.0 s | 2.0 s |
+| Start to first pill | 0.40 s, first start 0.43 s | 0.47 s, first start 0.57 s | 0.47 s, first start 0.54 s |
+| `Sobreiro.exe` | 168.9 MB | 168.9 MB | 168.9 MB |
+
+The two 1.1 columns are one run each of the same code, a day apart: what lies between them is
+what two runs differ by, not a change.
 
 A, the C# shell that keeps Core, is not released: it would be a whole shell written to be
 replaced by 2.0.
 
 **Done when:** 1.1.0 is released, its row is under Releases in [baseline.md](baseline.md), and
 that row shows 5 s or less per idle hour.
+
+Done on 2026-11-14: 1.1.0 is released and its row shows 2.0 s.
 
 ## 2.0: the new shell on Windows, at parity
 
