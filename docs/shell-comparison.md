@@ -7,6 +7,8 @@ ends in a [shortlist](#shortlist) and in
 puts its figures in its row and a note under
 [What the spikes measured](#what-the-spikes-measured).
 
+The decision taken from it, on 2026-11-14, is in [roadmap.md](roadmap.md#the-decision): B.
+
 ## The bar
 
 Measured on 2026-11-13, in [baseline.md](baseline.md) (the 1.0.0 row and the note "Taskbar asked
