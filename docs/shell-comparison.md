@@ -332,17 +332,17 @@ On macOS and Linux a notification is a different call on each, and belongs to 3.
 |---|---|---|
 | The face | 201 lines | 191 lines |
 | The window | 181 lines, 7 native imports | 109 lines |
-| The tracker and its native calls | 443 lines, 12 native imports | 479 lines, 23 native imports shared with the flyout |
-| The question to UI Automation | 52 lines | 194 lines, 2 native imports |
-| The pill in all | 877 lines | 973 lines |
+| The tracker and its native calls | 443 lines, 12 native imports | 480 lines, 23 native imports shared with the flyout |
+| The question to UI Automation | 52 lines | 224 lines, 2 native imports |
+| The pill in all | 877 lines | 1,004 lines |
 | The flyout | 633 lines, 8 native imports | 413 lines, without the hand-set baselines |
-| Tray icons, menu, polling and start | 993 lines | 502 lines, with a short menu |
+| Tray icons, menu, polling and start | 993 lines | 516 lines, with a short menu |
 | Native imports in the tray app | 34 | 27 |
 
-The face is the same code as today's with other type names. The pictures the spike renders of
-itself at 100%, 150% and 200%, in both themes, match today's pill in width; the text lines
-needed their height set by hand to match in height. They were compared by eye, not pixel by
-pixel.
+The counts include the switches of the experiments. The face is the same code as today's with
+other type names. The pictures the spike renders of itself at 100%, 150% and 200%, in both
+themes, match today's pill in width; the text lines needed their height set by hand to match
+in height. They were compared by eye, not pixel by pixel.
 
 **F's pill with this flyout** was not built. The variant would keep F's hand-drawn pill and use
 the toolkit for the flyout and the tray only. The table above bounds what it could save: the
