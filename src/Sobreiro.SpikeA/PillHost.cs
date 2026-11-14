@@ -168,7 +168,7 @@ internal sealed unsafe class PillHost : IDisposable
 
     private static bool WindowAlive(PillWindow window) => Native.IsWindow(window.Handle);
 
-    /// <summary>One UI Automation query at a time, on a thread-pool thread; the answer comes back through the dispatcher.</summary>
+    /// <summary>One UI Automation query at a time, off the UI thread; the answer comes back through the dispatcher.</summary>
     private void AskUiAutomation()
     {
         if (!Active || _taskbar == IntPtr.Zero) return;
@@ -181,12 +181,13 @@ internal sealed unsafe class PillHost : IDisposable
         _schedule = _schedule.Asked(Now);
         var taskbar = _taskbar;
         var generation = _generation;
-        _ = Task.Run(() =>
+        void Answer(TaskbarAnchors? answer)
         {
-            var answer = Spike.AskUia ? TaskbarProbe.Query(taskbar) : null;
             Spike.Trace(answer is null ? "anchors: none" : $"anchors: {answer}");
             Dispatcher.UIThread.Post(() => Guard("anchors", () => OnProbed(taskbar, generation, answer)));
-        });
+        }
+        if (Spike.AskUia) TaskbarProbe.Ask(taskbar, Answer);
+        else Answer(null);
     }
 
     private void OnProbed(IntPtr taskbar, int generation, TaskbarAnchors? answer)

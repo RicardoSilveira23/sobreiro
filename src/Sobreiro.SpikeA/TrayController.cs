@@ -35,6 +35,7 @@ internal sealed class TrayController : IDisposable
     private readonly DispatcherTimer _debounce;
     private readonly DispatcherTimer _tick;
     private readonly string _usagePath = AppPaths.UsageFile();
+    private static readonly string? Collect = Environment.GetEnvironmentVariable("SOBREIRO_SPIKE_COLLECT");
     private FlyoutWindow? _flyout;
     private bool _copilotDrawn;
     private bool _disposed;
@@ -82,6 +83,19 @@ internal sealed class TrayController : IDisposable
             Guard("live usage", () => _claude.Tick(DateTimeOffset.Now));
             Guard("copilot usage", () => _copilot.Tick(DateTimeOffset.Now));
             Refresh();
+            // The runtime's first collection comes only after tens of MB of garbage on a PC with a large
+            // processor cache, and an idle tray makes about 0.7 MB a minute: until then private memory
+            // just rises. SOBREIRO_SPIKE_COLLECT=gen0 or full collects here, every 30 seconds.
+            switch (Collect)
+            {
+                case "gen0": GC.Collect(0, GCCollectionMode.Forced, blocking: true); break;
+                case "full": GC.Collect(); break;
+            }
+            // Every 30 seconds, for the trace: how much of the process's memory is the garbage collector's.
+            var info = GC.GetGCMemoryInfo();
+            using var self = System.Diagnostics.Process.GetCurrentProcess();
+            Spike.Trace($"memory private={self.PrivateMemorySize64 / 1024} KB gc-committed={info.TotalCommittedBytes / 1024} KB " +
+                $"gc-heap={info.HeapSizeBytes / 1024} KB live={GC.GetTotalMemory(false) / 1024} KB gen0={GC.CollectionCount(0)} gen2={GC.CollectionCount(2)} asked={TaskbarProbe.Asked}");
         };
 
         _watcher = new FileSystemWatcher(dataDir, "usage.json")

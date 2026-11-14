@@ -23,8 +23,38 @@ internal static unsafe partial class TaskbarProbe
     /// <summary>SOBREIRO_SPIKE_RELEASE=gc leaves the answer's COM objects to the garbage collector, as first measured.</summary>
     private static readonly bool ReleaseAtOnce = Environment.GetEnvironmentVariable("SOBREIRO_SPIKE_RELEASE") != "gc";
 
+    private static readonly System.Collections.Concurrent.BlockingCollection<(IntPtr Taskbar, Action<TaskbarAnchors?> Done)> Queue = new();
+    private static Thread? _thread;
+
+    /// <summary>
+    /// Puts the question on one thread that lives as long as the app and belongs to COM's multithreaded
+    /// apartment. SOBREIRO_SPIKE_THREAD=pool asks from a thread-pool thread instead, as first measured.
+    /// </summary>
+    public static void Ask(IntPtr taskbar, Action<TaskbarAnchors?> done)
+    {
+        if (Environment.GetEnvironmentVariable("SOBREIRO_SPIKE_THREAD") == "pool")
+        {
+            _ = Task.Run(() => done(Query(taskbar)));
+            return;
+        }
+        if (_thread is null)
+        {
+            _thread = new Thread(() =>
+            {
+                foreach (var (handle, answer) in Queue.GetConsumingEnumerable()) answer(Query(handle));
+            }) { IsBackground = true, Name = "taskbar probe" };
+            _thread.SetApartmentState(ApartmentState.MTA);
+            _thread.Start();
+        }
+        Queue.Add((taskbar, done));
+    }
+
+    /// <summary>How many questions have been put, for the trace.</summary>
+    public static int Asked;
+
     public static TaskbarAnchors? Query(IntPtr taskbar)
     {
+        Interlocked.Increment(ref Asked);
         try
         {
             if (Native.WindowRect(taskbar) is not { } bounds) return null;
