@@ -76,6 +76,8 @@ Changes that were tried, each beside the release it was tried on, kept or not.
 | 1.0.0, taskbar asked on change | 2026-11-13 | 94 MB | 170 MB | 7.3 s | 0.48 s | 0.39 s | 168.9 MB | 2.2 MB | 9 ms |
 | 1.0.0, pill on a plain window (spike) | 2026-11-13 | 27 MB | 96 MB | 5.4 s | 0.33 s | 0.25 s | 170.2 MB | 2.2 MB | 8 ms |
 | 1.0.0, tiered compilation off | 2026-11-13 | 103 MB | 173 MB | 3.0 s | 0.57 s | 0.47 s | 168.9 MB | 2.2 MB | 9 ms |
+| 1.0.0, shell on Avalonia with Native AOT (spike) | 2026-11-13 | 26 MB | 63 MB | 1.4 s | 0.07 s | 0.06 s | 22.1 MB | 2.2 MB | 8 ms |
+| 1.0.0, the same spike with GPU rendering | 2026-11-13 | 103 MB | 125 MB | 2.5 s | 0.12 s | 0.11 s | 22.1 MB | 2.2 MB | 8 ms |
 
 Notes on an experiment:
 
@@ -189,3 +191,27 @@ Notes on an experiment:
   - It is one run. Two baseline runs of one build have differed by 1.9 s on this PC (13.9 s and
     15.8 s, above), which is less than the 4.3 s between these two rows, and the copies run
     side by side point the same way.
+- **Shell on Avalonia with Native AOT: a spike, not merged.** The second spike of the next shell
+  ([shell-comparison.md](shell-comparison.md#a-c-with-avalonia-native-aot)): the tray icon, the
+  pill and the flyout built again on the toolkit, Core untouched, published with Native AOT.
+  The two rows are one exe with a switch for the rendering, measured the same evening as the
+  row above them, "tiered compilation off", which is the one to compare with.
+  - Software rendering: private memory 103 MB to 26 MB, working set 173 MB to 63 MB, 3.0 s to
+    1.4 s of processor time per idle hour, later starts 0.47 s to 0.06 s (59, 58, 60 and
+    62 ms), the first start 0.57 s to 0.07 s.
+  - GPU rendering, the toolkit's default: 103 MB, 125 MB, 2.5 s, 0.11 s.
+  - Minute by minute, the software run used 0.03, 0.00, 0.02, 0.02, 0.04, 0.03, 0.03, 0.02 and
+    0.02 s, and the GPU run 0.07, 0.04, 0.03, 0.02, 0.08, 0.06, 0.00, 0.00 and 0.08 s. Windows
+    counts processor time in steps of 0.016 s.
+  - Private memory was still rising at the end of the software run: 15.7, 16.9, 17.5, 18.4,
+    19.7, 22.1, 23.1, 23.8, 25.0 and 26.3 MB, minute by minute. It is garbage the runtime had
+    not collected yet: its first collection had not come. Hidden copies of the same exe
+    levelled off at about 33 MB after 23 minutes, and copies that ask for a collection every
+    30 seconds stayed at 16 to 17 MB. The row is the build that never asks.
+  - The run never opens the flyout. In a separate copy with its pill shown, opening it once
+    took private memory from 14.0 MB to 17.0 MB, and it was 17.3 MB after closing.
+  - `Sobreiro.exe` is 22.1 MB and needs two of the toolkit's libraries beside it, 12.8 MB: 34.9
+    MB in three files. GPU rendering needs a third, 5.1 MB. The exe does not carry the bridge.
+  - The spike leaves out Connect, the alerts, most of the menu, the first-run migration and the
+    log. It polls with this PC's sign-ins, as an installed copy does.
+  - The code is on the branch `spike/shell-a-avalonia`, cut from `main` at `0f5e0d5`.
