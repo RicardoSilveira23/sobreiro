@@ -3,7 +3,7 @@
 //!
 //! Each area of `src/Sobreiro.Core` is ported here with its tests, one at a time, and the folders
 //! keep the names they have there. So far: the limits, `usage.json` and how readings are merged
-//! into it, and the way files are written. The tests are in `core/tests`.
+//! into it, the way files are written, and what the bridge does. The tests are in `core/tests`.
 
 // No calls to the system means no unsafe code, and no file in here can allow it for itself.
 #![forbid(unsafe_code)]

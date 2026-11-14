@@ -95,11 +95,14 @@ jobs:
       - name: Build
         run: |
           cargo build --release --locked
-          Get-Item target/release/Sobreiro.exe | ForEach-Object { '{0}: {1} bytes' -f $_.Name, $_.Length }
+          Get-Item target/release/Sobreiro.exe, target/release/sobreiro-bridge.exe |
+            ForEach-Object { '{0}: {1} bytes' -f $_.Name, $_.Length }
 
       - uses: actions/upload-artifact@v7
         with:
           name: Sobreiro-rust-win-x64
-          path: target/release/Sobreiro.exe
+          path: |
+            target/release/Sobreiro.exe
+            target/release/sobreiro-bridge.exe
           if-no-files-found: error
           retention-days: 14

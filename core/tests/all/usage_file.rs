@@ -1,5 +1,5 @@
 //! Ported from `tests/Sobreiro.Tests/UsageFileTests.cs`, but for its three tests of `AppPaths`,
-//! which come with the area "Paths and config". The last test here is new.
+//! which are in `app_paths.rs`. The last test here is new.
 use sobreiro_core::usage::usage_file::{self, ForMerge};
 use sobreiro_core::usage::{RateLimits, UsageSnapshot};
 

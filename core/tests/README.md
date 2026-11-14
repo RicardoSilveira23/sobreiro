@@ -4,10 +4,12 @@ Core is ported from `src/Sobreiro.Core` one area at a time, and each area's test
 from `tests/Sobreiro.Tests`. This page keeps the count, and gives a line for every C# test that
 has no Rust test.
 
-All of them build into one program, `core/tests/all`:
+Core's tests build into one program, `core/tests/all`. The bridge's exe has its own, in
+`bridge/tests`.
 
 ```
 cargo test -p sobreiro-core
+cargo test -p sobreiro-bridge
 ```
 
 A C# `[Theory]` with rows is one Rust test that walks the same rows, so the Rust count is lower
@@ -16,29 +18,48 @@ one for each row.
 
 ## Limits, usage and the files the bridge writes
 
-Ported so far: the limits, `usage.json` (its format, reading and writing it, merging a reading
-into it) and the atomic write. The bridge itself is the second piece of this area.
+The whole area: the limits, `usage.json` (its format, reading and writing it, merging a reading
+into it), the atomic write, and the bridge.
 
 | C# test file | Rust file | C# cases | Ported | Rust tests |
 | --- | --- | ---: | ---: | ---: |
-| `LimitListTests.cs` | `all/limit_list.rs` | 28 | 28 | 14 |
-| `UsageLevelTests.cs` | `all/usage_level.rs` | 8 | 8 | 3 |
-| `RateLimitsJsonTests.cs` | `all/rate_limits_json.rs` | 20 | 20 | 14, and 4 new |
-| `ResetPeriodTests.cs` | `all/reset_period.rs` | 4 | 4 | 4 |
-| `UsageFileTests.cs` | `all/usage_file.rs` | 13 | 10 | 10, and 1 new |
-| `UsageMergeTests.cs` | `all/usage_merge.rs` | 16 | 16 | 16 |
-| `AtomicFileTests.cs` | `all/atomic_file.rs` | 6 | 6 | 6 |
-| | | 95 | 92 | 67, and 5 new |
+| `LimitListTests.cs` | `core/tests/all/limit_list.rs` | 28 | 28 | 14 |
+| `UsageLevelTests.cs` | `core/tests/all/usage_level.rs` | 8 | 8 | 3 |
+| `RateLimitsJsonTests.cs` | `core/tests/all/rate_limits_json.rs` | 20 | 20 | 14, and 4 new |
+| `ResetPeriodTests.cs` | `core/tests/all/reset_period.rs` | 4 | 4 | 4 |
+| `UsageFileTests.cs` | `core/tests/all/usage_file.rs`, `app_paths.rs` | 13 | 13 | 13, and 1 new |
+| `UsageMergeTests.cs` | `core/tests/all/usage_merge.rs` | 16 | 16 | 16 |
+| `AtomicFileTests.cs` | `core/tests/all/atomic_file.rs` | 6 | 6 | 6 |
+| `BridgeRunnerTests.cs` | `core/tests/all/bridge_runner.rs` | 10 | 9 | 9 |
+| `BridgeConfigTests.cs` | `core/tests/all/bridge_config.rs` | 6 | 6 | 4 |
+| `BashLocatorTests.cs` | `core/tests/all/bash_locator.rs` | 6 | 6 | 6 |
+| `ChainRunnerTests.cs` | `bridge/tests/chain_runner.rs` | 10 | 10 | 9, and 1 new |
+| | | 127 | 126 | 98, and 6 new |
 
-Still to port in this area, with the bridge: `BridgeRunnerTests.cs` (10 cases),
-`BridgeConfigTests.cs` (6), `ChainRunnerTests.cs` (10) and `BashLocatorTests.cs` (6).
+Ported ahead of its own area, because the bridge prints it:
 
-### C# tests with no Rust test yet
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `StatusLineTextTests.cs` (Display) | `core/tests/all/status_line_text.rs` | 4 | 4 | 4 |
 
-- `UsageFileTests.AppPaths_uses_SOBREIRO_DATA_DIR_when_set`,
-  `UsageFileTests.AppPaths_ignores_relative_SOBREIRO_DATA_DIR` and
-  `UsageFileTests.AppPaths_defaults_to_LocalApplicationData_when_unset`: they test `AppPaths`,
-  not the usage file, and come over with the area "Paths and config".
+The three `AppPaths_*` tests in `UsageFileTests.cs` are in `app_paths.rs`. `AppPathsTests.cs`
+itself waits for the area "Paths and config", with the rest of `AppPaths`.
+
+### C# tests with no Rust test
+
+- `BridgeRunnerTests.Still_prints_when_chain_throws`: a Rust function has no exception to
+  throw. A chained command that fails gives "nothing", and
+  `bridge_runner::falls_back_to_default_line_when_chain_cannot_start` covers that.
+
+### C# tests ported in part
+
+- `ChainRunnerTests.StartInfo_uses_bash_dash_c` also asserts that the process's input and
+  output are redirected and that it is not started through the shell. A command in Rust does
+  not let a test read those settings back. The tests that run a command show them:
+  `run_passes_stdin_and_returns_stdout_and_exit_code` would fail without either pipe.
+- The three `AppPaths_*` tests set `SOBREIRO_DATA_DIR` for the whole test run and ask Windows
+  for the user's folder. In Rust both are handed to the code under test, so the tests name
+  them outright and no test changes what another reads.
 
 ### Rust tests with no C# test
 
@@ -53,3 +74,12 @@ They pin down what the C# does where no C# test names it, so the port cannot dri
   outside those years and reads such a time as missing.
 - `usage_file::read_skips_a_byte_order_mark`: the C# reader skips the three bytes some editors
   put at the start of a UTF-8 file.
+- `chain_runner::a_command_out_of_time_takes_the_processes_it_started_with_it`: the C# ends
+  the chained command with every process it started; this shows the Rust does.
+
+And two files of tests the C# had no like of:
+
+- `bridge/tests/exe.rs`, 4 tests: the exe itself, run as Claude Code runs it, with a data
+  folder of its own. One of them holds the file the 1.1.0 bridge wrote for the same input.
+- `bridge/src/windows_calls.rs`, 1 test: Windows says where the user's local application data
+  folder is.
