@@ -4,6 +4,9 @@ Written 2026-11-13. Today's milestones are in [plan.md](plan.md); this covers wh
 them. An earlier draft made "a Rust core under the C# UI" its own version. That step is dropped:
 see [Not in this roadmap](#not-in-this-roadmap).
 
+The next shell was chosen on 2026-11-14: Rust, for 2.0. [The decision](#the-decision) has its
+numbers. 1.1 comes first: [today's shell, tuned](#11-todays-shell-tuned).
+
 ## Where it stands
 
 Checked on 2026-11-13 against 1.0.0, which publishes the bridge with Native AOT and the tray
@@ -104,6 +107,8 @@ milestone 5.
 Rust is one candidate, not the answer. No language is chosen until it has been compared with
 the others, first on paper and then in running code.
 
+Both were done by 2026-11-14, and Rust was chosen: see [The decision](#the-decision).
+
 ### Carried over from 1.0: idle CPU
 
 5 s of processor time or less per idle hour, measured with the baseline script as before. 1.0
@@ -123,8 +128,9 @@ shell decision: whatever lowers it on the current shell is worth having in a 1.x
   first runs (tiered compilation off, one line in the project file). The baseline run measured
   3.0 s per idle hour against 7.3 s. The price is a start about 0.08 s slower (first pill after
   0.47 s, first start 0.57 s) and 9 MB more private memory (103 MB), both inside their targets.
-- **What is left.** That is one run, on `main` and not yet in a release: the next release's row
-  under Releases in [baseline.md](baseline.md) is the check that it holds.
+- **What is left.** That is one run, on `main` and not yet in a release. The release is
+  [1.1](#11-todays-shell-tuned): its row under Releases in [baseline.md](baseline.md) is the
+  check that it holds.
 
 ### Step 1: compare on paper
 
@@ -175,7 +181,74 @@ then run the 1.0 baseline script.
   port and the more mature tray support wins.
 - Otherwise: the candidate that keeps the tested Core.
 
+### The decision
+
+Taken on 2026-11-14, by Ricardo, on the three spikes' figures: **B, the shell in Rust, for 2.0.**
+Each spike's note is in [shell-comparison.md](shell-comparison.md#what-the-spikes-measured) and
+its row in [baseline.md](baseline.md). All were measured on one PC, ten minutes idle, pill
+shown; A and B draw in software.
+
+| | 1.0.0 | F: C#, the pill on a plain window | A: C# on a toolkit, Core kept | B: Rust, Core rewritten |
+|---|---|---|---|---|
+| Private memory | 97 MB | 27 MB | 26 MB, still rising | 7 MB |
+| Where it settles | Rising slowly | 94 MB once the flyout has been opened | 33 MB, or 16 to 17 MB with a collection every 30 seconds | 6.5 MB |
+| CPU per idle hour | 14.9 s | 5.4 s | 1.4 s | 1.7 s |
+| Start to first pill | 0.40 s | 0.25 s | 0.06 s | 0.06 s |
+| Files | 168.9 MB | 170.2 MB | 34.9 MB in three files | 9.3 MB in one file |
+
+The rule, line by line:
+
+- **Stay on WPF?** No. 40% under 1.0 is 58 MB, and A and B are far under it. F is not, once its
+  flyout has been opened.
+- **Does the candidate that rewrites Core win?** Yes. B's pill was seen in the taskbar, with the
+  flyout opening beside it on a click. Half of A's memory is 13 MB against its baseline row and
+  8 MB against its lowest resting level; B rests at 6.5 MB.
+- **Otherwise the candidate that keeps Core.** Not reached.
+
+Known when it was taken:
+
+- A alone takes 64 to 80 MB off 1.0's 97 MB. B takes 10 to 26 MB more, and for that all of
+  Core is written again, with its 956 tests, as well as the shell.
+- The maintainer has not worked in Rust. The port is checked by its tests and by how the app
+  behaves, more than by reading it.
+- The spike's rewrite of Core was made by machine in half an hour and was not reviewed. It is
+  something to read, not something to build on.
+- Not shown yet for B: the pill on monitors of different scale, a tooltip above the taskbar,
+  and a pill owned by the taskbar without the toolkit's unstable hook. 2.0 starts there.
+
+### 1.1: today's shell, tuned
+
+The release of the current shell with the idle-CPU work in it: the best the current stack
+measured. It is what is on `main`, 1.0.0 with the two changes under
+[idle CPU](#carried-over-from-10-idle-cpu).
+
+| | 1.0.0 | 1.1, as measured on `main` |
+|---|---|---|
+| Private memory, 10 minutes idle | 97 MB | 103 MB |
+| CPU per idle hour | 14.9 s | 3.0 s |
+| Start to first pill | 0.40 s, first start 0.43 s | 0.47 s, first start 0.57 s |
+| `Sobreiro.exe` | 168.9 MB | 168.9 MB |
+
+A, the C# shell that keeps Core, is not released: it would be a whole shell written to be
+replaced by 2.0.
+
+**Done when:** 1.1.0 is released, its row is under Releases in [baseline.md](baseline.md), and
+that row shows 5 s or less per idle hour.
+
 ## 2.0: the new shell on Windows, at parity
+
+The new shell is B: Rust, on the toolkit its spike used, drawn in software.
+[Its note](shell-comparison.md#b-rust-with-slint) says what was built and where it fell short.
+In this order:
+
+1. **The pill's three open questions,** before anything is ported: the right size on monitors
+   of different scale, a tooltip above the taskbar, and an owner that does not lean on the
+   toolkit's unstable hook (or that hook pinned to a version, with a test that fails when it
+   changes). If one has no answer, the decision is opened again before more is built.
+2. **Core, one area at a time, with its tests.** The spike's rewrite is read, not taken over.
+3. **The shell to parity:** pill, flyout, tray icons and menu, Connect, alerts, start at
+   sign-in, the migration.
+4. **The release:** its baseline row, and the comparison below.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
   two languages in one process.
@@ -186,7 +259,12 @@ then run the 1.0 baseline script.
   [plan.md](plan.md) hold word for word.
 
 **Done when:** every feature in the manual works, the 2.0 baseline beats 1.0 by the margin the
-spike measured, and upgrading over 1.0 needs no step from the user.
+spike measured, upgrading over 1.0 needs no step from the user, and the comparison is published.
+
+**The comparison, published with 2.0.** A table and graphs of 1.0, 1.1 and 2.0, drawn from each
+release's row in [baseline.md](baseline.md): memory, idle CPU, start and size. It goes in the
+docs and on the landing page, with a download for each of the three releases. 2.0's figures are
+a spike's until it is released, so the comparison waits for that row.
 
 ## 3.0: macOS, then Linux
 
@@ -232,6 +310,7 @@ tests/fixtures/     JSON shared by every test suite
 | A language is chosen on reputation rather than on this app's numbers | The paper comparison, then the spike, before any port |
 | A candidate's tray support is young or thin on one system | Scored in the comparison; the decision rule's fallback |
 | Tests lost or weakened in a port | Port tests with the code, area by area; shared fixtures |
+| The new shell is in a language the maintainer has not worked in | Tests ported with each area; 1.x keeps shipping until parity; the pill's open questions come first |
 | Signing and notarisation cost money and time | Free signing for open source on Windows; macOS waits for demand |
 | Linux desktops differ | One desktop and one package format first, scope stated |
 | One maintainer, three systems | The demand gate on 3.0 |
