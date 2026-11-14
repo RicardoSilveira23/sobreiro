@@ -96,9 +96,7 @@ pub fn run() -> Result<(), slint::PlatformError> {
     );
 
     let claude_icon = tray()?;
-    claude_icon.set_shown(false);
     let copilot_icon = tray()?;
-    copilot_icon.set_shown(false);
 
     pill::on_clicks(
         || with_app("pill click", App::clicked),
@@ -167,9 +165,12 @@ pub fn run() -> Result<(), slint::PlatformError> {
     result
 }
 
-// The toolkit's tray element. Its menu is the system's own.
+// The toolkit's tray element. Its menu is the system's own. The toolkit makes the icon once, on the event
+// loop's first turn, from the picture it has then, and gives up without one: so each starts with empty rings.
 fn tray() -> Result<Tray, slint::PlatformError> {
     let tray = Tray::new()?;
+    let colours = TaskbarColours::for_taskbar(WindowsTheme::is_light(), false, sobreiro_core::colours::BarColourOption::Purple, None);
+    tray.set_rings(faces::tray_icon(&RingsModel::from(&[]), &colours, native::small_icon_size()));
     tray.on_icon_clicked(|| with_app("icon click", App::clicked));
     tray.on_pick_style(|index| {
         with_app("style", |app| {
