@@ -5,10 +5,15 @@
 // A test fails by panicking, in the helpers below as in the tests themselves.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod app_paths;
 mod atomic_file;
+mod bash_locator;
+mod bridge_config;
+mod bridge_runner;
 mod limit_list;
 mod rate_limits_json;
 mod reset_period;
+mod status_line_text;
 mod usage_file;
 mod usage_level;
 mod usage_merge;

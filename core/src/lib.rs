@@ -10,8 +10,11 @@
 // Core never prints: what it knows goes back to the caller. This also keeps a token off the console.
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 
+pub mod app_paths;
+pub mod bridge;
 pub mod connect;
 pub mod copilot;
+pub mod display;
 pub mod io;
 pub mod limits;
 pub mod usage;
