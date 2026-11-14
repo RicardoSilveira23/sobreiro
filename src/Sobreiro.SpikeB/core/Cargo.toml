@@ -1,0 +1,27 @@
+# SPIKE (shell candidate B): the part of Sobreiro.Core the shell needs, rewritten in Rust.
+# Thrown away after measuring.
+[package]
+name = "sobreiro-core"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+sha2 = "0.10"
+ureq = { version = "3", default-features = false, features = ["native-tls"] }
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Security_Credentials",
+    "Win32_System_Registry",
+] }
+
+[dev-dependencies]
+tempfile = "3"

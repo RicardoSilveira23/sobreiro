@@ -12,7 +12,7 @@ pub struct Ring {
 
 const GRID: u32 = 4;
 
-/// A square picture of `size` pixels, premultiplied: every ring's track in `track` (red, green, blue, alpha)
+/// A square picture of `size` pixels, not premultiplied: every ring's track in `track` (red, green, blue, alpha)
 /// and its arc on top.
 pub fn render(size: u32, stroke: f32, track: [u8; 4], rings: &[Ring]) -> SharedPixelBuffer<Rgba8Pixel> {
     let mut buffer = SharedPixelBuffer::<Rgba8Pixel>::new(size, size);
@@ -40,12 +40,10 @@ pub fn render(size: u32, stroke: f32, track: [u8; 4], rings: &[Ring]) -> SharedP
                 }
             }
         }
-        *pixel = Rgba8Pixel {
-            r: (sum[0] / samples).round() as u8,
-            g: (sum[1] / samples).round() as u8,
-            b: (sum[2] / samples).round() as u8,
-            a: (sum[3] / samples).round() as u8,
-        };
+        // The tray element wants colours that are not premultiplied.
+        let alpha = sum[3] / samples;
+        let straight = |part: f32| if alpha > 0.0 { (part / samples * 255.0 / alpha).round().min(255.0) as u8 } else { 0 };
+        *pixel = Rgba8Pixel { r: straight(sum[0]), g: straight(sum[1]), b: straight(sum[2]), a: alpha.round() as u8 };
     }
     buffer
 }

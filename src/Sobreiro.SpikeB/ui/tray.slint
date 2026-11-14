@@ -1,5 +1,16 @@
 // SPIKE (shell candidate B): the toolkit's tray element. One instance for Claude's rings, one for Copilot's.
 export component Tray inherits SystemTrayIcon {
+    // The element's own properties are not reachable from Rust: these carry them.
+    in property <image> rings;
+    in property <string> tip;
+    in property <bool> shown: false;
+    callback icon-clicked();
+    icon: rings;
+    tooltip: tip;
+    visible: shown;
+    clicked => {
+        root.icon-clicked();
+    }
     callback pick-style(int);
     callback open-folder();
     callback quit();

@@ -31,6 +31,7 @@ struct Host {
     enabled: bool,
     face: Option<PillFace>,
     shown_face: Option<PillFace>,
+    prepared: bool,
     left_clicked: Option<Rc<dyn Fn()>>,
     right_clicked: Option<Rc<dyn Fn()>>,
 }
@@ -53,6 +54,7 @@ thread_local! {
         enabled: false,
         face: None,
         shown_face: None,
+        prepared: false,
         left_clicked: None,
         right_clicked: None,
     });
@@ -211,20 +213,30 @@ impl Host {
         window.set_face(face.clone());
         self.shown_face = Some(face.clone());
         if first {
+            self.prepared = false;
             if let Err(error) = window.show() {
                 trace!("pill show failed: {error}");
             }
-            if let Some(hwnd) = self.hwnd() {
-                native::add_ex_style(hwnd, native::WS_EX_OURS);
-                trace!(
-                    "pill window {:?} shown, owner-is-taskbar={} exstyle=0x{:x} scale={}",
-                    hwnd.0,
-                    native::owner(hwnd) == self.taskbar,
-                    native::ex_style(hwnd),
-                    window.window().scale_factor()
-                );
-            }
+            // Before the event loop runs the toolkit only notes the window; it is made on the loop's first turn.
+            slint::Timer::single_shot(Duration::ZERO, || with_host("first place", Host::place));
         }
+    }
+
+    // Once per window, as soon as Windows has it: our style bits, and the message that asks the app to leave.
+    fn prepare(&mut self, hwnd: HWND) {
+        if self.prepared {
+            return;
+        }
+        self.prepared = true;
+        native::add_ex_style(hwnd, native::WS_EX_OURS);
+        shell::quit_on_end_session(hwnd);
+        trace!(
+            "pill window {:?} made, owner-is-taskbar={} exstyle=0x{:x} dpi={}",
+            hwnd.0,
+            native::owner(hwnd) == self.taskbar,
+            native::ex_style(hwnd),
+            native::dpi(hwnd)
+        );
     }
 
     fn close_window(&mut self) {
@@ -285,6 +297,7 @@ impl Host {
             return;
         }
         let Some(hwnd) = self.hwnd() else { return };
+        self.prepare(hwnd);
         let full_screen = native::notification_state().is_some_and(FullScreen::is_full_screen);
         let (Some(taskbar_rect), Some(monitor)) = (native::window_rect(self.taskbar), native::monitor_rect(self.taskbar)) else {
             native::hide(hwnd);
@@ -306,7 +319,14 @@ impl Host {
         let Some(own) = native::window_rect(hwnd) else { return };
         let gap = (4.0 * dpi as f64 / 96.0).round() as i32;
         let place = PillPlacement::place(to_core(monitor), to_core(taskbar_rect), self.anchors, own.width(), own.height(), gap);
-        if place.is_shown() { self.move_to(hwnd, place.x, place.y) } else { native::hide(hwnd) }
+        if place.is_shown() {
+            self.move_to(hwnd, place.x, place.y)
+        } else {
+            if native::is_visible(hwnd) {
+                trace!("pill hidden: {:?}", place.hidden);
+            }
+            native::hide(hwnd)
+        }
     }
 
     /// Moves the window to (x, y) in screen pixels, above the taskbar, and shows it.

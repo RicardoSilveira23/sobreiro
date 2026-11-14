@@ -3,7 +3,7 @@
 //! is made the first time the flyout is opened, not at start, and is hidden afterwards, not closed.
 use crate::{Flyout, FlyoutCard, native, shell, trace};
 use slint::ComponentHandle;
-use slint::winit_030::{WinitWindowAccessor, WinitWindowEventResult, winit};
+use slint::winit_030::{WinitWindowAccessor, EventResult, winit};
 use sobreiro_core::display::{FlyoutPlacement, PixelRect};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -113,7 +113,7 @@ impl FlyoutWindow {
                     });
                 }
             }
-            WinitWindowEventResult::Propagate
+            EventResult::Propagate
         });
         *self.window.borrow_mut() = Some(window);
     }

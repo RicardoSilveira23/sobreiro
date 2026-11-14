@@ -88,7 +88,7 @@ pub fn tray_icon(model: &RingsModel, colours: &TaskbarColours, size: u32) -> Ima
         .collect();
     let ink = colours.ink;
     let track = [ink.r, ink.g, ink.b, TaskbarColours::ICON_TRACK_ALPHA];
-    Image::from_rgba8_premultiplied(icon::render(size, stroke as f32, track, &rings))
+    Image::from_rgba8(icon::render(size, stroke as f32, track, &rings))
 }
 
 fn row(view: &LimitView, palette: &NightPalette, normal: Rgb, note: Option<&str>) -> LimitRow {
