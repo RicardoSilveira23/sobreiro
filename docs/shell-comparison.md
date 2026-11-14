@@ -44,7 +44,7 @@ memory, size and start figure of a candidate that does not exist yet is an **E**
 | Candidate | Idle memory, exe size, start | The pill | Tray, menu bar, notifications | Core and its tests | Toolchain, CI, signing | Licence | Maintainer |
 |---|---|---|---|---|---|---|---|
 | **A. C# with Avalonia, Native AOT** (spiked) | 26 MB after 10 minutes with software rendering, 2 to 3 MB more once the flyout has been opened; 103 MB with GPU rendering (M). Hidden copies level off at 33 MB, or rest at 16 to 17 MB with a collection every 30 seconds (M); exe 34.9 MB in three files (M); start 0.06 s (M) | Built, and seen inside the taskbar (M): owned by it, transparent per pixel, takes no focus. Mixed scaling not checked. The toolkit sets a window's owner and style itself when it shows it, so ours are put back afterwards. Native code: 27 imports against today's 34 (M) | Windows: icon, tooltip, click and a menu the toolkit draws itself, built (M). macOS: icon and menu, no text in the menu bar (P). Linux: on desktops with a status notifier, GNOME needs an extension (P). No system notifications (P) | All of it: 4,220 lines and 956 tests, untouched, and published with Native AOT without a warning (M) | No new language. A build on each system, with that system's linker (P). The toolkit's build step reports usage to its maker unless a variable is set (P) | MIT (P). Fits | Knows C# and .NET. The toolkit is new to him; the spike wrote its windows in C#, as today's shell does |
-| **B. Rust with Slint** | 15 to 40 MB (E); exe 5 to 15 MB (E); start under 0.2 s (E) | Unproven: frameless and always on top (P), a transparent window on Windows is not documented, the window handle comes through a feature marked unstable (P). Native code: all of today's again, in Rust | Tray element since June 2026 (P). Windows: icon, tooltip, menu, click (P). macOS: the same, plus text in the menu bar (P). Linux: status notifier only, GNOME needs an extension (P). No notifications (P) | None of the code. 4,220 lines and 956 tests rewritten; the JSON fixtures are reused | A second toolchain, simple to install. A build on each system | GPL 3 (P). Fits | Has not worked in Rust |
+| **B. Rust with Slint** (spiked) | 7 MB after 10 minutes with software rendering, about 1 MB more once the flyout has been opened; 246 MB with GPU rendering (M). A resting level: nothing in it collects garbage (M); exe 9.3 MB in one file (M); start 0.06 s (M) | Built, and seen inside the taskbar (M): owned by it from birth, transparent per pixel, takes no focus. Mixed scaling not checked. Being born owned goes through a hook the toolkit marks as unstable (P). Its tooltip opens inside the pill's own window (M). Native code: 36 calls in all against today's 34 imports (M) | Windows: icon, tooltip, click and the system's own menu, built (M); each icon needs its picture before the app's loop starts (M). macOS: the same, plus text in the menu bar (P). Linux: status notifier only, GNOME needs an extension (P). No notifications (P) | None of the code. For the spike, 3,148 of its lines were rewritten as 4,426 lines of Rust, with 518 tests passing and the JSON fixtures reused (M). Not reviewed line by line | A second toolchain, installed in a minute (M). 261 crates from the public registry in the build (M). A build on each system | GPL 3 (P). Fits; the crates in the build are permissive or GPL 3 (M) | Has not worked in Rust |
 | **C. C++ with Qt** | 15 to 35 MB (E); 49 MB in 19 files (R), or one exe of 15 to 25 MB (E); start under 0.3 s (E) | Possible on paper: frameless translucent window, window handle, per-monitor DPI by default (P). Being owned by the taskbar is not documented. Native code: all of today's again, in the language those calls are written for | The longest-proven. Icon, tooltip, menu, click and a message balloon on all three (P). macOS: no text in the menu bar (P). Linux: status notifier or the older tray, limits on GNOME (P) | None of the code. 4,220 lines and 956 tests rewritten; fixtures reused | The heaviest: a build system, the toolkit installed on each CI runner, a deployment tool per system; one exe means compiling the toolkit | LGPL 3 (P). Fits | Has not worked in C++ or Qt |
 | **D. Go with a small tray and window library** | 10 to 25 MB (E); exe 8 to 15 MB (E); start under 0.2 s (E) | Only by hand: no small library was found that draws a transparent window, so the window, the drawing and the text are native calls. The most native code of all | Tray libraries: icon, menu, click on all three; title text on macOS and Linux only, tooltip on macOS and Windows only (P). Notifications from another library | None of the code. 4,220 lines and 956 tests rewritten; fixtures reused | The simplest on Windows. A C compiler on macOS, and on Linux for some libraries (P), so a build on each system anyway | Apache 2.0 and BSD libraries (P). Fit | Has not worked in Go |
 | **E. A native shell per system** | Windows, today's shell: 94 to 97 MB, 168.9 MB, 0.40 s (M). macOS: 13 MB for a plain menu bar app (R) | Exists (M). Native code: what is there | The best fit on each: today's on Windows, a menu bar item with text on macOS (P), a status notifier on Linux | All of it on Windows. Elsewhere: Core as a native library under the system's shell (P for the library, not found for calling it from Swift), or rewritten there | Three toolchains and three shells to keep. The most code | No toolkit to license. Fits | C# yes; has not worked in Swift |
@@ -380,6 +380,241 @@ was not tried with Native AOT.
 Screen readers get what they get today: UI Automation finds the pill as a window with its two
 lines as text ("5h" and "7d" with their figures).
 
+### B. Rust with Slint
+
+Spiked on 2026-11-13 and 14, on the same PC. In short: the whole shell idles at 7 MB with its
+pill shown, where today's idles at 103 MB and A's at 26 MB, and opening the flyout adds about
+1 MB. That is with the toolkit's software renderer; through the graphics card it idles at
+246 MB. It is one exe of 9.3 MB and shows its pill 0.06 s after it is started. The price is
+the one the table names: none of Core carries over. For the spike, about two thirds of it was
+written again in Rust.
+
+**What was built.** A Rust program beside today's projects, on the branch
+`spike/shell-b-slint`, which is never merged. It builds only the tray icons, the pill and the
+flyout, and brings the part of Core they need with it, rewritten.
+
+- The pill is one of the toolkit's windows: borderless, clear per pixel, never activated. Its
+  face is written in the toolkit's own language to the WPF face's measures, in the app's own
+  fonts: the rings, the labels and figures, the stale mark, Copilot's block and bar, the
+  lighter ground under the pointer, and a tooltip.
+- It is placed by today's tracker, written again on the toolkit's timer and event loop, with
+  the same native calls and the same placement rules.
+- The taskbar is asked through UI Automation's own COM interface, from a thread of its own.
+  The bindings crate for Windows already declares the interfaces, and a COM object is
+  released when its value goes out of scope.
+- The flyout is a second window of the toolkit, made the first time it is opened: the card
+  with bars, battery or thermometer, placed beside the point of the click, closed by Esc or
+  by losing the focus.
+- The tray icons, their tooltips, the click and a short menu are the toolkit's tray element.
+  The menu is the system's own. The rings in the icon are worked out pixel by pixel in the
+  spike, because the toolkit draws into windows only.
+- The rewritten logic reads, polls and words everything, as Core does, with this PC's
+  sign-ins. The two requests go out through an HTTP crate set to use Windows' own TLS.
+- Left out: Connect and Disconnect, the alerts, the settings in the menu other than Style, the
+  first-run migration, the bridge inside the exe, the log, and the events for a change of
+  theme, clock or display (a redraw every 30 seconds stands in). The spike refuses to start
+  without a data folder of its own.
+- The renderer is chosen when the exe is built. The measured exe carries the software
+  renderer only; a second build adds the toolkit's OpenGL renderer, behind a switch in the
+  environment.
+
+**The taskbar takes the window.** Checked first, before any drawing, with a test window in each
+way of rendering: its owner is the taskbar, it lies wholly inside it and above it, the
+foreground window did not change, and a screenshot shows the taskbar through the half-clear
+part of the picture and around its round corners. A transparent window on Windows is not in
+the toolkit's documentation. It works, in software rendering too.
+
+- The toolkit lets the app change a window's attributes before the window is made. With that
+  the pill is born owned by the taskbar and is not activated when it is shown: nothing has to
+  be put back afterwards, as A needed. That hook belongs to a feature the toolkit marks as
+  unstable, one that may change between minor releases. The window handle comes through a
+  feature that is not marked so.
+- The two style bits that keep the pill out of Alt+Tab and away from the focus are added with
+  a native call once the window exists. The tracker checks them and the owner at every
+  placement and never had to put one back.
+- Then the spike itself, with every other Sobreiro on the PC closed, seen in three
+  screenshots: the pill in today's place left of the tray icons, 76 by 38 pixels where today's
+  is 75 by 38; its ground lighter with the pointer on it, the foreground window unchanged;
+  and the flyout open beside it after a real click sent by a script at the pointer. A second
+  click closed it.
+- Not seen by eye: the tray icons, which Windows put among the hidden icons. The shell
+  answered with their place, and a left and a right click sent as the tray's own message
+  opened the flyout and the menu. The menu was seen in one screenshot.
+- Nobody clicked anything by hand. A full-screen app, a hidden taskbar and a restart of the
+  taskbar were not tried.
+
+**The baseline run**, beside the row it is measured against and A's, all in
+[baseline.md](baseline.md) under Experiments:
+
+| | 1.0.0, tiered compilation off | A, software rendering | The spike, software rendering | The spike, GPU rendering |
+|---|---|---|---|---|
+| Private memory | 103 MB | 26 MB | 7 MB | 246 MB |
+| Working set | 173 MB | 63 MB | 29 MB | 103 MB |
+| CPU per idle hour | 3.0 s | 1.4 s | 1.7 s | 1.7 s |
+| First pill, first start | 0.57 s | 0.07 s | 0.06 s | 0.41 s |
+| First pill, later starts | 0.47 s | 0.06 s | 0.06 s | 0.23 s |
+| Sobreiro.exe | 168.9 MB | 22.1 MB, and 12.8 MB of libraries | 9.3 MB | 9.7 MB |
+
+7 MB is 93% under 1.0's 97 MB, where the decision rule asks for 40%. Rendering through the
+graphics card costs about 240 MB on this PC and buys nothing for a pill that changes a few
+times an hour. The 0.3 s between A's and the spike's processor time is less than two runs of
+one build have differed by.
+
+**Against the decision rule.** B rewrites Core, so the rule asks two things of it: a pill that
+works, and half the memory of the candidate that keeps Core, or less.
+
+- Half of A's row is 13 MB. Half of the 16 to 17 MB A's hidden copies rest at, when the app
+  asks for a collection every 30 seconds, is 8 MB.
+- The spike ended its baseline run at 6.5 MB, which the row rounds to 7 MB, and that is a
+  resting level (below). It is under both.
+- Its pill works on this PC: taken by the taskbar, placed, clicked, with the flyout beside it.
+  What is missing is under "Where it fell short"; the tooltip is the part of the pill itself
+  that does not work as today's does.
+
+**After the flyout has been opened once, the memory stays down.** A copy with its pill shown
+stood at 5.0 MB. Its flyout was opened by a real click: 5.9 MB three seconds later, and 5.9 MB
+two minutes after it was closed. So the flyout costs about 1 MB, and keeps it: its window is
+hidden, not closed.
+
+**What the memory is made of.** Six copies ran side by side for 7 minutes, each on its own data
+folder, signed out of Claude, their pills hidden because an installed pill had the place.
+Private memory at the end of minutes 5 and 7, and processor time from the end of minute 1,
+scaled to an hour:
+
+| Rendering | Pill | The taskbar is asked | Flyout | Private memory, minute 5 | Minute 7 | CPU per idle hour |
+|---|---|---|---|---|---|---|
+| software | switched off in the config | no | not opened | 3.5 MB | 4.9 MB | under 0.2 s |
+| software | window | no | not opened | 4.2 MB | 4.2 MB | under 0.2 s |
+| software | window | yes | not opened | 4.8 MB | 5.7 MB | 2.2 s |
+| software | window | yes | opened once | 5.7 MB | 6.7 MB | 1.2 s |
+| GPU | window | yes | not opened | 243 MB | 244 MB | 1.3 s |
+| GPU | window | yes | opened once | 288 MB | 289 MB | 1.8 s |
+
+- Everything that is not the pill is about 4 MB, where A's is 10 MB and today's exe with its
+  pill off is 19 to 21 MB.
+- The toolkit's pill window is about half a megabyte, and the question to UI Automation about
+  as much. That question is nearly all of the idle processor time: a copy that never asks
+  uses less than Windows can count.
+- Most copies gain about 1 MB between their fifth and their seventh minute, once, when the
+  second round of polls comes. The copy that never asks the taskbar did not. What the megabyte
+  is made of was not looked into.
+- The flyout copies opened their flyout by themselves, five seconds after starting.
+
+**The 7 MB is a resting level.** Private memory in the baseline run was 5.6 MB for five
+minutes, stepped to 6.5 MB by the seventh and stayed there. A hidden signed-in copy watched
+for 16 minutes made the same single step, 5.5 MB to 6.5 MB in its sixth minute, and stood at
+6.4 MB at the end. Nothing in this shell collects garbage, so there is no slope to wait out.
+
+**Three things the toolkit did that were not expected.**
+
+- It makes its tray icon once, on the first turn of the app's loop, from the picture the icon
+  has at that moment. Without a picture it gives up, says so on the error stream, and never
+  tries again: the first copies had no Copilot icon. The spike now gives each icon empty rings
+  before the loop starts. The toolkit's documentation describes the icon as made when a
+  picture is first set, which is not what this version did.
+- A window hidden behind the toolkit's back, as today's tracker hides the pill, is never
+  painted, and the toolkit keeps trying for as long as a change waits to be drawn. A hidden
+  signed-in copy used 10 s of processor time per idle hour that way, all on the UI thread.
+  The tracker now holds a new face back until the pill is shown again: 1.2 s per idle hour in
+  the same hidden signed-in copy, watched for three minutes. A pill hidden behind a
+  full-screen app would have met this.
+- With GPU rendering, the test window of the first step was drawn and see-through. Seventy
+  minutes later nothing rendered through the graphics card was drawn any more, in the pill,
+  the flyout or that same test window, while windows rendered in software were. The display
+  had gone to sleep in between, with nobody at the PC. Whether that is the reason is not
+  known, and it was not looked into further: the software renderer is the one to ship.
+
+**The rewrite of Core.** The spike needed the limits, the usage file, the config, the colours,
+every display model, the taskbar rules, the poller and both providers with their sign-ins:
+3,148 lines of C# as the files stand, 2,717 without blank lines, against the 4,220 this
+document counts for all of Core. Left out were the alerts, the bridge, Connect, the
+diagnostics log, the migration and the media pictures.
+
+- It came to 4,426 lines of Rust, 3,920 without blank lines, and 518 tests that pass: about
+  510 of the 540 test methods that cover those files, by the port's own count, and 8 new
+  ones. The JSON fixtures are read from where they are.
+- It was written by machine in about half an hour, type for type from the C#, and nobody has
+  read it line by line. Only the two HTTP clients and the type that holds a token were read
+  against the rules on tokens: the same two addresses and headers as today, no redirects, no
+  cookies, and a token type that cannot be printed, copied or written to a file.
+- What .NET gives and Rust's standard library does not, and where each came from: time zones
+  and calendar arithmetic (a crate, which has no zone database of its own: the test of a
+  clock change in Lisbon was not ported), the user's short time format (two Windows calls), a
+  watcher on the data folder (30 lines over a native call), HTTP, TLS and JSON (crates), and
+  a poll that runs off the UI thread and answers on it (a thread and a closure handed back).
+- Differences that remain: money is rounded half-to-even on an exact tie, where .NET rounds
+  away from zero; `config.json` is written with Unix line ends; a request under way cannot be
+  cancelled before its 10 s timeout.
+- The 30 test methods not ported need an HTTP test server, a made-up culture, the zone
+  database, or cancellation by exception.
+
+**The toolchain.** Installed with one command in about a minute: 600 MB, and 470 MB of fetched
+crates after the first build. The first build took 1 minute 7 seconds, the ones after it about
+40 seconds each. The build links 261 crates from the public registry, each under a permissive
+licence or GPL 3; its working folder is 2.2 GB. The spike was not built by CI.
+
+**The files.** One exe of 9.3 MB, with the three fonts inside and nothing beside it. Today's
+release is one file of 168.9 MB that carries the bridge; the spike does not carry the bridge,
+which is 2.2 MB.
+
+**System notifications**, on paper. The toolkit has none (P), and its tray element keeps its
+icon to itself. The two ways A's note names hold here too:
+
+- A notification icon of the app's own, registered with one native call, for the balloon.
+- The toolkit's icon, reached from outside: the spike's test found each one registered under
+  a message-only window of the toolkit's, with the number 1. That leans on something the
+  toolkit does not document.
+
+**How much code.** Counted on the spike's branch against `main`, as the files stand:
+
+| Part | Today, on WPF | The spike |
+|---|---|---|
+| The face | 201 lines | 237 lines in the toolkit's language, 73 of Rust to fill it in |
+| The window and the tracker | 624 lines, 19 native imports | 410 lines, and 198 for 22 native calls shared with the flyout |
+| The question to UI Automation | 52 lines | 120 lines, 2 native calls |
+| The pill in all | 877 lines | 1,038 lines |
+| The flyout | 633 lines, 8 native imports | 514 lines in the toolkit's language, 194 of Rust |
+| Tray icons, menu, polling and start | 993 lines | 633 lines, 7 native calls |
+| The logic | Core, as it is | 4,426 lines, 5 native calls |
+| Native imports or calls in all | 34 | 36 |
+
+The toolkit's language is wordy by the line: one property a line. The pictures the spike
+renders of itself at 100%, 150% and 200%, in both themes, match A's pictures within three
+pixels of width over four pills; the flyout card is 479 pixels high where A's is 472. They
+were compared by eye, not pixel by pixel.
+
+**Where it fell short.**
+
+- The tooltip opens inside the pill's own window, which is 76 by 38 pixels: it covers the pill
+  and is cut off, where today's opens above the taskbar. The toolkit's tooltip is drawn in
+  the window it belongs to. A tooltip above the taskbar would be a window of the spike's own,
+  or the system's.
+- Mixed scaling was not checked: the PC has one display at 100%. The window is placed in
+  physical pixels and the toolkit scales its content by the monitor it is on; the face was
+  drawn at 150% and 200% only as pictures.
+- The pill's right click opens nothing. The menu belongs to the toolkit's tray element and
+  cannot be opened from elsewhere, so the pill would need a second menu of its own.
+- Being born owned and not activated goes through the hook the toolkit marks as unstable, as
+  said above.
+- The toolkit has no setting for figures of equal width, which the WPF card uses so a
+  changing figure does not shift its line, and no way to set two sizes of text on one
+  baseline: a figure and its unit are two blocks side by side.
+- The software renderer does not clip to round corners: the fill of Copilot's bar is square
+  at the bottom.
+- The toolkit's tray element was five months old in the version used. Each one comes with a
+  hidden window of the toolkit's default size, whose cost was not measured apart.
+- Windows' message that the session is ending does not reach the app through the toolkit.
+  The spike reads the pill window's messages first for it, with two native calls.
+- The pill is one pixel wider than today's.
+- Connect, the alerts and the rest of the menu were not built, and a third of Core was not
+  rewritten, so the line counts above are a floor.
+- The Rust has no reader: the maintainer has not worked in the language, and the rewrite was
+  not reviewed.
+
+Screen readers get nearly what they get today: UI Automation finds the pill as a window with
+four texts, each label and each figure by itself ("5h", its figure, "7d", its figure), where
+today's gives two lines.
+
 ## Notes on each point
 
 ### Idle memory, exe size and start time
@@ -395,7 +630,8 @@ lines as text ("5h" and "7d" with their figures).
   render in software (P). The spike measured both ways of rendering: see
   [What the spikes measured](#a-c-with-avalonia-native-aot).
 - **B.** The toolkit publishes "less than 300 KiB" of memory for its runtime (P). That is the
-  runtime on a small device, not a Windows process with a window, fonts and a tray icon.
+  runtime on a small device, not a Windows process with a window, fonts and a tray icon. The
+  spike measured the process: see [What the spikes measured](#b-rust-with-slint).
 - **C.** One report of an empty window: 4.1 MB of memory, which kind not said, and 49 MB on disk
   in 19 files when shipped with the toolkit's libraries beside the exe (R, March 2025).
 - **D.** Nothing was found, measured or published.
@@ -420,7 +656,9 @@ right size on monitors of different scale; and a way to put questions to UI Auto
   monitors of different scale was not checked. **B** documents frameless and always on top;
   transparency on Windows is not in its documentation, and the window handle is reached through
   a feature its documentation says may change between minor releases. Its software renderer is
-  selectable on desktop and leaves out some effects (P).
+  selectable on desktop and leaves out some effects (P). B's spike built all three on Windows
+  as well: the transparency works in both ways of rendering, and the unstable feature turned
+  out to be needed for the window's owner and for not activating it, not for its handle.
 - **D** has the calls and nothing above them: the window procedure, the drawing, the text and
   the questions to UI Automation would all be written by hand, in a language that is not the
   usual one for them.
@@ -436,7 +674,9 @@ right size on monitors of different scale; and a way to put questions to UI Auto
   documents it; **A** and **C** document an icon and a menu. A native shell has it from the
   system.
 - **B**'s tray element is under five months old. The roadmap said it offers a menu only; on
-  2026-11-13 its documentation lists icon, tooltip, title and a click as well.
+  2026-11-13 its documentation lists icon, tooltip, title and a click as well. The spike built
+  the icon, the tooltip, the click and the menu on Windows, and found the icon is made only if
+  it has its picture when the app starts.
 - System notifications: only **C** has them built in, and its documentation says a message may
   not appear at all, depending on the system. Today's shell shows a balloon from its tray icon.
   Where **A** would get them is in its
@@ -447,6 +687,8 @@ right size on monitors of different scale; and a way to put questions to UI Auto
 - Core is already marked compatible with Native AOT, and the bridge, which links Core, ships
   that way (checked in the repository on 2026-11-13). **A** and **F** need nothing from it.
 - **B**, **C** and **D** rewrite 4,220 lines and 956 tests. Only the JSON fixtures carry over.
+  B's spike rewrote about two thirds of it, by machine: what that came to is in its
+  [note](#b-rust-with-slint).
 - **E** keeps Core on Windows. On macOS and Linux .NET can publish Core as a native library (P);
   no documentation was found for calling one from Swift.
 
@@ -516,34 +758,41 @@ Under the decision rule, B wins only with a working pill at half of A's memory o
 19 MB measured for everything that is not the pill, that is a narrow target: if A or F lands
 near 40 MB, B has to idle at 20 MB with its window and UI Automation included. A's spike has
 since landed at 26 MB in the baseline run, so the target is 13 MB. At the 16 to 17 MB its
-hidden copies rest at when the app asks for a collection, it would be 8 MB.
+hidden copies rest at when the app asks for a collection, it would be 8 MB. B's spike landed at
+7 MB, with its window and UI Automation included: under both.
 
 ## What this leaves open for the spikes
 
 For [step 2](roadmap.md#step-2-build-the-shortlist) (issue 18). The table settles none of these.
 
 - **Every memory, size and start figure of A, B and F.** All are estimates. Each spike runs the
-  baseline script on the PC the 1.0.0 row was measured on. F's and A's are measured now.
+  baseline script on the PC the 1.0.0 row was measured on. All three are measured now.
 - **Whether the taskbar takes each window.** Owned by the taskbar, per-pixel transparent, not
   taking focus, right on monitors of different scale: no toolkit documents the first, and B
   does not document the second. It is the first thing each spike tries, before any drawing.
-  F's and A's windows are taken; neither was checked on monitors of different scale.
+  All three windows are taken; none was checked on monitors of different scale.
 - **What the pill's 75 MB is made of.** How much is the WPF window and how much the UI
   Automation client, and whether asking through the system's own interface costs less than
   through WPF's managed one. Answered by F's spike: the window is about 53 MB, UI Automation 3
   to 5 MB, and the system's interface is 1 to 3 MB cheaper than the managed client.
 - **What the flyout costs, in every candidate.** New from F's spike: a WPF flyout opened once
   brings back all the memory the plain pill saved. A and B have to be measured after their
-  flyout has been opened and closed, not only before. A's costs 2 to 3 MB, and keeps them.
+  flyout has been opened and closed, not only before. A's costs 2 to 3 MB, and keeps them. B's
+  costs about 1 MB, and keeps it.
 - **A:** software against GPU rendering, in memory and in idle processor time (answered: 26 MB
   and 1.4 s an hour against 103 MB and 2.5 s); whether the shell publishes with Native AOT
   without warnings (answered: it does); where system notifications come from (answered on
   paper: one native call for a balloon, as today). Still open for A: mixed scaling, a menu on
   the pill's right click, shipping three files where today's release is one, and a baseline
   run of the build that asks for a collection every 30 seconds.
-- **B:** a transparent frameless window on Windows; whether the unstable window-handle feature
-  is something to build on; whether the software renderer draws the pill's rings and text as
-  they look today; the tray element's age.
+- **B:** a transparent frameless window on Windows (answered: it works, in software rendering
+  too); whether the unstable window-handle feature is something to build on (answered in part:
+  the handle does not need it, the owner at birth does, and it held on the version used);
+  whether the software renderer draws the pill's rings and text as they look today (answered:
+  within three pixels of A's pictures, with square ends on Copilot's bar); the tray element's
+  age (answered: it works, with one fault at start that the spike steps around). Still open
+  for B: mixed scaling, a tooltip above the taskbar, a menu on the pill's right click, and
+  who reads the Rust.
 - **F:** how much drawing code the pill takes, with the app's own fonts (answered: 241 lines);
   whether the exe can shrink while the flyout stays WPF (answered: by 17 MB safely); what a
   hand-drawn flyout would cost in accessibility if it ever followed (answered in part: a
@@ -552,7 +801,7 @@ For [step 2](roadmap.md#step-2-build-the-shortlist) (issue 18). The table settle
 - **Processor time.** No candidate had an idle figure. The current shell's was 1.4 s per hour
   without the pill (M) and 7.3 s with it (M), and is 3.0 s with it since tiered compilation
   was switched off (M), which meets the 5 s target. A's spike used 1.4 s with its pill shown
-  (M). F's 5.4 s was measured before that switch and is not comparable.
+  (M), and B's 1.7 s (M). F's 5.4 s was measured before that switch and is not comparable.
 - **Not for the spikes:** the menu bar text on macOS that A lacks, the tray on Linux, and
   signing on three systems matter in 3.0. They are in the table so that the decision in issue 19
   is made knowing them.

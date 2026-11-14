@@ -78,6 +78,8 @@ Changes that were tried, each beside the release it was tried on, kept or not.
 | 1.0.0, tiered compilation off | 2026-11-13 | 103 MB | 173 MB | 3.0 s | 0.57 s | 0.47 s | 168.9 MB | 2.2 MB | 9 ms |
 | 1.0.0, shell on Avalonia with Native AOT (spike) | 2026-11-13 | 26 MB | 63 MB | 1.4 s | 0.07 s | 0.06 s | 22.1 MB | 2.2 MB | 8 ms |
 | 1.0.0, the same spike with GPU rendering | 2026-11-13 | 103 MB | 125 MB | 2.5 s | 0.12 s | 0.11 s | 22.1 MB | 2.2 MB | 8 ms |
+| 1.0.0, shell in Rust with Slint (spike) | 2026-11-14 | 7 MB | 29 MB | 1.7 s | 0.06 s | 0.06 s | 9.3 MB | 2.2 MB | 9 ms |
+| 1.0.0, the Rust spike with GPU rendering | 2026-11-14 | 246 MB | 103 MB | 1.7 s | 0.41 s | 0.23 s | 9.7 MB | 2.2 MB | 8 ms |
 
 Notes on an experiment:
 
@@ -215,3 +217,37 @@ Notes on an experiment:
   - The spike leaves out Connect, the alerts, most of the menu, the first-run migration and the
     log. It polls with this PC's sign-ins, as an installed copy does.
   - The code is on the branch `spike/shell-a-avalonia`, cut from `main` at `0f5e0d5`.
+- **Shell in Rust with Slint: a spike, not merged.** The third spike of the next shell
+  ([shell-comparison.md](shell-comparison.md#b-rust-with-slint)): the tray icons, the pill and
+  the flyout built again in Rust on the toolkit, with the part of Core they need rewritten in
+  Rust beside them. The two rows are two builds of one source: one carries only the toolkit's
+  software renderer, the other also its OpenGL renderer and is told to use it. Measured in the
+  night after the rows above; "tiered compilation off" is the row to compare with.
+  - Software rendering: private memory 103 MB to 7 MB, working set 173 MB to 29 MB, 3.0 s to
+    1.7 s of processor time per idle hour, later starts 0.47 s to 0.06 s (56, 54, 56 and
+    56 ms), the first start 0.57 s to 0.06 s.
+  - GPU rendering: 246 MB, 103 MB, 1.7 s, 0.23 s, and 0.41 s on the first start.
+  - Minute by minute, the software run used 0.01, 0.05, 0.01, 0.02, 0.03, 0.05, 0.03, 0.02 and
+    0.03 s, and the GPU run 0.04, 0.02, 0.02, 0.04, 0.05, 0.03, 0.02, 0.00 and 0.03 s.
+  - Private memory in the software run was 5.6 MB for its first five minutes, 5.9 MB and
+    6.6 MB after the sixth and seventh, and 6.5 MB from there: the row's 7 MB is 6.5 MB,
+    rounded. It is a step, not a slope: nothing under this shell collects garbage. A hidden
+    signed-in copy made the same step once, in the minute of its second usage poll, and stayed
+    at 6.4 to 6.5 MB for the ten minutes it was watched after it. What the step is made of
+    was not looked into.
+  - The run never opens the flyout. In a separate copy with its pill shown, opening it with a
+    real click took private memory from 5.0 MB to 5.9 MB, and it was 5.9 MB two minutes after
+    closing.
+  - `Sobreiro.exe` is one file of 9.3 MB with the fonts inside, 9.7 MB with the OpenGL
+    renderer. It does not carry the bridge.
+  - The GPU row is a copy whose pill window was in its place; that it drew its pill was not
+    seen. Screenshots taken right after that run show nothing drawn in a window rendered
+    through the graphics card, where the same window rendered in software was drawn. The
+    display had gone to sleep halfway through the run, with nobody at the PC. Whether that is
+    the reason is not known.
+  - The spike leaves out what A's left out: Connect, the alerts, most of the menu, the
+    first-run migration and the log. It polls with this PC's sign-ins, as an installed copy
+    does.
+  - The code is on the branch `spike/shell-b-slint`, cut from `main` at `0f5e0d5`. Both rows
+    are its commit `5ad60c8`. One fix came after them, for a pill that is hidden while its
+    figures change; it does not touch a pill that is shown.
