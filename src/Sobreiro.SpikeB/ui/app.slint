@@ -9,6 +9,7 @@ export { Tray }
 // show through the red and around the round corners.
 export component Probe inherits Window {
     in property <bool> on-top: true;
+    callback hover-changed(bool);
     title: "Sobreiro pill";
     no-frame: true;
     always-on-top: on-top;
@@ -23,6 +24,12 @@ export component Probe inherits Window {
             height: 16px;
             border-radius: 8px;
             background: white;
+        }
+
+        TouchArea {
+            changed has-hover => {
+                root.hover-changed(self.has-hover);
+            }
         }
     }
 }

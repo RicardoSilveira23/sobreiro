@@ -102,6 +102,66 @@ pub fn run() -> Result<(), slint::PlatformError> {
             });
         }
 
+        // SOBREIRO_SPIKE_PROBE_HOVER: the tooltip opens for this window when the real pointer rests on it, and
+        // every two seconds the window is looked after as the tracker looks after the pill: its owner is put
+        // back if it is gone, and it is raised if it is hidden or below the taskbar.
+        if spike::env("SOBREIRO_SPIKE_PROBE_HOVER").is_some() {
+            let tip = Rc::new(tip::TipWindow::default());
+            tip.set_text("Session 42%, resets at 18:00\nWeek 13%, resets on Monday");
+            let weak = ui.as_weak();
+            let hovering = tip.clone();
+            ui.on_hover_changed(move |hovered| {
+                let Some(ui) = weak.upgrade() else { return };
+                let hwnd = shell::hwnd_of(ui.window());
+                trace!("hover={hovered}");
+                match (hovered, native::window_rect(taskbar), native::window_rect(hwnd)) {
+                    (true, Some(bar), Some(pill)) => hovering.pointer_on(tip::Place { pill, band_top: bar.top, taskbar }),
+                    _ => hovering.pointer_off(),
+                }
+            });
+            std::mem::forget(tip);
+            for tick in 1..seconds / 2 {
+                let weak = ui.as_weak();
+                slint::Timer::single_shot(Duration::from_secs(tick * 2), move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let hwnd = shell::hwnd_of(ui.window());
+                    if native::owner(hwnd) != taskbar {
+                        let (before, error) = native::set_owner_checked(hwnd, taskbar);
+                        trace!("{} s: the owner was gone (0x{before:x}); put back, error {error}, now owned={}", tick * 2, native::owner(hwnd) == taskbar);
+                    }
+                    let (visible, above) = (native::is_visible(hwnd), native::is_above(hwnd, taskbar));
+                    if !visible || !above {
+                        let own = native::window_rect(hwnd).unwrap_or_default();
+                        let moved = native::place(hwnd, own.left, own.top, true);
+                        trace!(
+                            "{} s: visible={visible} above-taskbar={above}; raised={moved}, now visible={} above={}",
+                            tick * 2,
+                            native::is_visible(hwnd),
+                            native::is_above(hwnd, taskbar)
+                        );
+                    }
+                });
+            }
+        }
+
+        // SOBREIRO_SPIKE_PROBE_WATCH: what the tracker looks at on every tick, once a second from the third on.
+        if spike::env("SOBREIRO_SPIKE_PROBE_WATCH").is_some() {
+            for second in 3..seconds {
+                let weak = ui.as_weak();
+                slint::Timer::single_shot(Duration::from_secs(second), move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let hwnd = shell::hwnd_of(ui.window());
+                    trace!(
+                        "{second} s: owner-is-taskbar={} visible={} above-taskbar={} exstyle=0x{:x}",
+                        native::owner(hwnd) == taskbar,
+                        native::is_visible(hwnd),
+                        native::is_above(hwnd, taskbar),
+                        native::ex_style(hwnd)
+                    );
+                });
+            }
+        }
+
         // The toolkit writes the window's whole extended style when one of its own settings changes.
         if spike::env("SOBREIRO_SPIKE_PROBE_RESTYLE").is_some() {
             for (after, on_top) in [(1200, false), (1600, true)] {

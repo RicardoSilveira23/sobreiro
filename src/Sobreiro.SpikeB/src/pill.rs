@@ -358,11 +358,15 @@ impl Host {
             return;
         };
         if full_screen {
+            if native::is_visible(hwnd) {
+                trace!("pill hidden: full screen, state {:?}", native::notification_state());
+            }
             native::hide(hwnd);
             return;
         }
         let dpi = native::dpi(self.taskbar);
         if self.anchors.is_some() && dpi != self.anchors_dpi {
+            trace!("pill hidden: the taskbar's dpi went from {} to {dpi}; the pill's window is at {}", self.anchors_dpi, native::dpi(hwnd));
             self.anchors = None;
             self.generation += 1;
             self.schedule = TaskbarQuerySchedule::default();
@@ -372,7 +376,17 @@ impl Host {
         }
         let Some(own) = native::window_rect(hwnd) else { return };
         let gap = (4.0 * dpi as f64 / 96.0).round() as i32;
-        let place = PillPlacement::place(to_core(monitor), to_core(taskbar_rect), self.anchors, own.width(), own.height(), gap);
+        // A hidden window is not told that the scale changed, and one born off the screen has the scale of the
+        // nearest monitor: its size is then for another scale than the taskbar's. The fit and the place are
+        // worked out for the size it will have there; Windows tells it the new scale when it is shown, the
+        // toolkit resizes it, and `move_to` places it once more.
+        let window_dpi = native::dpi(hwnd).max(1);
+        let at_taskbar = |length: i32| if window_dpi == dpi { length } else { (length as f64 * dpi as f64 / window_dpi as f64).round() as i32 };
+        let (width, height) = (at_taskbar(own.width()), at_taskbar(own.height()));
+        if window_dpi != dpi {
+            trace!("pill: its window is at dpi {window_dpi}, the taskbar at {dpi}: {}x{} taken as {width}x{height}", own.width(), own.height());
+        }
+        let place = PillPlacement::place(to_core(monitor), to_core(taskbar_rect), self.anchors, width, height, gap);
         if place.is_shown() {
             // A face held back while the pill was hidden goes in now; the window may change width with it,
             // so it is placed again on the loop's next turn.
@@ -401,8 +415,13 @@ impl Host {
             trace!("pill: the extended style was put back");
         }
         if native::owner(hwnd) != self.taskbar {
-            native::set_owner(hwnd, self.taskbar);
-            trace!("pill: the owner was put back");
+            let (before, error) = native::set_owner_checked(hwnd, self.taskbar);
+            trace!(
+                "pill: the owner was put back (it was 0x{before:x}; error {error}; owned now: {}; visible {}; above the taskbar {})",
+                native::owner(hwnd) == self.taskbar,
+                native::is_visible(hwnd),
+                native::is_above(hwnd, self.taskbar)
+            );
         }
         let visible = native::is_visible(hwnd);
         let own = native::window_rect(hwnd).unwrap_or_default();

@@ -71,6 +71,16 @@ pub fn set_owner(hwnd: HWND, owner: HWND) {
     unsafe { SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner.0 as isize) };
 }
 
+/// The same, and what Windows said: the owner before, and its error code (0 when it took the new one).
+pub fn set_owner_checked(hwnd: HWND, owner: HWND) -> (isize, u32) {
+    use windows::Win32::Foundation::{GetLastError, SetLastError, WIN32_ERROR};
+    unsafe {
+        SetLastError(WIN32_ERROR(0));
+        let before = SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, owner.0 as isize);
+        (before, GetLastError().0)
+    }
+}
+
 pub fn owner(hwnd: HWND) -> HWND {
     unsafe { GetWindow(hwnd, GW_OWNER).unwrap_or_default() }
 }
@@ -229,5 +239,12 @@ pub fn unhook(hook: &mut HWINEVENTHOOK) {
 pub fn place_topmost(hwnd: HWND, x: i32, y: i32) {
     unsafe {
         let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+}
+
+/// The same for a window that has an owner: the owner stays where it is in the z-order.
+pub fn place_topmost_owned(hwnd: HWND, x: i32, y: i32) {
+    unsafe {
+        let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), x, y, 0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
     }
 }

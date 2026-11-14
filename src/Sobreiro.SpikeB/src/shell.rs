@@ -9,8 +9,8 @@ use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     CBT_CREATEWNDW, CallNextHookEx, GWL_EXSTYLE, HCBT_ACTIVATE, HCBT_CREATEWND, HCBT_DESTROYWND, STYLESTRUCT, SWP_NOACTIVATE,
-    SWP_SHOWWINDOW, SetWindowsHookExW, WH_CBT, WINDOWPOS, WM_ACTIVATE, WM_NCDESTROY, WM_STYLECHANGING, WM_WINDOWPOSCHANGING,
-    WS_CHILD, WS_EX_APPWINDOW,
+    SWP_HIDEWINDOW, SWP_NOZORDER, SWP_SHOWWINDOW, SetWindowsHookExW, WH_CBT, WINDOWPOS, WM_ACTIVATE, WM_DPICHANGED, WM_NCDESTROY,
+    WM_SHOWWINDOW, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WS_CHILD, WS_EX_APPWINDOW,
 };
 use std::rc::Rc;
 
@@ -204,6 +204,22 @@ unsafe extern "system" fn on_cbt(code: i32, wparam: WPARAM, lparam: LPARAM) -> L
 // extended style bits to keep and whether the window is never activated.
 unsafe extern "system" fn born_ours(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM, _id: usize, data: usize) -> LRESULT {
     let keep = (data & 0xFFFF_FFFF) as u32;
+    // SOBREIRO_SPIKE_MESSAGES: what is done to the window, as it is asked for: shown or hidden and why, moved
+    // in the z-order, told a new scale.
+    if spike::env("SOBREIRO_SPIKE_MESSAGES").is_some() {
+        let owner = native::owner(hwnd).0 as isize;
+        match message {
+            WM_SHOWWINDOW => trace!("  {:?} WM_SHOWWINDOW show={} why={} owner=0x{owner:x}", hwnd.0, wparam.0, lparam.0),
+            WM_DPICHANGED => trace!("  {:?} WM_DPICHANGED dpi={} owner=0x{owner:x}", hwnd.0, wparam.0 & 0xFFFF),
+            WM_WINDOWPOSCHANGING => {
+                let position = unsafe { &*(lparam.0 as *const WINDOWPOS) };
+                if position.flags.contains(SWP_SHOWWINDOW) || position.flags.contains(SWP_HIDEWINDOW) || !position.flags.contains(SWP_NOZORDER) {
+                    trace!("  {:?} WM_WINDOWPOSCHANGING flags=0x{:x} after={:?} owner=0x{owner:x}", hwnd.0, position.flags.0, position.hwndInsertAfter.0);
+                }
+            }
+            _ => {}
+        }
+    }
     match message {
         WM_WINDOWPOSCHANGING => {
             let position = unsafe { &mut *(lparam.0 as *mut WINDOWPOS) };

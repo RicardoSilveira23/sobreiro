@@ -144,7 +144,12 @@ impl TipWindow {
         if own.left == x && own.top == y {
             return;
         }
-        native::place_topmost(hwnd, x, y);
+        // SOBREIRO_SPIKE_TIP_ZORDER=owner: as first tried, the owner is carried along in the z-order.
+        if crate::spike::env("SOBREIRO_SPIKE_TIP_ZORDER").as_deref() == Some("owner") {
+            native::place_topmost(hwnd, x, y);
+        } else {
+            native::place_topmost_owned(hwnd, x, y);
+        }
         trace!(
             "tip at {x},{y} size {}x{} window-dpi {} taskbar-dpi {dpi} scale {} wholly-above-the-taskbar={} birth={:?} exstyle=0x{:x} \
              active={}",
