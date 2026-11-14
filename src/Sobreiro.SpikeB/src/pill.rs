@@ -413,13 +413,21 @@ impl Host {
             return;
         }
         native::place(hwnd, x, y, step == PillShowStep::Raise);
+        let now = native::window_rect(hwnd).unwrap_or_default();
         trace!(
-            "pill {} to {x},{y} size {}x{} dpi {}",
+            "pill {} to {x},{y} size {}x{} dpi {} taskbar-dpi {}",
             if step == PillShowStep::Raise { "raised" } else { "moved" },
-            own.width(),
-            own.height(),
-            native::dpi(hwnd)
+            now.width(),
+            now.height(),
+            native::dpi(hwnd),
+            native::dpi(self.taskbar)
         );
+        // A move onto a monitor of another scale changes the window's size inside the call: the toolkit keeps
+        // the face's measures and resizes the window. The place was worked out for the old size, so once more.
+        if now.width() != own.width() || now.height() != own.height() {
+            trace!("pill: its size changed under the move, from {}x{}: placed again", own.width(), own.height());
+            slint::Timer::single_shot(Duration::ZERO, || with_host("place again", Host::place));
+        }
     }
 }
 

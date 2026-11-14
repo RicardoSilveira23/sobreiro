@@ -147,6 +147,20 @@ pub fn is_window(hwnd: HWND) -> bool {
     !hwnd.is_invalid() && unsafe { IsWindow(Some(hwnd)).as_bool() }
 }
 
+/// Tells a window what Windows tells it when it comes onto a monitor of another scale: the new DPI and the
+/// rectangle Windows would suggest, here the same corner and the size scaled. For a PC with one display.
+pub fn pretend_dpi_changed(hwnd: HWND, dpi: u32) {
+    let Some(own) = window_rect(hwnd) else { return };
+    let old = self::dpi(hwnd).max(1) as i64;
+    let scaled = |length: i32| (length as i64 * dpi as i64 / old) as i32;
+    let suggested = RECT { left: own.left, top: own.top, right: own.left + scaled(own.width()), bottom: own.top + scaled(own.height()) };
+    let wparam = windows::Win32::Foundation::WPARAM(((dpi << 16) | dpi) as usize);
+    let lparam = windows::Win32::Foundation::LPARAM(&suggested as *const RECT as isize);
+    unsafe {
+        SendMessageW(hwnd, WM_DPICHANGED, Some(wparam), Some(lparam));
+    }
+}
+
 /// The thread and the process a window belongs to.
 pub fn thread_and_process(hwnd: HWND) -> (u32, u32) {
     let mut process = 0u32;

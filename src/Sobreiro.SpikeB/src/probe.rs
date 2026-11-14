@@ -79,6 +79,29 @@ pub fn run() -> Result<(), slint::PlatformError> {
             });
         }
 
+        // SOBREIRO_SPIKE_PROBE_DPI=144: the window is told, as Windows would tell it, that it is now on a monitor
+        // at that DPI. On a PC with one display this is as near as the mixed case comes.
+        if let Some(dpi) = spike::env("SOBREIRO_SPIKE_PROBE_DPI").and_then(|s| s.parse::<u32>().ok()) {
+            let weak = ui.as_weak();
+            slint::Timer::single_shot(Duration::from_millis(1100), move || {
+                let Some(ui) = weak.upgrade() else { return };
+                let hwnd = shell::hwnd_of(ui.window());
+                let before = native::window_rect(hwnd).unwrap_or_default();
+                native::pretend_dpi_changed(hwnd, dpi);
+                let after = native::window_rect(hwnd).unwrap_or_default();
+                trace!(
+                    "told dpi {dpi}: size {}x{} -> {}x{} inside the call, toolkit-scale={} exstyle=0x{:x} owner-is-taskbar={}",
+                    before.width(),
+                    before.height(),
+                    after.width(),
+                    after.height(),
+                    ui.window().scale_factor(),
+                    native::ex_style(hwnd),
+                    native::owner(hwnd) == taskbar
+                );
+            });
+        }
+
         // The toolkit writes the window's whole extended style when one of its own settings changes.
         if spike::env("SOBREIRO_SPIKE_PROBE_RESTYLE").is_some() {
             for (after, on_top) in [(1200, false), (1600, true)] {
