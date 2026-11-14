@@ -292,6 +292,10 @@ Decided on 2026-11-14, before Core is ported.
   `Cargo.lock`, which CI does not let move. The UI toolkit is pinned to one exact version on
   top of that, because the pill leans on how that version makes a window. Every library the
   spike used is at the version its answers were tried on.
+- **Rules the build holds the code to.** No `unwrap`, `expect` or `panic` outside tests, since
+  a panic ends the app; no `todo` or debugging aid; unsafe code only in the shell's files that
+  call Windows and say so, and none at all in Core; Core never prints. The toolkit's generated
+  code is exempt from the rules on panics. A breach stops CI.
 - **Licences.** One of the tests asks the build for every library it takes on Windows, those
   of the tests and the build scripts among them: 318 today. It fails on a licence that nobody
   has read against GPL-3.0-or-later. All 318 fit: MIT, Apache 2.0, BSD, ISC, Zlib, Boost and

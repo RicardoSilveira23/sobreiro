@@ -19,3 +19,19 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Rules the compiler and the linter hold every crate to. "deny" stops the build; one file can
+# still allow a rule for itself, with the reason beside it.
+[workspace.lints.rust]
+# Unsafe code only where the shell calls Windows, in files that say so. Core forbids it outright.
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+# A panic ends the app: the release build does not unwind. What can fail gives an error back.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+# Nothing unfinished and no debugging aid gets merged.
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
