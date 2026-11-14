@@ -32,6 +32,7 @@ struct Host {
     face: Option<PillFace>,
     shown_face: Option<PillFace>,
     prepared: bool,
+    showing: bool,
     left_clicked: Option<Rc<dyn Fn()>>,
     right_clicked: Option<Rc<dyn Fn()>>,
 }
@@ -55,6 +56,7 @@ thread_local! {
         face: None,
         shown_face: None,
         prepared: false,
+        showing: false,
         left_clicked: None,
         right_clicked: None,
     });
@@ -210,6 +212,11 @@ impl Host {
             return;
         }
         let first = self.shown_face.is_none();
+        // A window hidden behind the toolkit's back is never painted, and the toolkit keeps trying for as
+        // long as a change waits to be drawn: a new face is held back until the pill is shown again.
+        if !first && self.hwnd().is_some_and(|hwnd| !native::is_visible(hwnd)) && !self.showing {
+            return;
+        }
         window.set_face(face.clone());
         self.shown_face = Some(face.clone());
         if first {
@@ -320,6 +327,14 @@ impl Host {
         let gap = (4.0 * dpi as f64 / 96.0).round() as i32;
         let place = PillPlacement::place(to_core(monitor), to_core(taskbar_rect), self.anchors, own.width(), own.height(), gap);
         if place.is_shown() {
+            // A face held back while the pill was hidden goes in now; the window may change width with it,
+            // so it is placed again on the loop's next turn.
+            if !native::is_visible(hwnd) && self.shown_face != self.face {
+                self.showing = true;
+                self.render();
+                self.showing = false;
+                slint::Timer::single_shot(Duration::ZERO, || with_host("place again", Host::place));
+            }
             self.move_to(hwnd, place.x, place.y)
         } else {
             if native::is_visible(hwnd) {
