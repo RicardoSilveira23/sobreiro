@@ -1,0 +1,21 @@
+# Sobreiro 2.0: Core and the Windows shell in Rust. The C# under src/ and tests/ is 1.x, which ships
+# from the branch 1.x; it stays here as the reference for the port until the new shell matches it.
+[workspace]
+resolver = "3"
+members = ["core", "shell/windows"]
+
+[workspace.package]
+version = "2.0.0-dev"
+edition = "2024"
+rust-version = "1.100"
+license = "GPL-3.0-or-later"
+publish = false
+
+# The release build: one small exe. Size before speed, the whole program optimised as one unit,
+# no unwinding tables and no symbols.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

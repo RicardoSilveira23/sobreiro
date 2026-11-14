@@ -268,6 +268,37 @@ In this order:
   name and the `statusLine` entry stay as they are, and the security rules in
   [plan.md](plan.md) hold word for word.
 
+### Where it lives and how it is built
+
+Decided on 2026-11-14, before Core is ported.
+
+- **Branches.** The WPF app ships from the branch `1.x`, cut at 1.1.0: its fixes and its
+  `v1.*` tags come from there. `main` takes the Rust work and releases nothing until 2.0. The
+  C# stays on `main` until the new shell matches it, as the reference for the port, and CI
+  goes on building and testing it.
+- **Folders.** One Cargo workspace at the root, in the folders [Structure](#structure) draws:
+  `core/` is the crate `sobreiro-core`, and `shell/windows/` is the crate `sobreiro`, which
+  builds `Sobreiro.exe`. `bridge/` arrives with the bridge. The fonts are read from
+  `src/Sobreiro/Fonts` until the C# leaves.
+- **The bridge is ported,** with the area of Core it stands on. Its name and what it writes do
+  not change. Once built it is measured against today's 2.2 MB and 9 ms a run.
+- **CI** has a second job for the workspace, on Windows, on every push and pull request:
+  format, lint with warnings as errors, the tests, and the release build kept as an artifact.
+- **The release build is one exe with nothing beside it.** The three fonts and the C runtime
+  are inside. The tests take the exe apart to see that, and run a copy alone in an empty
+  folder, where it draws a line of text in each font without a window. 8.8 MB as it stands,
+  with the toolkit linked in and only that specimen to draw.
+- **Versions.** The compiler is pinned in `rust-toolchain.toml` and every library in
+  `Cargo.lock`, which CI does not let move. The UI toolkit is pinned to one exact version on
+  top of that, because the pill leans on how that version makes a window. Every library the
+  spike used is at the version its answers were tried on.
+- **Licences.** One of the tests asks the build for every library it takes on Windows, those
+  of the tests and the build scripts among them: 318 today. It fails on a licence that nobody
+  has read against GPL-3.0-or-later. All 318 fit: MIT, Apache 2.0, BSD, ISC, Zlib, Boost and
+  Unicode licences, and the toolkit, taken under GPL version 3 only. So the exe as shipped is
+  under version 3, while Sobreiro's own files stay "or later". These are readings, not legal
+  advice.
+
 **Done when:** every feature in the manual works, the 2.0 baseline beats 1.0 by the margin the
 spike measured, upgrading over 1.0 needs no step from the user, and the comparison is published.
 

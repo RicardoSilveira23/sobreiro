@@ -1,0 +1,7 @@
+# The compiler is pinned, as the libraries are in Cargo.lock: a new release changes the build only
+# when this line does.
+[toolchain]
+channel = "1.100.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-pc-windows-msvc"]

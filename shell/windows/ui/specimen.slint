@@ -1,0 +1,25 @@
+// One line of text in each of the app's three fonts, black on white, each in a band of its own.
+// `Sobreiro.exe --specimen` draws it without a window and measures the ink in each band.
+// The fonts are the 1.x app's, read from where they are until the C# leaves this branch.
+import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
+import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
+import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+
+component Line inherits Text {
+    x: 8px;
+    height: 40px;
+    text: "Sobreiro 0123456789";
+    font-size: 20px;
+    color: black;
+    vertical-alignment: center;
+}
+
+export component Specimen inherits Window {
+    width: 480px;
+    height: 120px;
+    background: white;
+
+    Line { y: 0px; font-family: "Inter"; font-weight: 400; }
+    Line { y: 40px; font-family: "Inter"; font-weight: 500; }
+    Line { y: 80px; font-family: "Unbounded"; font-weight: 700; }
+}

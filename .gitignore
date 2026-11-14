@@ -14,3 +14,4 @@ node_modules/
 scripts/.venv-media/
 scripts/__pycache__/
 media/.stage-*/
+target/
