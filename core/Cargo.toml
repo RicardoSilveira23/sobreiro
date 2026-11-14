@@ -10,5 +10,12 @@ publish.workspace = true
 [lib]
 path = "src/lib.rs"
 
+[dependencies]
+# Dates and spans of time. Only what works on the clock of the whole world (UTC) is switched on;
+# the user's own time zone arrives with the area that shows times.
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+# Reads JSON. What Core writes it writes by hand, to keep each file's bytes as 1.x wrote them.
+serde_json = "1"
+
 [lints]
 workspace = true

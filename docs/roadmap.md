@@ -278,10 +278,14 @@ Decided on 2026-11-14, before Core is ported.
   goes on building and testing it.
 - **Folders.** One Cargo workspace at the root, in the folders [Structure](#structure) draws:
   `core/` is the crate `sobreiro-core`, and `shell/windows/` is the crate `sobreiro`, which
-  builds `Sobreiro.exe`. `bridge/` arrives with the bridge. The fonts are read from
-  `src/Sobreiro/Fonts` until the C# leaves.
+  builds `Sobreiro.exe`. `bridge/` is the crate `sobreiro-bridge`, which builds
+  `sobreiro-bridge.exe`. The fonts are read from `src/Sobreiro/Fonts` until the C# leaves.
 - **The bridge is ported,** with the area of Core it stands on. Its name and what it writes do
-  not change. Once built it is measured against today's 2.2 MB and 9 ms a run.
+  not change. Against today's 2.2 MB and 9 ms a run it is 0.4 MB and 9 ms, both bridges
+  measured on the same PC on 2026-11-14. About half of that run is one question to Windows:
+  where the user's local application data folder is, which 1.x asks too. Reading the folder
+  from the environment instead gave 4.5 ms; it is not done, because the bridge would then
+  write somewhere else than the tray reads whenever its environment had been changed.
 - **CI** has a second job for the workspace, on Windows, on every push and pull request:
   format, lint with warnings as errors, the tests, and the release build kept as an artifact.
 - **The release build is one exe with nothing beside it.** The three fonts and the C runtime
@@ -293,9 +297,9 @@ Decided on 2026-11-14, before Core is ported.
   top of that, because the pill leans on how that version makes a window. Every library the
   spike used is at the version its answers were tried on.
 - **Rules the build holds the code to.** No `unwrap`, `expect` or `panic` outside tests, since
-  a panic ends the app; no `todo` or debugging aid; unsafe code only in the shell's files that
-  call Windows and say so, and none at all in Core; Core never prints. The toolkit's generated
-  code is exempt from the rules on panics. A breach stops CI.
+  a panic ends the app; no `todo` or debugging aid; unsafe code only in the files of the
+  shell and of the bridge that call Windows and say so, and none at all in Core; Core never
+  prints. The toolkit's generated code is exempt from the rules on panics. A breach stops CI.
 - **Licences.** One of the tests asks the build for every library it takes on Windows, those
   of the tests and the build scripts among them: 318 today. It fails on a licence that nobody
   has read against GPL-3.0-or-later. All 318 fit: MIT, Apache 2.0, BSD, ISC, Zlib, Boost and
