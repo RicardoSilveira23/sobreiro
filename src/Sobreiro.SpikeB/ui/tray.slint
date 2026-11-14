@@ -1,0 +1,52 @@
+// SPIKE (shell candidate B): the toolkit's tray element. One instance for Claude's rings, one for Copilot's.
+export component Tray inherits SystemTrayIcon {
+    callback pick-style(int);
+    callback open-folder();
+    callback quit();
+    Menu {
+        MenuItem {
+            title: "Sobreiro, spike of shell B";
+            enabled: false;
+        }
+
+        Menu {
+            title: "Style";
+            MenuItem {
+                title: "Bars";
+                activated => {
+                    root.pick-style(0);
+                }
+            }
+
+            MenuItem {
+                title: "Battery";
+                activated => {
+                    root.pick-style(1);
+                }
+            }
+
+            MenuItem {
+                title: "Thermometer";
+                activated => {
+                    root.pick-style(2);
+                }
+            }
+        }
+
+        MenuSeparator { }
+
+        MenuItem {
+            title: "Open data folder";
+            activated => {
+                root.open-folder();
+            }
+        }
+
+        MenuItem {
+            title: "Quit";
+            activated => {
+                root.quit();
+            }
+        }
+    }
+}

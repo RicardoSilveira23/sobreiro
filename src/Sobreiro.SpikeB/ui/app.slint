@@ -1,3 +1,10 @@
+import { Pill, PillFace, PillLine, PillFaceView } from "pill.slint";
+export { Pill, PillFace, PillLine }
+import { Flyout, FlyoutCard, LimitRow } from "flyout.slint";
+export { Flyout, FlyoutCard, LimitRow }
+import { Tray } from "tray.slint";
+export { Tray }
+
 // SPIKE (shell candidate B). Step 1's test window: half-clear red with a solid white dot. The taskbar must
 // show through the red and around the round corners.
 export component Probe inherits Window {
@@ -15,6 +22,29 @@ export component Probe inherits Window {
             height: 16px;
             border-radius: 8px;
             background: white;
+        }
+    }
+}
+
+// For `--snapshot` only: pill faces side by side on a taskbar's colour.
+export component Sheet inherits Window {
+    in property <[PillFace]> faces;
+    in property <color> ground;
+    out property <length> sheet-width: row.preferred-width;
+    title: "Sobreiro snapshot";
+    no-frame: true;
+    background: ground;
+    height: 52px;
+    row := HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 7px;
+        padding-bottom: 7px;
+        spacing: 24px;
+        alignment: start;
+        for face in faces: PillFaceView {
+            face: face;
+            hovered: false;
         }
     }
 }

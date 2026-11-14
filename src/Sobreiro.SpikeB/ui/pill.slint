@@ -1,0 +1,237 @@
+// SPIKE (shell candidate B): the pill's face, to the same measures as the WPF face: two right-aligned
+// lines, two rings, Copilot's block and bar, the stale mark.
+import "../../Sobreiro/Fonts/Inter-Regular.ttf";
+import "../../Sobreiro/Fonts/Inter-Medium.ttf";
+import "../../Sobreiro/Fonts/Unbounded-Bold.ttf";
+
+export struct PillLine {
+    label: string,
+    figure: string,
+    stale: bool,
+}
+
+export struct PillFace {
+    show-claude: bool,
+    session: PillLine,
+    weekly: PillLine,
+    // SVG path of each ring's arc in a 26 x 26 box; empty when there is nothing to draw.
+    outer-arc: string,
+    inner-arc: string,
+    outer-fill: color,
+    inner-fill: color,
+    has-copilot: bool,
+    credits: PillLine,
+    reset-date: string,
+    fraction: float,
+    bar-fill: color,
+    ink: color,
+    tooltip: string,
+}
+
+// The label, the figure, and "*" in the label's font after a figure that is no longer updated.
+component Line inherits HorizontalLayout {
+    in property <PillLine> line;
+    in property <color> ink;
+    alignment: end;
+    spacing: 0px;
+    height: 15px;
+    Text {
+        text: line.label;
+        font-family: "Inter";
+        font-size: 12px;
+        color: ink;
+        vertical-alignment: center;
+    }
+
+    Rectangle {
+        width: 3px;
+    }
+
+    Text {
+        text: line.figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: 11px;
+        color: ink;
+        vertical-alignment: center;
+    }
+
+    if line.stale: Text {
+        text: "*";
+        font-family: "Inter";
+        font-size: 12px;
+        color: ink;
+        vertical-alignment: center;
+    }
+}
+
+// Each track is a full circle at the track alpha; each arc runs clockwise from 12 o'clock.
+component Rings inherits Rectangle {
+    in property <PillFace> face;
+    width: 26px;
+    height: 26px;
+    Rectangle {
+        border-radius: 13px;
+        border-width: 3px;
+        border-color: face.ink.with-alpha(0.15);
+    }
+
+    Rectangle {
+        x: 5px;
+        y: 5px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        border-width: 3px;
+        border-color: face.ink.with-alpha(0.15);
+    }
+
+    Path {
+        width: 26px;
+        height: 26px;
+        viewbox-width: 26;
+        viewbox-height: 26;
+        commands: face.outer-arc;
+        stroke: face.outer-fill;
+        stroke-width: 3px;
+        stroke-line-cap: round;
+    }
+
+    Path {
+        width: 26px;
+        height: 26px;
+        viewbox-width: 26;
+        viewbox-height: 26;
+        commands: face.inner-arc;
+        stroke: face.inner-fill;
+        stroke-width: 3px;
+        stroke-line-cap: round;
+    }
+}
+
+export component PillFaceView inherits Rectangle {
+    in property <PillFace> face;
+    in property <bool> hovered;
+    // Nearly clear at rest, as in the WPF face, so the whole pill takes the pointer.
+    background: face.ink.with-alpha(hovered ? 0.1 : 0.004);
+    border-radius: 4px;
+    height: 38px;
+    row := HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        spacing: 0px;
+        alignment: start;
+        if face.show-claude: VerticalLayout {
+            alignment: center;
+            Line {
+                line: face.session;
+                ink: face.ink;
+            }
+
+            Line {
+                line: face.weekly;
+                ink: face.ink;
+            }
+        }
+        if face.show-claude: Rectangle {
+            width: 8px;
+        }
+        if face.show-claude: VerticalLayout {
+            alignment: center;
+            Rings {
+                face: root.face;
+            }
+        }
+        if face.has-copilot && face.show-claude: Rectangle {
+            width: 12px;
+        }
+        if face.has-copilot: VerticalLayout {
+            alignment: center;
+            Line {
+                line: face.credits;
+                ink: face.ink;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                height: 15px;
+                Text {
+                    text: face.reset-date;
+                    font-family: "Inter";
+                    font-size: 11px;
+                    color: face.ink.with-alpha(0.6);
+                    vertical-alignment: center;
+                }
+            }
+        }
+        if face.has-copilot: Rectangle {
+            width: 8px;
+        }
+        // A rounded track filling from the bottom.
+        if face.has-copilot: VerticalLayout {
+            alignment: center;
+            Rectangle {
+                width: 5px;
+                height: 26px;
+                border-radius: 2.5px;
+                background: face.ink.with-alpha(0.15);
+                clip: true;
+                Rectangle {
+                    x: 0px;
+                    y: parent.height - self.height;
+                    width: 5px;
+                    height: 26px * clamp(face.fraction, 0, 1);
+                    background: face.bar-fill;
+                }
+            }
+        }
+    }
+}
+
+export component Pill inherits Window {
+    in property <PillFace> face;
+    callback left-clicked();
+    callback right-clicked();
+    title: "Sobreiro pill";
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    // The window is as wide as its face: the toolkit resizes it when the figures change.
+    width: view.preferred-width;
+    height: 38px;
+    view := PillFaceView {
+        x: 0px;
+        y: 0px;
+        face: root.face;
+        hovered: touch.has-hover;
+        touch := TouchArea {
+            pointer-event(event) => {
+                if event.kind == PointerEventKind.up && event.button == PointerEventButton.left {
+                    root.left-clicked();
+                }
+                if event.kind == PointerEventKind.up && event.button == PointerEventButton.right {
+                    root.right-clicked();
+                }
+            }
+            // The toolkit's tooltip takes marked-up text, which would join the lines: a plain text block instead.
+            Tooltip {
+                Rectangle {
+                    background: #2b2b2b;
+                    border-radius: 4px;
+                    border-width: 1px;
+                    border-color: #454545;
+                    HorizontalLayout {
+                        padding: 6px;
+                        Text {
+                            text: root.face.tooltip;
+                            color: white;
+                            font-size: 12px;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

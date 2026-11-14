@@ -1,0 +1,514 @@
+// SPIKE (shell candidate B): the flyout card, to the WPF card's measures. Not polished: a figure and its
+// unit are two text blocks side by side instead of the WPF card's hand-set baselines, and the toolkit has
+// no setting for figures of equal width.
+
+export struct LimitRow {
+    label: string,
+    has-data: bool,
+    used-figure: string,
+    left-figure: string,
+    used-fraction: float,
+    has-projected: bool,
+    projected: float,
+    level: color,
+    has-status: bool,
+    status: string,
+    badge-fill: color,
+    badge-ink: color,
+    // Empty when there is none.
+    resets-in: string,
+    detail: string,
+    note: string,
+    left-cells: int,
+    soon-cells: int,
+    left-percent: float,
+    soon-percent: float,
+}
+
+export struct FlyoutCard {
+    show-claude: bool,
+    title: string,
+    // 0 bars, 1 battery, 2 thermometer
+    style: int,
+    session: LimitRow,
+    weekly: LimitRow,
+    has-spend: bool,
+    spend: LimitRow,
+    has-copilot: bool,
+    copilot: LimitRow,
+    footer: string,
+    ground: color,
+    ink: color,
+    soft: color,
+    line: color,
+    track: color,
+}
+
+component Body inherits Text {
+    font-family: "Inter";
+    wrap: word-wrap;
+}
+
+component Rule inherits Rectangle {
+    in property <color> line;
+    height: 1px;
+    background: line;
+}
+
+// The figure in the display font and its unit in the text font.
+component Figure inherits HorizontalLayout {
+    in property <string> figure;
+    in property <string> unit;
+    in property <FlyoutCard> card;
+    alignment: end;
+    spacing: 5px;
+    Text {
+        text: figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: 22px;
+        color: card.ink;
+        vertical-alignment: bottom;
+    }
+
+    VerticalLayout {
+        alignment: end;
+        padding-bottom: 4px;
+        Text {
+            text: unit;
+            font-family: "Inter";
+            font-size: 14px;
+            color: card.soft;
+        }
+    }
+}
+
+component Badge inherits Rectangle {
+    in property <LimitRow> limit;
+    background: limit.badge-fill;
+    border-radius: 10px;
+    height: 20px;
+    width: label.preferred-width + 20px;
+    label := Text {
+        text: limit.status;
+        font-family: "Inter";
+        font-weight: 500;
+        font-size: 13px;
+        color: limit.badge-ink;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// The badge, the resets-in text and the spend detail under a meter or a glyph.
+component Lines inherits VerticalLayout {
+    in property <LimitRow> limit;
+    in property <FlyoutCard> card;
+    in property <bool> column;
+    property <bool> badge: limit.has-data && limit.has-status;
+    property <bool> resets: limit.resets-in != "";
+    // In a row, the badge and the text share a line when they fit in the card's 292 px.
+    property <bool> one-line: !column && badge && resets && measure-badge.preferred-width + 20px + 8px + measure-resets.preferred-width <= 292px;
+    spacing: 4px;
+    alignment: start;
+    measure-badge := Text {
+        visible: false;
+        height: 0px;
+        text: limit.status;
+        font-family: "Inter";
+        font-weight: 500;
+        font-size: 13px;
+    }
+
+    measure-resets := Text {
+        visible: false;
+        height: 0px;
+        text: limit.resets-in;
+        font-family: "Inter";
+        font-size: 14px;
+    }
+
+    if one-line: HorizontalLayout {
+        alignment: start;
+        spacing: 8px;
+        Badge {
+            limit: root.limit;
+        }
+
+        Text {
+            text: limit.resets-in;
+            font-family: "Inter";
+            font-size: 14px;
+            color: card.soft;
+            vertical-alignment: center;
+        }
+    }
+    if badge && !one-line: HorizontalLayout {
+        alignment: column ? center : start;
+        Badge {
+            limit: root.limit;
+        }
+    }
+    if resets && !one-line: Text {
+        text: limit.resets-in;
+        font-family: "Inter";
+        font-size: column ? 13px : 14px;
+        color: card.soft;
+        horizontal-alignment: column ? center : left;
+    }
+    if limit.detail != "": Body {
+        text: limit.detail;
+        font-size: 14px;
+        color: card.soft;
+        horizontal-alignment: column ? center : left;
+    }
+}
+
+// Label left and figure right, the meter with its tick, then the text lines.
+component BarRow inherits VerticalLayout {
+    in property <LimitRow> limit;
+    in property <FlyoutCard> card;
+    padding-top: 14px;
+    padding-bottom: 0px;
+    spacing: 0px;
+    HorizontalLayout {
+        VerticalLayout {
+            alignment: end;
+            padding-bottom: 3px;
+            Text {
+                text: limit.label;
+                font-family: "Inter";
+                font-size: 15px;
+                color: card.ink;
+            }
+        }
+
+        Figure {
+            figure: limit.used-figure;
+            unit: "used";
+            card: root.card;
+        }
+    }
+
+    Rectangle {
+        height: 6px;
+    }
+
+    Rectangle {
+        height: 6px;
+        background: card.track;
+        Rectangle {
+            x: 0px;
+            width: parent.width * clamp(limit.used-fraction, 0, 1);
+            background: limit.level;
+        }
+
+        if limit.has-projected && limit.projected < 1: Rectangle {
+            x: parent.width * limit.projected - 1px;
+            y: -3px;
+            width: 2px;
+            height: 12px;
+            background: card.ink;
+        }
+    }
+
+    Rectangle {
+        height: 10px;
+    }
+
+    Lines {
+        limit: root.limit;
+        card: root.card;
+        column: false;
+    }
+
+    if limit.note != "": Rectangle {
+        height: 4px;
+    }
+    if limit.note != "": Body {
+        text: limit.note;
+        font-size: 14px;
+        color: card.soft;
+    }
+    Rectangle {
+        height: 14px;
+    }
+
+    Rule {
+        line: card.line;
+    }
+}
+
+// 128 x 40: an outline and nub, ten cells.
+component Battery inherits Rectangle {
+    in property <LimitRow> limit;
+    in property <FlyoutCard> card;
+    width: 128px;
+    height: 40px;
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: 117px;
+        height: 38px;
+        border-radius: 5px;
+        border-width: 1.5px;
+        border-color: card.soft;
+    }
+
+    Rectangle {
+        x: 120px;
+        y: 13px;
+        width: 5px;
+        height: 14px;
+        border-radius: 1.5px;
+        background: card.soft;
+    }
+
+    for i in 10: Rectangle {
+        x: 5px + 11px * i;
+        y: 5px;
+        width: 8px;
+        height: 30px;
+        border-radius: 1.5px;
+        background: i < limit.left-cells ? limit.level : card.track;
+        opacity: i < limit.left-cells && i >= limit.left-cells - limit.soon-cells ? 0.35 : 1;
+    }
+}
+
+// 30 x 104: tube, the faint share the pace will use, the solid rest, the bulb; a scale beside it.
+component Thermometer inherits HorizontalLayout {
+    in property <LimitRow> limit;
+    in property <FlyoutCard> card;
+    property <length> y-left: 4px + 80px * (1 - limit.left-percent / 100);
+    property <length> y-soon: y-left + 80px * limit.soon-percent / 100;
+    property <color> colour: limit.has-data ? limit.level : card.track;
+    alignment: center;
+    spacing: 10px;
+    Rectangle {
+        width: 30px;
+        height: 104px;
+        Rectangle {
+            x: 10px;
+            y: 4px;
+            width: 10px;
+            height: 86px;
+            border-radius: 5px;
+            background: card.track;
+        }
+
+        Rectangle {
+            x: 10px;
+            y: y-left;
+            width: 10px;
+            height: max(0px, y-soon - y-left);
+            background: colour;
+            opacity: 0.35;
+        }
+
+        Rectangle {
+            x: 10px;
+            y: y-soon;
+            width: 10px;
+            height: max(0px, 90px - y-soon);
+            background: colour;
+        }
+
+        Rectangle {
+            x: 6px;
+            y: 84px;
+            width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            background: colour;
+        }
+    }
+
+    VerticalLayout {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        Text {
+            text: "100%";
+            font-family: "Inter";
+            font-size: 11px;
+            color: card.soft;
+            vertical-alignment: top;
+        }
+
+        Text {
+            text: "0%";
+            font-family: "Inter";
+            font-size: 11px;
+            color: card.soft;
+            vertical-alignment: bottom;
+        }
+    }
+}
+
+component Column inherits VerticalLayout {
+    in property <LimitRow> limit;
+    in property <FlyoutCard> card;
+    alignment: start;
+    spacing: 0px;
+    if card.style == 1: HorizontalLayout {
+        alignment: center;
+        Battery {
+            limit: root.limit;
+            card: root.card;
+        }
+    }
+    if card.style != 1: Thermometer {
+        limit: root.limit;
+        card: root.card;
+    }
+    Rectangle {
+        height: 4px;
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        Figure {
+            figure: limit.left-figure;
+            unit: "left";
+            card: root.card;
+        }
+    }
+
+    Rectangle {
+        height: 8px;
+    }
+
+    Text {
+        text: limit.label;
+        font-family: "Inter";
+        font-weight: 500;
+        font-size: 15px;
+        color: card.ink;
+        horizontal-alignment: center;
+    }
+
+    Rectangle {
+        height: 6px;
+    }
+
+    Lines {
+        limit: root.limit;
+        card: root.card;
+        column: true;
+    }
+}
+
+component Heading inherits VerticalLayout {
+    in property <string> text;
+    in property <FlyoutCard> card;
+    spacing: 12px;
+    Text {
+        text: root.text;
+        font-family: "Inter";
+        font-size: 15px;
+        color: card.soft;
+    }
+
+    Rule {
+        line: card.ink;
+    }
+}
+
+export component CardView inherits Rectangle {
+    in property <FlyoutCard> card;
+    width: 330px;
+    background: card.ground;
+    border-color: card.line;
+    border-width: 1px;
+    border-radius: 10px;
+    VerticalLayout {
+        padding-left: 19px;
+        padding-right: 19px;
+        padding-top: 19px;
+        padding-bottom: 15px;
+        spacing: 0px;
+        if card.show-claude: Heading {
+            text: card.title;
+            card: root.card;
+        }
+        if card.show-claude && card.style == 0: BarRow {
+            limit: card.session;
+            card: root.card;
+        }
+        if card.show-claude && card.style == 0: BarRow {
+            limit: card.weekly;
+            card: root.card;
+        }
+        if card.show-claude && card.style != 0: VerticalLayout {
+            padding-top: 16px;
+            spacing: 14px;
+            HorizontalLayout {
+                spacing: 12px;
+                Column {
+                    limit: card.session;
+                    card: root.card;
+                    horizontal-stretch: 1;
+                }
+
+                Column {
+                    limit: card.weekly;
+                    card: root.card;
+                    horizontal-stretch: 1;
+                }
+            }
+
+            Rule {
+                line: card.line;
+            }
+        }
+        if card.show-claude && card.has-spend: BarRow {
+            limit: card.spend;
+            card: root.card;
+        }
+        if card.has-copilot && card.show-claude: Rectangle {
+            height: 10px;
+        }
+        if card.has-copilot: Heading {
+            text: "GitHub Copilot";
+            card: root.card;
+        }
+        if card.has-copilot: BarRow {
+            limit: card.copilot;
+            card: root.card;
+        }
+        Rectangle {
+            height: 12px;
+        }
+
+        Body {
+            text: card.footer;
+            font-size: 14px;
+            color: card.soft;
+        }
+    }
+}
+
+export component Flyout inherits Window {
+    in property <FlyoutCard> card;
+    callback escape();
+    title: "Sobreiro";
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    width: 330px;
+    height: view.preferred-height;
+    view := CardView {
+        x: 0px;
+        y: 0px;
+        card: root.card;
+    }
+
+    scope := FocusScope {
+        key-pressed(event) => {
+            if event.text == Key.Escape {
+                root.escape();
+                return accept;
+            }
+            return reject;
+        }
+    }
+}

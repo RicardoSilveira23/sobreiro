@@ -16,6 +16,11 @@ pub fn next_window_owned_by(owner: HWND) {
     NEXT_OWNER.set(Some(owner.0 as isize));
 }
 
+/// The next window the toolkit makes on this thread is not activated when shown, and has no owner.
+pub fn next_window_inactive() {
+    NEXT_OWNER.set(Some(0));
+}
+
 /// Picks the window backend and the renderer before any window exists. Every window is born without a
 /// taskbar button; a window announced with [`next_window_owned_by`] is also born owned and inactive.
 pub fn select_backend() -> Result<(), slint::PlatformError> {
@@ -26,6 +31,7 @@ pub fn select_backend() -> Result<(), slint::PlatformError> {
         .with_winit_window_attributes_hook(|attributes| {
             let attributes = attributes.with_skip_taskbar(true);
             match NEXT_OWNER.take() {
+                Some(0) => attributes.with_active(false),
                 Some(owner) => attributes.with_active(false).with_owner_window(owner),
                 None => attributes,
             }
