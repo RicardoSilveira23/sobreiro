@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # The WPF app, 1.x. It ships from the branch 1.x and stays here as the reference for the port.
   build:
     runs-on: windows-latest
     defaults:
@@ -50,5 +51,55 @@ jobs:
         with:
           name: sobreiro-bridge-win-x64
           path: dist/sobreiro-bridge.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  # The Rust shell for 2.0: the workspace in Cargo.toml at the root. The compiler is the one
+  # rust-toolchain.toml pins, and --locked keeps every library at its version in Cargo.lock.
+  rust:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Toolchain
+        run: |
+          rustup toolchain install
+          cargo --version
+
+      # What the libraries compile to. It changes only when the compiler, a library or a build
+      # flag does.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            target
+          key: rust-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock', '.cargo/config.toml') }}
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Lint
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      # In the release profile, so the exe the tests take apart is built as the shipped one is.
+      # The licence of every library is one of the tests.
+      - name: Test
+        run: cargo test --release --workspace --locked
+
+      - name: Build
+        run: |
+          cargo build --release --locked
+          Get-Item target/release/Sobreiro.exe | ForEach-Object { '{0}: {1} bytes' -f $_.Name, $_.Length }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Sobreiro-rust-win-x64
+          path: target/release/Sobreiro.exe
           if-no-files-found: error
           retention-days: 14
