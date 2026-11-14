@@ -2,7 +2,7 @@
 //! that holds the pill. Same schedule, same placement from the ported logic. Left out: the message that says
 //! the taskbar was made again and the display-change event (the 2-second tick and the taskbar's own DPI
 //! catch both, later).
-use crate::{Pill, PillFace, native, shell, spike, trace, uia};
+use crate::{Pill, PillFace, native, shell, spike, tip, trace, uia};
 use slint::ComponentHandle;
 use sobreiro_core::display::PixelRect;
 use sobreiro_core::taskbar::{FullScreen, PillPlacement, PillShow, PillShowStep, TaskbarAnchors, TaskbarLayout, TaskbarQuerySchedule};
@@ -35,6 +35,8 @@ struct Host {
     showing: bool,
     born: shell::Born,
     born_done: bool,
+    tip: Rc<tip::TipWindow>,
+    band_top: i32,
     left_clicked: Option<Rc<dyn Fn()>>,
     right_clicked: Option<Rc<dyn Fn()>>,
 }
@@ -61,6 +63,8 @@ thread_local! {
         showing: false,
         born: shell::Born::Ours,
         born_done: false,
+        tip: Rc::new(tip::TipWindow::default()),
+        band_top: 0,
         left_clicked: None,
         right_clicked: None,
     });
@@ -196,16 +200,19 @@ impl Host {
         };
         let left = self.left_clicked.clone();
         window.on_left_clicked(move || {
+            with_host("click", |host| host.tip.pointer_off());
             if let Some(left) = &left {
                 left()
             }
         });
         let right = self.right_clicked.clone();
         window.on_right_clicked(move || {
+            with_host("click", |host| host.tip.pointer_off());
             if let Some(right) = &right {
                 right()
             }
         });
+        window.on_hover_changed(|hovered| with_host("hover", move |host| host.hover(hovered)));
         window.window().set_position(slint::PhysicalPosition::new(-32000, -32000));
         self.window = Some(window);
         self.born_done = false;
@@ -226,6 +233,7 @@ impl Host {
             return;
         }
         window.set_face(face.clone());
+        self.tip.set_text(face.tooltip.as_str());
         self.shown_face = Some(face.clone());
         if first {
             self.prepared = false;
@@ -273,7 +281,17 @@ impl Host {
         shell::quit_on_end_session(hwnd);
     }
 
+    /// The pointer came onto the pill or left it. The tooltip opens above the taskbar's band if it stays.
+    fn hover(&mut self, hovered: bool) {
+        let shown = self.hwnd().filter(|hwnd| native::is_visible(*hwnd)).and_then(native::window_rect);
+        match shown {
+            Some(pill) if hovered => self.tip.pointer_on(tip::Place { pill, band_top: self.band_top, taskbar: self.taskbar }),
+            _ => self.tip.pointer_off(),
+        }
+    }
+
     fn close_window(&mut self) {
+        self.tip.pointer_off();
         if let Some(window) = self.window.take() {
             let _ = window.hide();
         }
@@ -362,11 +380,13 @@ impl Host {
                 self.showing = false;
                 slint::Timer::single_shot(Duration::ZERO, || with_host("place again", Host::place));
             }
+            self.band_top = place.band_top;
             self.move_to(hwnd, place.x, place.y)
         } else {
             if native::is_visible(hwnd) {
                 trace!("pill hidden: {:?}", place.hidden);
             }
+            self.tip.pointer_off();
             native::hide(hwnd)
         }
     }

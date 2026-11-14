@@ -12,6 +12,7 @@ mod probe;
 mod shell;
 mod snapshot;
 mod spike;
+mod tip;
 mod uia;
 mod watch;
 

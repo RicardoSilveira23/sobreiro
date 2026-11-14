@@ -194,6 +194,8 @@ export component Pill inherits Window {
     in property <PillFace> face;
     callback left-clicked();
     callback right-clicked();
+    // The pointer came onto the pill or left it: the tooltip is a window of its own (Tip, below).
+    callback hover-changed(bool);
     title: "Sobreiro pill";
     no-frame: true;
     always-on-top: true;
@@ -215,22 +217,40 @@ export component Pill inherits Window {
                     root.right-clicked();
                 }
             }
-            // The toolkit's tooltip takes marked-up text, which would join the lines: a plain text block instead.
-            Tooltip {
-                Rectangle {
-                    background: #2b2b2b;
-                    border-radius: 4px;
-                    border-width: 1px;
-                    border-color: #454545;
-                    HorizontalLayout {
-                        padding: 6px;
-                        Text {
-                            text: root.face.tooltip;
-                            color: white;
-                            font-size: 12px;
-                        }
-                    }
-                }
+            changed has-hover => {
+                root.hover-changed(self.has-hover);
+            }
+        }
+    }
+}
+
+// The pill's tooltip. The toolkit's own tooltip is drawn inside the window it belongs to, and the pill's
+// window is the pill: this is a window of its own, placed above the taskbar by the shell.
+export component Tip inherits Window {
+    in property <string> text;
+    title: "Sobreiro tooltip";
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    width: box.preferred-width;
+    height: box.preferred-height;
+    box := Rectangle {
+        x: 0px;
+        y: 0px;
+        background: #2b2b2b;
+        border-radius: 4px;
+        border-width: 1px;
+        border-color: #454545;
+        HorizontalLayout {
+            padding-left: 8px;
+            padding-right: 8px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            Text {
+                text: root.text;
+                color: white;
+                font-family: "Inter";
+                font-size: 12px;
             }
         }
     }

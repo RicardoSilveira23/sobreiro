@@ -3,7 +3,8 @@
 //! file and leaves after 12 seconds (`SOBREIRO_SPIKE_PROBE_SECONDS`). `SOBREIRO_SPIKE_BORN` picks how the
 //! window comes to be owned and left inactive; `SOBREIRO_SPIKE_PROBE_OWNER=own` gives it an owner made
 //! here, for a PC without a taskbar.
-use crate::{Probe, native, shell, spike, trace};
+use crate::{Probe, native, shell, spike, tip, trace};
+use std::rc::Rc;
 use slint::ComponentHandle;
 use std::time::Duration;
 
@@ -59,6 +60,22 @@ pub fn run() -> Result<(), slint::PlatformError> {
             let moved = native::place(hwnd, x, y, true);
             trace!("moved={moved} to {x},{y}; taskbar [{},{},{},{}]", bar.left, bar.top, bar.right, bar.bottom);
         });
+
+        // SOBREIRO_SPIKE_PROBE_TIP: the pill's tooltip opens for this window, as if the pointer had come to rest
+        // on it 1.5 seconds after the start, and closes by itself.
+        if spike::env("SOBREIRO_SPIKE_PROBE_TIP").is_some() {
+            let weak = ui.as_weak();
+            slint::Timer::single_shot(Duration::from_millis(1500), move || {
+                let Some(ui) = weak.upgrade() else { return };
+                let hwnd = shell::hwnd_of(ui.window());
+                let (Some(bar), Some(pill)) = (native::window_rect(taskbar), native::window_rect(hwnd)) else { return };
+                let tip = Rc::new(tip::TipWindow::default());
+                tip.set_text("Session 42%, resets at 18:00\nWeek 13%, resets on Monday\nCopilot 2,644 of 15,000 credits");
+                tip.pointer_on(tip::Place { pill, band_top: bar.top, taskbar });
+                // Kept for the rest of the run.
+                std::mem::forget(tip);
+            });
+        }
 
         // The toolkit writes the window's whole extended style when one of its own settings changes.
         if spike::env("SOBREIRO_SPIKE_PROBE_RESTYLE").is_some() {
