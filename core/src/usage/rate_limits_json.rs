@@ -107,6 +107,9 @@ fn object(fields: &[String]) -> String {
 
 /// A number the way 1.x wrote it: the shortest digits that read back as the same number, and no
 /// ".0" on a whole one (23.5, 314.12, 500).
+///
+/// The two part ways only on a number far too small to be a percentage or an amount: a millionth
+/// is `0.000001` here and was `1E-06` there. Both read back as the same number in both.
 fn number(value: f64) -> Result<String, NotFinite> {
     if value.is_finite() {
         Ok(value.to_string())
