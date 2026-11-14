@@ -6,7 +6,12 @@ mod specimen;
 
 use std::process::ExitCode;
 
-slint::include_modules!();
+/// What the toolkit writes from the .slint files. That code is the toolkit's, so the workspace's
+/// rules on panics are not asked of it.
+mod ui {
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    slint::include_modules!();
+}
 
 fn main() -> ExitCode {
     match std::env::args().nth(1).as_deref() {

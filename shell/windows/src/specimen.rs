@@ -1,6 +1,6 @@
 //! `--specimen`: draws the specimen of the three fonts into memory, with the software renderer and
 //! no window, and prints how many pixels wide the ink of each line is. The build's tests read it.
-use crate::Specimen;
+use crate::ui::Specimen;
 use slint::platform::software_renderer::{MinimalSoftwareWindow, RepaintBufferType};
 use slint::platform::{Platform, WindowAdapter};
 use slint::{ComponentHandle, PhysicalSize, PlatformError, Rgb8Pixel};

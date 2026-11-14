@@ -1,5 +1,8 @@
 //! The build gives one exe with nothing beside it: the fonts and the C runtime are inside, and it
 //! runs from a folder that holds nothing else.
+// A test fails by panicking, in the helpers below as in the tests themselves.
+#![allow(clippy::unwrap_used)]
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
