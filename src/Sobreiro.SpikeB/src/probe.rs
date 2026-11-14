@@ -8,7 +8,10 @@ use std::time::Duration;
 pub fn run() -> Result<(), slint::PlatformError> {
     let taskbar = native::find_taskbar();
     let foreground_before = native::foreground();
-    shell::next_window_owned_by(taskbar);
+    // SOBREIRO_SPIKE_OWNER=after: the window is born as the toolkit makes any window, and owned afterwards.
+    if spike::env("SOBREIRO_SPIKE_OWNER").as_deref() != Some("after") {
+        shell::next_window_owned_by(taskbar);
+    }
     let ui = Probe::new()?;
     ui.window().set_position(slint::PhysicalPosition::new(-32000, -32000));
     ui.show()?;
