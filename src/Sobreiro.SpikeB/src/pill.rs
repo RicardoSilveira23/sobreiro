@@ -276,6 +276,8 @@ impl Host {
         );
         if self.born.owned_afterwards() {
             native::set_owner(hwnd, self.taskbar);
+        }
+        if self.born.styled_afterwards() {
             native::add_ex_style(hwnd, native::WS_EX_OURS);
         }
         shell::quit_on_end_session(hwnd);

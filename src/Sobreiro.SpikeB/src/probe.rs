@@ -46,6 +46,8 @@ pub fn run() -> Result<(), slint::PlatformError> {
             );
             if born.owned_afterwards() {
                 native::set_owner(hwnd, taskbar);
+            }
+            if born.styled_afterwards() {
                 native::add_ex_style(hwnd, native::WS_EX_OURS);
             }
         });

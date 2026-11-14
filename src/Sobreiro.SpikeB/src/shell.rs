@@ -39,9 +39,14 @@ impl Born {
         }
     }
 
-    /// True when the owner and the style bits still have to be put on after the window is shown.
+    /// True when the owner still has to be given after the window is shown.
     pub fn owned_afterwards(self) -> bool {
         matches!(self, Born::Plain | Born::Refuse)
+    }
+
+    /// True when the style bits still have to be put on after the window is shown.
+    pub fn styled_afterwards(self) -> bool {
+        self != Born::Ours
     }
 }
 
@@ -148,10 +153,16 @@ fn with_birth<T>(hwnd: HWND, action: impl FnOnce(Born, &mut Birth) -> T) -> Opti
 unsafe extern "system" fn on_cbt(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     let hwnd = HWND(wparam.0 as *mut _);
     if code == HCBT_CREATEWND as i32 {
-        // Windows has made the window and has not yet sent it a message. Only a top-level window is ours.
+        // Windows has made the window and has not yet sent it a message. Only a top-level window is ours: no
+        // child, and no window with a parent. One born owned, as the toolkit's hook makes it, names its owner.
         let create = unsafe { &*(*(lparam.0 as *const CBT_CREATEWNDW)).lpcs };
-        let top_level = create.hwndParent.0.is_null() && create.style & WS_CHILD.0 as i32 == 0;
-        if top_level && let Some(next) = NEXT.try_with(|next| next.take()).ok().flatten() {
+        let parent = create.hwndParent;
+        let fits = |next: &Next| create.style & WS_CHILD.0 as i32 == 0 && (parent.0.is_null() || parent == next.want.owner);
+        let next = NEXT.try_with(|next| {
+            let mut next = next.borrow_mut();
+            if next.as_ref().is_some_and(fits) { next.take() } else { None }
+        });
+        if let Ok(Some(next)) = next {
             let ours = next.born == Born::Ours;
             let birth = Birth {
                 hwnd: hwnd.0 as isize,
