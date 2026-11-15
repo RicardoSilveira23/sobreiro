@@ -1,0 +1,5 @@
+# A test fails by panicking, so the three rules on panics do not hold inside test functions.
+# A file of tests whose helpers panic too says so in its first lines.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true

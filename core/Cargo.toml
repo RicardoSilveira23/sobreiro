@@ -1,0 +1,39 @@
+[package]
+name = "sobreiro-core"
+description = "Sobreiro's logic: providers, polling, limits, config and file formats. No UI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+# Dates and spans of time. Only what works on the clock of the whole world (UTC) is switched on;
+# the user's own time zone arrives with the area that shows times.
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+# Reads JSON. What Core writes it writes by hand, to keep each file's bytes as 1.x wrote them.
+# "raw_value" hands over a value's own text unread, for the keys of `config.json` that Sobreiro
+# does not know and must write back as they were.
+serde_json = { version = "1", features = ["raw_value"] }
+# What `serde_json` reads into. Named here because `config.json` is read into a type of Core's
+# own, which keeps the keys in the file's order.
+serde = "1"
+# SHA-256, for the name a second copy of Sobreiro takes from its data folder.
+sha2 = "0.10"
+# HTTP, for the two requests Sobreiro makes. Blocking, and built without what it is not to do:
+# no cookies, no compression, no proxy from the registry. TLS is Windows' own
+# ("native-tls"), with the certificates Windows trusts; "no-default" leaves out the list of
+# certificates the library would otherwise carry inside it.
+ureq = { version = "3.5", default-features = false, features = ["native-tls-no-default"] }
+# Core writes nothing through this library. It is named for its feature alone: the HTTP library
+# can hand a request to a logger byte by byte, token and all, at the level "trace", and the
+# feature takes that level out of every library in the build, when it is compiled. No logger is
+# installed today; this keeps the token out of one that might be. What is said at "debug" has
+# the token struck out by the HTTP library itself.
+log = { version = "0.4", features = ["max_level_debug"] }
+
+[lints]
+workspace = true

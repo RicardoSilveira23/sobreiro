@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use Sobreiro in your work, you can cite it like this."
+title: Sobreiro
+type: software
+authors:
+  - given-names: Ricardo
+    family-names: Silveira
+abstract: "A Windows 11 tray app that keeps GitHub Copilot's monthly AI credits and Claude Code's session and weekly limits in view on your taskbar."
+repository-code: "https://github.com/RicardoSilveira23/sobreiro"
+url: "https://sobreiro.ricardosilveira.dev"
+license: GPL-3.0-or-later
+keywords:
+  - windows
+  - windows-11
+  - tray-app
+  - taskbar
+  - claude-code
+  - github-copilot
+  - usage
+  - rate-limits
+  - dotnet
+  - csharp
+  - wpf

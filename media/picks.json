@@ -1,0 +1,41 @@
+{
+  "copy": {
+    "site/assets/img/hero.webp": "animations/hero-both@1x.webp",
+    "site/assets/img/hero.png": "animations/hero-both@1x-still.png",
+    "site/assets/img/panel-claude-bars.png": "stills/details/claude-bars-dark@1x.png",
+    "site/assets/img/panel-claude-bars@2x.png": "stills/details/claude-bars-dark@2x.png",
+    "site/assets/img/panel-claude-battery.png": "stills/details/claude-battery-dark@1x.png",
+    "site/assets/img/panel-claude-battery@2x.png": "stills/details/claude-battery-dark@2x.png",
+    "site/assets/img/panel-claude-thermometer.png": "stills/details/claude-thermometer-dark@1x.png",
+    "site/assets/img/panel-claude-thermometer@2x.png": "stills/details/claude-thermometer-dark@2x.png",
+    "site/assets/img/panel-copilot-bars.png": "stills/details/copilot-bars-dark@1x.png",
+    "site/assets/img/panel-copilot-bars@2x.png": "stills/details/copilot-bars-dark@2x.png",
+    "site/assets/img/panel-copilot-battery.png": "stills/details/copilot-battery-dark@1x.png",
+    "site/assets/img/panel-copilot-battery@2x.png": "stills/details/copilot-battery-dark@2x.png",
+    "site/assets/img/panel-copilot-thermometer.png": "stills/details/copilot-thermometer-dark@1x.png",
+    "site/assets/img/panel-copilot-thermometer@2x.png": "stills/details/copilot-thermometer-dark@2x.png",
+    "site/assets/img/panel-both-bars.png": "stills/details/both-bars-dark@1x.png",
+    "site/assets/img/panel-both-bars@2x.png": "stills/details/both-bars-dark@2x.png",
+    "site/assets/img/panel-both-battery.png": "stills/details/both-battery-dark@1x.png",
+    "site/assets/img/panel-both-battery@2x.png": "stills/details/both-battery-dark@2x.png",
+    "site/assets/img/panel-both-thermometer.png": "stills/details/both-thermometer-dark@1x.png",
+    "site/assets/img/panel-both-thermometer@2x.png": "stills/details/both-thermometer-dark@2x.png",
+    "site/assets/img/option-light.png": "stills/details/both-bars-light@1x.png",
+    "site/assets/img/option-light@2x.png": "stills/details/both-bars-light@2x.png",
+    "site/assets/img/option-accent.png": "stills/details/both-bars-dark-accent@1x.png",
+    "site/assets/img/option-accent@2x.png": "stills/details/both-bars-dark-accent@2x.png",
+    "site/assets/img/manual-copilot.png": "stills/details/copilot-bars-dark@1x.png",
+    "site/assets/img/manual-copilot@2x.png": "stills/details/copilot-bars-dark@2x.png",
+    "site/assets/img/option-tray-and-pill.png": "stills/taskbar/tray-and-pill-both.png",
+    "site/assets/img/option-tray-only.png": "stills/taskbar/tray-only-claude.png"
+  },
+  "bake": [
+    {
+      "out": "docs/images/readme-demo",
+      "animation": "animations/hero-both@1x",
+      "colour": "#6f4df6",
+      "width": 800,
+      "radius": 10
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+# Sobreiro 2.0: Core and the Windows shell in Rust. The C# under src/ and tests/ is 1.x, which ships
+# from the branch 1.x; it stays here as the reference for the port until the new shell matches it.
+[workspace]
+resolver = "3"
+members = ["core", "bridge", "shell/windows"]
+
+[workspace.package]
+version = "2.0.0-dev"
+edition = "2024"
+rust-version = "1.100"
+license = "GPL-3.0-or-later"
+publish = false
+
+# The release build: one small exe. Size before speed, the whole program optimised as one unit,
+# no unwinding tables and no symbols.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# Rules the compiler and the linter hold every crate to. "deny" stops the build; one file can
+# still allow a rule for itself, with the reason beside it.
+[workspace.lints.rust]
+# Unsafe code only where the shell calls Windows, in files that say so. Core forbids it outright.
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+# A panic ends the app: the release build does not unwind. What can fail gives an error back.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+# Nothing unfinished and no debugging aid gets merged.
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"

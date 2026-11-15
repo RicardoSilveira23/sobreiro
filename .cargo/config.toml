@@ -1,0 +1,4 @@
+# One exe with nothing beside it: the C runtime is linked in, so the exe starts on a PC that does
+# not have the Visual C++ runtime installed.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
