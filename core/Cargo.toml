@@ -11,8 +11,9 @@ publish.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
-# Dates and spans of time. Only what works on the clock of the whole world (UTC) is switched on;
-# the user's own time zone arrives with the area that shows times.
+# Dates and spans of time. Only what works on the clock of the whole world (UTC) and on fixed
+# offsets is switched on; the user's own time zone is Core's `display::Zone`, which the shell
+# hands in.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 # Reads JSON. What Core writes it writes by hand, to keep each file's bytes as 1.x wrote them.
 # "raw_value" hands over a value's own text unread, for the keys of `config.json` that Sobreiro

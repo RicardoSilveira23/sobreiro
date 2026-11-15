@@ -639,19 +639,15 @@ network: the client is handed a stand-in that answers as the test says.
 | `CopilotCliCredentialTests.cs` | `core/tests/all/copilot_cli_credential.rs` | 14 | 14 | 7, and 2 new |
 | `CopilotPollTests.cs` | `core/tests/all/copilot_poll.rs` | 13 | 13 | 13, and 7 new |
 | `CopilotProviderTests.cs` | `core/tests/all/copilot_provider.rs` | 15 | 13 | 13, and 4 new |
-| `CopilotStateTests.cs` | `core/tests/all/copilot_shown.rs` | 10 | 1 | 1 |
+| `CopilotStateTests.cs`, its `CopilotShown` case | `core/tests/all/copilot_shown.rs` | 1 | 1 | 1 |
 | `GhCliTests.cs` | `core/tests/all/gh_cli.rs` | 6 | 3 | 3, and 7 new |
-| | | 72 | 58 | 49, and 33 new |
+| | | 63 | 58 | 49, and 33 new |
 
-Nine of the ten cases of `CopilotStateTests.cs` are about the sentence under the figures, and
-come with the area "Display"; the one that picks between two readings is here.
+The other nine cases of `CopilotStateTests.cs` are about the sentence under the figures, which
+needs a time zone and the user's clock. They are counted in the next section, "Display".
 
 ### C# tests with no Rust test
 
-- `CopilotStateTests.Fresh_live_ok_has_no_line`, `Old_live_ok_says_as_of`,
-  `Cache_says_from_the_copilot_cli`, `Problem_comes_before_source` and
-  `Each_problem_has_its_sentence` (five rows): the cases of `CopilotStateText.Line`, which
-  needs `When.Format`, a time zone and a culture. They come with the area "Display".
 - `GhCliTests.Missing_exe_gives_no_token`,
   `Grandchild_holding_the_pipe_open_does_not_stall_the_read` and
   `Hanging_exe_is_killed_after_the_timeout`: each starts a process. Core starts none, so the
@@ -760,3 +756,189 @@ ticks, the ten-millionths of a second the C# clock counts in.
   GitHub, two of them with a body that holds the made-up token. Neither a line told to the
   log, nor the printed schedule, state and line of a poll, nor the printed reading and
   limits, holds it.
+
+## Display: colours, times and the models the pill and the flyout show
+
+What is shown, and in which colour: the colours of the pill, the bars and the badges (the
+folder `Colours`), a time in the user's zone and on the user's clock (`When`, `Duration`), the
+time that falls on weekdays (`WorkingTime`), the pace of a limit and its badge (`Pace`,
+`LimitStatus`), the rings, the marks on figures that stopped, and where the flyout opens
+(`Rings`, `PillStale`, `FlyoutPlacement`), the models of the flyout, the pill and the tray
+tooltip (`FlyoutModel`, `GlyphFill`, `PillModel`, `TooltipText`), and the sentence under
+Copilot's figures (`CopilotStateText`, in `core/src/copilot/copilot_state_text.rs`).
+
+1.x took the time zone and the culture from .NET. Core asks the system nothing, so the shell
+hands both in:
+
+- A zone is `display::Zone`: the offset from UTC before the first change, and each change after
+  it, which the shell builds from Windows' rules for the years around now. Past the last change
+  the last offset holds. A local time the clock skips has no moment; one it repeats takes the
+  later moment, which is what .NET gave (the offset after a fall-back). The C# tests used UTC,
+  zones of one offset and Europe/Lisbon; here they use `Zone::utc()`, `Zone::fixed` and a
+  Lisbon built from the changes .NET printed, so the clock change in `WorkingTimeTests` is held.
+- The one thing 1.x read off the culture is the clock: its short time pattern and the words for
+  morning and afternoon. Day names, months, numbers and money it wrote in the invariant
+  culture. `display::ClockFormat` holds those three texts, which the shell reads from
+  Windows' regional settings. The pattern is written as .NET writes a custom time pattern, with
+  the letters h, H, m, s and t, and the shell turns Windows' time picture into it. One
+  difference: .NET wrote the culture's time separator for a `:` in the pattern, and Core copies
+  `:` as it is, so the shell writes the separator into the pattern. No culture of .NET 10 has a
+  pattern and a separator that disagree; a user whose short and long time formats in Windows
+  use two separators could see the other one in 1.x. The cultures the C# tests named (en-US,
+  en-GB, pt-PT) are helpers in `main.rs`; `when::the_helpers_hold_what_dotnet_gives` holds them
+  against .NET 10.
+
+Issue 5 noted that a spike rounded money differently on an exact tie. 1.x writes dollars with
+the pattern `#,0.00`, and credits with `Math.Round` and then `#,0`. .NET first rounds a double
+to 15 significant digits, then rounds half away from zero: 2.675 is "2.68", 1.005 is "1.01",
+0.125 is "0.13", and a negative that rounds to zero keeps its sign, "-0.00". `Math.Round`
+takes a half to the even number, so 2,644.5 credits are "2,644". Core rounds both the same
+way, and two tests hold it on rows the C# wrote: `flyout_model::money_answers_as_the_csharp_did`
+and `tooltip_text::credits_figures_answers_as_the_csharp_did`.
+
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `AccentPaletteTests.cs` | `core/tests/all/accent_palette.rs` | 4 | 4 | 4, and 2 new |
+| `BarColourTests.cs` | `core/tests/all/bar_colour.rs` | 11 | 11 | 8, and 4 new |
+| `ContrastTests.cs` | `core/tests/all/contrast.rs` | 4 | 4 | 4, and 2 new |
+| `TaskbarColoursTests.cs` | `core/tests/all/taskbar_colours.rs` | 12 | 12 | 11, and 1 new |
+| `DurationTests.cs` | `core/tests/all/duration.rs` | 7 | 7 | 4, and 1 new |
+| `WhenTests.cs` | `core/tests/all/when.rs` | 6 | 6 | 6, and 3 new |
+| `WorkingTimeTests.cs` | `core/tests/all/working_time.rs` | 10 | 10 | 10, and 3 new |
+| | `core/tests/all/zone.rs` | | | 7 new |
+| `PaceTests.cs` | `core/tests/all/pace.rs` | 20 | 20 | 20, and 2 new |
+| `LimitStatusTests.cs` | `core/tests/all/limit_status.rs` | 33 | 33 | 22, and 2 new |
+| `RingsModelTests.cs` | `core/tests/all/rings_model.rs` | 18 | 18 | 13, and 2 new |
+| `PillStaleTests.cs` | `core/tests/all/pill_stale.rs` | 34 | 34 | 13, and 3 new |
+| `FlyoutPlacementTests.cs` | `core/tests/all/flyout_placement.rs` | 8 | 8 | 8, and 3 new |
+| `FlyoutModelTests.cs` | `core/tests/all/flyout_model.rs` | 29 | 29 | 23, and 4 new |
+| `GlyphFillTests.cs` | `core/tests/all/glyph_fill.rs` | 5 | 5 | 5, and 1 new |
+| `PillModelTests.cs` | `core/tests/all/pill_model.rs` | 16 | 16 | 16, and 1 new |
+| `TooltipTextTests.cs` | `core/tests/all/tooltip_text.rs` | 9 | 9 | 9, and 5 new |
+| `LegacyDisplayTests.cs` | `flyout_model.rs`, `tooltip_text.rs` | 5 | 5 | 2 |
+| `CopilotStateTests.cs`, its `CopilotStateText` cases | `core/tests/all/copilot_state_text.rs` | 9 | 9 | 5, and 1 new |
+| | | 240 | 240 | 183, and 47 new |
+
+`LimitStatusTests.cs` also holds the class `BadgeColourTests` (13 of its 33 cases), ported as
+`limit_status::badge_colour_values` and `badge_text_on_fill_is_readable_in_both_palettes`.
+`BarColourTests.cs` holds the test of `NightPalette.LevelColour`; `NightPalette` has no test
+file of its own.
+
+### C# tests with no Rust test
+
+None.
+
+### C# tests ported in part
+
+- Three of the five cases of `LegacyDisplayTests.cs` are about Connect and the data folders, and
+  were already held by tests of earlier areas under other names: `Reconnect_wording` by
+  `connect_message::reconnect_has_its_own_words` and
+  `confirm_for_a_reconnect_from_another_folder_says_so`,
+  `Default_data_directory_is_recognised_with_or_without_an_override_naming_it` by
+  `app_paths::the_data_folder_is_the_default_one_without_an_override_or_with_one_naming_it`, and
+  `Default_and_legacy_directories_sit_side_by_side_in_local_app_data` by
+  `app_paths::the_default_and_the_old_folder_do_not_follow_the_override`. The C# asked Windows
+  for the folders; there the test hands them in.
+- `TooltipTextTests.Long_culture_pattern_is_truncated` used a pattern with `zzz`, the offset
+  from UTC. A clock pattern from Windows has no such letter, so the test writes "+00:00" as text
+  in the pattern. It still holds the cut at 127.
+
+### Rust tests with no C# test
+
+What the rows hold was read off the C# of 1.1.0, run on 2026-11-15 on made-up colours, limits,
+zones and clocks. The rows were written out by the C# and turned into Rust by a script, not
+typed. A moment in a row is a count of ticks, and a double is held bit for bit.
+
+- `zone::utc_has_no_offset_and_no_change`, `a_change_holds_from_its_moment_on`,
+  `changes_are_sorted_by_their_moment`, `the_rows_name_zones_the_helper_knows`, and
+  `the_wall_at_the_ends_of_what_chrono_holds_is_the_nearest_it_holds`: a moment whose local
+  time lies past the last one chrono holds gives that last one, where 1.x stopped with an
+  error.
+- `zone::zone_offset_at_answers_as_the_csharp_did` (144 rows) and
+  `zone_moment_answers_as_the_csharp_did` (200 local times: skipped, repeated and plain). The
+  zones are UTC, +09:00, -05:00, +05:45, Europe/Lisbon, America/Santiago (its clock skips
+  midnight), America/Havana (its clock repeats midnight) and Australia/Lord_Howe (a change of
+  half an hour), each with the changes .NET gave from 2025-12-01 to 2027-02-01; Havana's start
+  on 2025-10-01, since .NET's rules for it hold daylight time to the end of 2026 and the
+  fall-back that repeats midnight is the one of 2025-11-02. Every row of this section lies in
+  that span.
+- `duration::duration_format_answers_as_the_csharp_did`: 82 spans, from the smallest and
+  largest a C# span holds through a tick either side of zero and of each unit.
+- `working_time::working_time_between_answers_as_the_csharp_did` (109 rows) and
+  `working_time_after_answers_as_the_csharp_did` (132): the eight zones, across their changes,
+  month ends and weekends, zero, backwards and a negative time.
+- `when::when_format_answers_as_the_csharp_did`: 339 pairs of moments, from the same day to 90
+  days apart both ways and across each change, on the clocks of en-US, en-GB, pt-PT, ko-KR and
+  fi-FI. ko-KR (`tt h:mm`) and fi-FI (`H.mm`) give the text .NET gave with `:` and `.` copied.
+- `when::a_made_up_culture_answers_as_the_csharp_did`, the made-up culture of issue 5: 46
+  patterns at eight times of day, with text in quotes, escaped letters, `%`, runs of three
+  letters, and words for morning and afternoon that are empty, outside ASCII or made of
+  combining marks. Left out, as .NET refuses them with an error and Core cannot fail there: a
+  pattern that ends in a backslash or in `%`, `%%`, `%'h'`, and a quote that never closes. Core
+  copies a last backslash or `%` as it is, and runs an open quote to the end. Also left out: a
+  pattern of one letter alone, which .NET reads as a standard format and Core as a pattern, and
+  `t` before a word that starts outside the Basic Multilingual Plane, where .NET takes half of
+  the first character and Core the whole of it.
+- `when::the_helpers_hold_what_dotnet_gives`.
+- `pace::project_answers_as_the_csharp_did`: 298 limits, 157 of them on weekdays. Percents
+  around 0, 2, 100 and below zero; windows of five hours, a day and a tick, seven and thirty
+  days, zero, negative and none; readings before the start, a tick under 5% of the window, at
+  and after the reset; weekdays in all eight zones across their changes, and windows that are
+  all weekend. A span is counted in ticks, and a span times a number is rounded to the tick as
+  the C# rounds it, a half to the even tick.
+- `limit_status::for_limit_answers_as_the_csharp_did`: 151 limits on both clocks of the C#
+  tests and both day choices, with a reset a tick either side of 30 seconds away.
+- `rings_model::rings_model_answers_as_the_csharp_did` (68 sets of limits, through `from` and
+  `copilot`) and `ring_sweeps_answer_as_the_csharp_did` (102 sweeps; a ring of no radius and
+  no stroke gives NaN in both).
+- `pill_stale::claude_answers_as_the_csharp_did` (154 rows) and
+  `copilot_answers_as_the_csharp_did` (84): every state, misses from 0 to 3, ages a tick
+  either side of 15 minutes and of 24 hours.
+- `flyout_placement::edge_and_place_answer_as_the_csharp_did`: 120 rows, the taskbar on each
+  edge, hidden with the cursor at each tie, and flyouts larger than the work area. Every
+  coordinate is within 100,000 of zero, so no sum overflows in either language; the test holds
+  that. `flyout_placement_at_the_ends_of_an_int_answers_as_the_csharp_did` adds 76 rows at the
+  ends of an `i32`, where the C# wraps and so does Core.
+- `pace::the_rows_hold_both_answers_and_both_days`,
+  `limit_status::the_rows_hold_every_kind_of_badge_and_none`,
+  `pill_stale::the_rows_hold_both_answers` and
+  `flyout_placement::the_rows_hold_every_edge_and_a_flyout_larger_than_the_work_area` hold that
+  the rows reach every answer.
+- `contrast::ratio_answers_as_the_csharp_did` (64 pairs of colours, with channels around the
+  knee of the sRGB curve) and `contrast::parse_answers_as_the_csharp_did` (52 texts for
+  `Rgb.Parse`). 1.x takes white space around each byte's two digits and zeros after them, and
+  any number of `#` in front; Core takes the same.
+- `accent_palette::from_registry_answers_as_the_csharp_did` (12 lengths of bytes) and
+  `windows_blue_answers_as_the_csharp_did`.
+- `bar_colour::pick_answers_as_the_csharp_did` (220 rows: both choices, dark and light, 55
+  palettes, among them greys on the line of 3:1), `badge_answers_as_the_csharp_did`,
+  `level_colour_answers_as_the_csharp_did` and `night_palettes_answer_as_the_csharp_did`.
+- `taskbar_colours::for_taskbar_answers_as_the_csharp_did`: 312 rows, a light or dark taskbar
+  in the accent colour or not, both choices and 39 palettes, with the fill at each level.
+- `flyout_model::money_answers_as_the_csharp_did` (268 amounts, alone and with a cap, for each
+  period) and `tooltip_text::credits_figures_answers_as_the_csharp_did` (104 pairs).
+- `flyout_model::flyout_model_from_answers_as_the_csharp_did`: 115 sets of limits, every
+  state, the old bridge or not, Claude shown or not, a note, both day choices and ages from
+  under a minute to three days; every field of the model is compared.
+- `flyout_model::figures_that_are_not_finite_answer_as_the_csharp_did` (30 amounts of dollars
+  and 30 limits whose percent is NaN, infinite or the largest double) and
+  `tooltip_text::credits_that_are_not_finite_answer_as_the_csharp_did` (30 pairs): .NET writes
+  "NaN", "Infinity" and "-Infinity", and a NaN stays NaN through `Math.Min`. A NaN is
+  compared as NaN, not by its bits, whose sign differs between machines.
+- `working_time::after_a_span_of_any_length_ends_at_the_last_moment_at_once`: a span longer
+  than the time left to the last moment chrono holds gives that moment without walking the
+  days, and the time and the badge can be written for it. 1.x stopped with an error there.
+- `flyout_model::the_default_options_are_the_csharp_defaults`: the arguments the C# could leave
+  out are a `FlyoutOptions` here.
+- `glyph_fill::glyph_fill_answers_as_the_csharp_did` (189 views, every tie of a twentieth) and
+  `pill_model::pill_model_answers_as_the_csharp_did` (149 rows, the three ways to make a
+  model, credits that reset in each zone at month ends and across changes).
+- `tooltip_text::render_answers_as_the_csharp_did` (82 rows) and
+  `render_copilot_answers_as_the_csharp_did` (80), with clocks whose words make the text longer
+  than 127 units, so that it is cut.
+- `tooltip_text::a_cut_between_the_two_halves_of_a_character_drops_the_half`: the C# cut a
+  text after 127 UTF-16 units, and once that fell inside a character outside the Basic
+  Multilingual Plane, leaving half of it at the end. A Rust text cannot hold half a character,
+  so Core drops it and the tooltip is 126 units long. This row is left out of the one above.
+- `copilot_state_text::copilot_state_text_answers_as_the_csharp_did`: 100 rows, every state,
+  a live and a cached reading, ages around 15 minutes, five clocks and the zones.
