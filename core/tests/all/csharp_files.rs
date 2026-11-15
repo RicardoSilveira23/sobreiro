@@ -4,7 +4,7 @@
 //! Connect (or Reconnect, from a config that already holds the user's status line), then
 //! Disconnect. Every byte it wrote to `settings.json` and to `config.json` is held here, and
 //! the Rust must write the same. The samples are the shapes a real file takes: no status line,
-//! another tool's, Sobreiro's own, the old `openheadroom-bridge`, odd spacing, comments, a
+//! another tool's, Sobreiro's own, Sobreiro's from another folder, odd spacing, comments, a
 //! byte order mark, both kinds of line end.
 #![cfg(windows)]
 use std::path::Path;
@@ -21,8 +21,8 @@ const BRIDGE: &str = r"C:\Apps\Sobreiro\sobreiro-bridge.exe";
 /// One `settings.json` and what the C# made of it.
 struct Case {
     name: &'static str,
-    /// True when the config already held the user's own status line, as after the first-run
-    /// migration: the C# was then asked to connect over a bridge that was there already.
+    /// True when the config already held the user's own status line, as after an earlier
+    /// Connect: the C# was then asked to connect over a bridge that was there already.
     reconnect: bool,
     /// True when the file starts with a byte order mark. Every text below is without it.
     bom: bool,
@@ -159,30 +159,6 @@ const CASES: &[Case] = &[
         connected: "{\n  \"model\": \"x\",\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"C:/Apps/Sobreiro/sobreiro-bridge.exe\\\"\"\n  }\n}\n",
         config_when_connected: "{\r\n  \"chained_command\": \"~/.claude/statusline.sh\",\r\n  \"previous_status_line\": { \"type\": \"command\", \"command\": \"~/.claude/statusline.sh\", \"padding\": 1 },\r\n  \"style\": \"bars\",\r\n  \"bar_colour\": \"purple\",\r\n  \"show\": \"trayandpill\",\r\n  \"pace\": \"everyday\"\r\n}",
         disconnected: "{\n  \"model\": \"x\",\n  \"statusLine\": { \"type\": \"command\", \"command\": \"~/.claude/statusline.sh\", \"padding\": 1 }\n}\n",
-        config_when_disconnected: "{\r\n  \"style\": \"bars\",\r\n  \"bar_colour\": \"purple\",\r\n  \"show\": \"trayandpill\",\r\n  \"pace\": \"everyday\"\r\n}",
-    },
-    Case {
-        name: "legacy",
-        reconnect: false,
-        bom: false,
-        before: Some(
-            "{\n  \"model\": \"x\",\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"C:/Apps/OpenHeadroom/openheadroom-bridge.exe\\\"\",\n    \"padding\": 1\n  },\n  \"theme\": \"dark\"\n}\n",
-        ),
-        connected: "{\n  \"model\": \"x\",\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"C:/Apps/Sobreiro/sobreiro-bridge.exe\\\"\",\n    \"padding\": 1\n  },\n  \"theme\": \"dark\"\n}\n",
-        config_when_connected: "{\r\n  \"style\": \"bars\",\r\n  \"bar_colour\": \"purple\",\r\n  \"show\": \"trayandpill\",\r\n  \"pace\": \"everyday\"\r\n}",
-        disconnected: "{\n  \"model\": \"x\",\n  \"theme\": \"dark\"\n}\n",
-        config_when_disconnected: "{\r\n  \"style\": \"bars\",\r\n  \"bar_colour\": \"purple\",\r\n  \"show\": \"trayandpill\",\r\n  \"pace\": \"everyday\"\r\n}",
-    },
-    Case {
-        name: "legacy-reconnect",
-        reconnect: true,
-        bom: false,
-        before: Some(
-            "{\n  \"model\": \"x\",\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"C:/Apps/OpenHeadroom/openheadroom-bridge.exe\\\"\",\n    \"padding\": 1\n  },\n  \"theme\": \"dark\"\n}\n",
-        ),
-        connected: "{\n  \"model\": \"x\",\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": \"\\\"C:/Apps/Sobreiro/sobreiro-bridge.exe\\\"\",\n    \"padding\": 1\n  },\n  \"theme\": \"dark\"\n}\n",
-        config_when_connected: "{\r\n  \"chained_command\": \"~/.claude/statusline.sh\",\r\n  \"previous_status_line\": { \"type\": \"command\", \"command\": \"~/.claude/statusline.sh\", \"padding\": 1 },\r\n  \"style\": \"bars\",\r\n  \"bar_colour\": \"purple\",\r\n  \"show\": \"trayandpill\",\r\n  \"pace\": \"everyday\"\r\n}",
-        disconnected: "{\n  \"model\": \"x\",\n  \"statusLine\": { \"type\": \"command\", \"command\": \"~/.claude/statusline.sh\", \"padding\": 1 },\n  \"theme\": \"dark\"\n}\n",
         config_when_disconnected: "{\r\n  \"style\": \"bars\",\r\n  \"bar_colour\": \"purple\",\r\n  \"show\": \"trayandpill\",\r\n  \"pace\": \"everyday\"\r\n}",
     },
     Case {

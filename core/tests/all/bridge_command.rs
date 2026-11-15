@@ -1,9 +1,7 @@
 //! Ported from `tests/Sobreiro.Tests/BridgeCommandTests.cs`.
 use std::path::Path;
 
-use sobreiro_core::connect::bridge_command::{
-    command_for, is_bridge, is_legacy_bridge, runs, status_line_json,
-};
+use sobreiro_core::connect::bridge_command::{command_for, is_bridge, runs, status_line_json};
 
 #[test]
 fn for_uses_forward_slashes_and_quotes() {
@@ -444,25 +442,19 @@ fn a_command_that_is_not_a_full_path_is_read_from_the_folder_the_program_runs_in
 }
 
 #[test]
-fn is_bridge_and_is_legacy_bridge_answer_as_the_csharp_did() {
-    // The command, whether it runs a bridge of ours, and whether that is the old one.
-    let rows: &[(Option<&str>, bool, bool)] = &[
-        (Some("openheadroom-bridge sobreiro-bridge"), true, false),
-        (Some("OPENHEADROOM-BRIDGE"), true, true),
-        (Some("x/OpenHeadroom-Bridge.exe | y"), true, true),
-        (Some("SOBREIRO-BRIDGE"), true, false),
-        (Some("sobreiro_bridge"), false, false),
-        (Some("sobreiro bridge"), false, false),
-        (Some("openheadroom"), false, false),
-        (Some("ſobreiro-bridge"), false, false),
-        (Some("sobreıro-bridge"), false, false),
-        (Some("SOBREİRO-BRIDGE"), false, false),
-        (Some("\u{212a}openheadroom-bridge"), true, true),
-        (Some(""), false, false),
-        (None, false, false),
+fn is_bridge_answers_as_the_csharp_did() {
+    // The command, and whether it runs a bridge of ours.
+    let rows: &[(Option<&str>, bool)] = &[
+        (Some("SOBREIRO-BRIDGE"), true),
+        (Some("sobreiro_bridge"), false),
+        (Some("sobreiro bridge"), false),
+        (Some("ſobreiro-bridge"), false),
+        (Some("sobreıro-bridge"), false),
+        (Some("SOBREİRO-BRIDGE"), false),
+        (Some(""), false),
+        (None, false),
     ];
-    for (command, ours, legacy) in rows {
+    for (command, ours) in rows {
         assert_eq!(is_bridge(*command), *ours, "{command:?}");
-        assert_eq!(is_legacy_bridge(*command), *legacy, "{command:?}");
     }
 }

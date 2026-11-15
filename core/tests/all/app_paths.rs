@@ -238,15 +238,11 @@ fn an_override_is_taken_when_it_names_drive_and_folder() {
 }
 
 #[test]
-fn the_default_and_the_old_folder_do_not_follow_the_override() {
+fn the_default_folder_does_not_follow_the_override() {
     for paths in [without_override(), with_override(r"D:\scratch\elsewhere")] {
         assert_eq!(
             paths.default_directory(),
             Path::new(LOCAL_APP_DATA).join("Sobreiro")
-        );
-        assert_eq!(
-            paths.legacy_directory(),
-            Path::new(LOCAL_APP_DATA).join("OpenHeadroom")
         );
     }
 }

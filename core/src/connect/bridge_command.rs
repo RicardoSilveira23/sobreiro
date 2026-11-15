@@ -8,9 +8,6 @@ use crate::config::app_config::quoted;
 
 const BRIDGE_NAME: &str = "sobreiro-bridge";
 
-/// The bridge the app was called before 0.5.0 (OpenHeadroom).
-const LEGACY_BRIDGE_NAME: &str = "openheadroom-bridge";
-
 /// The command for the bridge at `bridge_exe_path`: with forward slashes and between quotes,
 /// so Git Bash runs it as one path.
 pub fn command_for(bridge_exe_path: &Path) -> String {
@@ -70,22 +67,12 @@ fn capital_for_comparing(letter: char) -> char {
     capital(letter)
 }
 
-/// True when `command` holds `name`, in capitals or small letters. Both names are plain
-/// English letters and a hyphen, and no other letter counts as one of those when capitals
-/// are ignored, so only the English alphabet has to be folded.
-fn names(command: &str, name: &str) -> bool {
-    command.to_ascii_lowercase().contains(name)
-}
-
-/// True for a command running this app's bridge, or the old one: both are our own.
+/// True for a command running this app's bridge: one that holds `sobreiro-bridge`, in
+/// capitals or small letters. The name is plain English letters and a hyphen, and no other
+/// letter counts as one of those when capitals are ignored, so only the English alphabet has
+/// to be folded.
 pub fn is_bridge(command: Option<&str>) -> bool {
-    command.is_some_and(|command| names(command, BRIDGE_NAME)) || is_legacy_bridge(command)
-}
-
-/// True for a command running the old `openheadroom-bridge`: connected, but to the old name.
-pub fn is_legacy_bridge(command: Option<&str>) -> bool {
-    command
-        .is_some_and(|command| names(command, LEGACY_BRIDGE_NAME) && !names(command, BRIDGE_NAME))
+    command.is_some_and(|command| command.to_ascii_lowercase().contains(BRIDGE_NAME))
 }
 
 /// A `statusLine` object running `command`, laid out for a top-level key of `settings.json`:

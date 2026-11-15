@@ -14,7 +14,6 @@ pub struct AppPaths {
     /// The override, when it is set and is a full path.
     overridden: Option<PathBuf>,
     default_directory: PathBuf,
-    legacy_directory: PathBuf,
 }
 
 impl AppPaths {
@@ -30,19 +29,12 @@ impl AppPaths {
                 .filter(|value| is_full_path(value))
                 .map(PathBuf::from),
             default_directory: local_app_data.join("Sobreiro"),
-            legacy_directory: local_app_data.join("OpenHeadroom"),
         }
     }
 
     /// `Sobreiro` in the local application data folder, whatever the override says.
     pub fn default_directory(&self) -> &Path {
         &self.default_directory
-    }
-
-    /// `OpenHeadroom` in the local application data folder, where the app kept its data
-    /// before 0.5.0.
-    pub fn legacy_directory(&self) -> &Path {
-        &self.legacy_directory
     }
 
     /// True when the data folder is the default one: no override, or one that names it.

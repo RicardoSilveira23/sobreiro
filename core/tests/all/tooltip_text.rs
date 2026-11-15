@@ -1,5 +1,5 @@
-//! Ported from `tests/Sobreiro.Tests/TooltipTextTests.cs`, and the tooltip test of
-//! `LegacyDisplayTests.cs`. The last tests walk rows that the C# of 1.x wrote out itself.
+//! Ported from `tests/Sobreiro.Tests/TooltipTextTests.cs`. The last tests walk rows that the
+//! C# of 1.x wrote out itself.
 use chrono::{DateTime, Utc};
 use sobreiro_core::copilot::{CopilotReading, CopilotSource};
 use sobreiro_core::display::tooltip_text::{self, MAX_LENGTH, credits_figures};
@@ -31,7 +31,7 @@ fn render_with(limits: Option<RateLimits>, clock: &ClockFormat) -> String {
             now(),
         ),
     };
-    tooltip_text::render(&list, now(), &Zone::utc(), clock, false)
+    tooltip_text::render(&list, now(), &Zone::utc(), clock)
 }
 
 fn render(limits: Option<RateLimits>) -> String {
@@ -159,7 +159,6 @@ fn claude_tooltip_ignores_copilot() {
         now(),
         &Zone::utc(),
         &en_us(),
-        false,
     );
     assert!(!text.contains("AI credits"), "{text}");
     assert!(text.ends_with("as of 11:58 AM"), "{text}");
@@ -178,20 +177,6 @@ fn copilot_tooltip_has_three_lines() {
         "AI credits 17% · resets Tue 1 Dec 12:00 AM\n2,644 of 15,000 credits\nas of 11:58 AM"
     );
     assert!(text.encode_utf16().count() <= MAX_LENGTH);
-}
-
-#[test]
-fn tooltip_asks_to_reconnect_when_there_is_no_data_on_a_legacy_connection() {
-    let text = tooltip_text::render(&[], now(), &Zone::utc(), &en_us(), true);
-    assert_eq!(
-        text,
-        "Sobreiro · no data yet\nStill on the old bridge: reconnect from the tray menu."
-    );
-    assert!(text.encode_utf16().count() <= MAX_LENGTH);
-    assert_eq!(
-        tooltip_text::render(&[], now(), &Zone::utc(), &en_us(), false),
-        "Sobreiro · no data yet"
-    );
 }
 
 /// The credits used and the budget, and the sentence under the credits, or none.
@@ -489,47 +474,18 @@ fn credits_figures_answers_as_the_csharp_did() {
     }
 }
 
-/// The limits, the moment (ticks from noon on 2026-11-09 UTC), the zone, the culture, whether
-/// the old bridge is connected and the tooltip.
+/// The limits, the moment (ticks from noon on 2026-11-09 UTC), the zone, the culture and the
+/// tooltip.
 type RenderRow = (
     &'static [LimitRow],
     i64,
     &'static str,
     &'static str,
-    bool,
     &'static str,
 );
 
 const RENDER: &[RenderRow] = &[
-    (&[], 0, "UTC", "en-US", false, "Sobreiro · no data yet"),
-    (
-        &[],
-        0,
-        "UTC",
-        "en-US",
-        true,
-        "Sobreiro · no data yet\nStill on the old bridge: reconnect from the tray menu.",
-    ),
-    (
-        &[(
-            3,
-            17.6,
-            17280000000000,
-            -600000000,
-            false,
-            25920000000000,
-            None,
-            None,
-            "",
-            Some(2644.0),
-            Some(15000.0),
-        )],
-        0,
-        "UTC",
-        "en-US",
-        true,
-        "Sobreiro · no data yet\nStill on the old bridge: reconnect from the tray menu.",
-    ),
+    (&[], 0, "UTC", "en-US", "Sobreiro · no data yet"),
     (
         &[
             (
@@ -562,7 +518,6 @@ const RENDER: &[RenderRow] = &[
         -648000000000,
         "UTC",
         "en-US",
-        false,
         "Session 0% · resets 8:55 PM\nWeekly 0% · reset 4:00 PM\nas of 12:40 PM",
     ),
     (
@@ -597,7 +552,6 @@ const RENDER: &[RenderRow] = &[
         6624000000000,
         "UTC",
         "en-GB",
-        false,
         "Session 50% · resets 05:47\nWeekly 0% · resets Fri 17:00\nas of Mon 23:43",
     ),
     (
@@ -645,7 +599,6 @@ const RENDER: &[RenderRow] = &[
         1728000000000,
         "UTC",
         "pt-PT",
-        false,
         "Session 89% · resets 10:30\nWeekly 1% · resets Mon 22:00\nSpend 0% · reset 10:00\nas of 10:53",
     ),
     (
@@ -693,7 +646,6 @@ const RENDER: &[RenderRow] = &[
         3996000000000,
         "+09:00",
         "long",
-        false,
         "Session 70% · resets 11:51:00 oclock and then some more words to make it long\nWeekly 27% · resets 16:00:00 oclock and then some",
     ),
     (
@@ -741,7 +693,6 @@ const RENDER: &[RenderRow] = &[
         0,
         "+09:00",
         "wide",
-        false,
         "Session 0% · resets 11:13 post meridiem do dia 🌇\nWeekly 0% · reset 7:00 post meridiem do dia 🌇\nas of Sun 7:07 post meridiem d",
     ),
     (
@@ -776,7 +727,6 @@ const RENDER: &[RenderRow] = &[
         2952000000000,
         "+09:00",
         "astral",
-        false,
         "Session 70% · resets 🌅🌅🌅🌅🌅🌅 10:27\nWeekly 100% · resets Mon 🌅🌅🌅🌅🌅🌅 11:00\nas of Wed 🌇🌇🌇🌇🌇🌇 8:18",
     ),
     (
@@ -811,7 +761,6 @@ const RENDER: &[RenderRow] = &[
         864000000000,
         "-05:00",
         "astral2",
-        false,
         "Session 70% · resets x🌅🌅🌅🌅🌅 8:02\nWeekly –\nSpend 70% · resets Thu 26 Nov x🌅🌅🌅🌅🌅 4:00\nas of x🌅🌅🌅🌅🌅 12:34",
     ),
     (
@@ -831,7 +780,6 @@ const RENDER: &[RenderRow] = &[
         4212000000000,
         "-05:00",
         "en-US",
-        false,
         "Session –\nWeekly 27% · resets Wed 2:00 PM\nas of Fri 2:30 PM",
     ),
     (
@@ -879,7 +827,6 @@ const RENDER: &[RenderRow] = &[
         5580000000000,
         "-05:00",
         "en-GB",
-        false,
         "Session 90% · resets 19:38\nWeekly 90% · resets Mon 17:00\nSpend 0% · resets Tue 1 Dec 15:00\nas of 01:17",
     ),
     (
@@ -914,7 +861,6 @@ const RENDER: &[RenderRow] = &[
         2880000000000,
         "+05:45",
         "pt-PT",
-        false,
         "Session 100% · resets 00:20\nWeekly 2% · resets Mon 02:45\nas of Wed 01:21",
     ),
     (
@@ -934,7 +880,6 @@ const RENDER: &[RenderRow] = &[
         3096000000000,
         "+05:45",
         "long",
-        false,
         "Session –\nWeekly 0% · resets Sun 21:45:00 oclock and then some more words to make it long\nas of 02:07:00 oclock and then some m",
     ),
     (
@@ -995,7 +940,6 @@ const RENDER: &[RenderRow] = &[
         6156000000000,
         "+05:45",
         "wide",
-        false,
         "Session 100% · resets 7:22 post meridiem do dia 🌇\nWeekly 99% · resets Sat 9:45 ÀÉÎÕÜ ante meridiem do dia\nSpend 2% · resets Fr",
     ),
     (
@@ -1015,7 +959,6 @@ const RENDER: &[RenderRow] = &[
         1080000000000,
         "Europe/Lisbon",
         "astral",
-        false,
         "Session 90% · resets 🌇🌇🌇🌇🌇🌇 8:04\nWeekly –\nas of 🌅🌅🌅🌅🌅🌅 9:27",
     ),
     (
@@ -1063,7 +1006,6 @@ const RENDER: &[RenderRow] = &[
         2736000000000,
         "Europe/Lisbon",
         "astral2",
-        false,
         "Session 0% · resets y🌇🌇🌇🌇🌇 6:38\nWeekly 90% · resets Tue y🌇🌇🌇🌇🌇 7:00\nas of Wed y🌇🌇🌇🌇🌇 9:41",
     ),
     (
@@ -1111,7 +1053,6 @@ const RENDER: &[RenderRow] = &[
         -792000000000,
         "Europe/Lisbon",
         "en-US",
-        false,
         "Session –\nWeekly 74% · resets Sun 15 Nov 9:00 AM\nSpend 50% · resets Sat 4:00 AM\nas of Fri 2:15 PM",
     ),
     (
@@ -1146,7 +1087,6 @@ const RENDER: &[RenderRow] = &[
         -72000000000,
         "America/Santiago",
         "en-GB",
-        false,
         "Session 74% · resets 11:10\nWeekly 89% · resets Mon 16 Nov 03:00\nas of Sat 20:52",
     ),
     (
@@ -1194,7 +1134,6 @@ const RENDER: &[RenderRow] = &[
         4140000000000,
         "America/Santiago",
         "pt-PT",
-        false,
         "Session 50% · resets 08:31\nWeekly 89% · resets Sun 18:00\nas of Thu 15:46",
     ),
     (
@@ -1214,7 +1153,6 @@ const RENDER: &[RenderRow] = &[
         2988000000000,
         "America/Santiago",
         "long",
-        false,
         "Session –\nWeekly –\nSpend 0% · resets Sun 12:00:00 oclock and then some more words to make it long\nas of Wed 07:48:00 oclock and",
     ),
     (
@@ -1262,7 +1200,6 @@ const RENDER: &[RenderRow] = &[
         4716000000000,
         "America/Havana",
         "wide",
-        false,
         "Session 99% · resets 5:42 post meridiem do dia 🌇\nWeekly 100% · resets Sat 21 Nov 11:00 post meridiem do dia 🌇\nSpend 0% · rese",
     ),
     (
@@ -1282,7 +1219,6 @@ const RENDER: &[RenderRow] = &[
         3060000000000,
         "America/Havana",
         "astral",
-        false,
         "Session –\nWeekly 100% · resets Thu 19 Nov 🌅🌅🌅🌅🌅🌅 8:00\nas of 🌇🌇🌇🌇🌇🌇 7:13",
     ),
     (
@@ -1330,7 +1266,6 @@ const RENDER: &[RenderRow] = &[
         6012000000000,
         "America/Havana",
         "astral2",
-        false,
         "Session 100% · resets x🌅🌅🌅🌅🌅 7:20\nWeekly 89% · resets Tue y🌇🌇🌇🌇🌇 4:00\nas of Sun x🌅🌅🌅🌅🌅 12:16",
     ),
     (
@@ -1378,7 +1313,6 @@ const RENDER: &[RenderRow] = &[
         -144000000000,
         "Australia/Lord_Howe",
         "en-US",
-        false,
         "Session 0% · resets 9:53 PM\nWeekly 2% · resets Thu 11:00 AM\nas of Sun 10:49 PM",
     ),
     (
@@ -1413,7 +1347,6 @@ const RENDER: &[RenderRow] = &[
         -864000000000,
         "Australia/Lord_Howe",
         "en-GB",
-        false,
         "Session 0% · resets Mon 02:22\nWeekly –\nSpend 100% · resets Mon 23 Nov 07:00\nas of Sat 19:54",
     ),
     (
@@ -1461,7 +1394,6 @@ const RENDER: &[RenderRow] = &[
         36000000000,
         "Australia/Lord_Howe",
         "pt-PT",
-        false,
         "Session 74% · resets 01:57\nWeekly 100% · resets Mon 16:00\nSpend 0% · reset Mon 22:00\nas of Mon 12:16",
     ),
     (
@@ -1509,7 +1441,6 @@ const RENDER: &[RenderRow] = &[
         5868000000000,
         "UTC",
         "long",
-        false,
         "Session 2% · resets 08:56:00 oclock and then some more words to make it long\nWeekly 0% · resets Thu 03:00:00 oclock and then so",
     ),
     (
@@ -1529,7 +1460,6 @@ const RENDER: &[RenderRow] = &[
         936000000000,
         "UTC",
         "wide",
-        false,
         "Session –\nWeekly 99% · resets Fri 11:00 ÀÉÎÕÜ ante meridiem do dia\nas of Mon 2:54 ÀÉÎÕÜ ante meridiem do dia",
     ),
     (
@@ -1564,7 +1494,6 @@ const RENDER: &[RenderRow] = &[
         3384000000000,
         "UTC",
         "astral",
-        false,
         "Session 69% · resets 🌅🌅🌅🌅🌅🌅 9:50\nWeekly 0% · reset 🌅🌅🌅🌅🌅🌅 8:00\nas of 🌅🌅🌅🌅🌅🌅 3:02",
     ),
     (
@@ -1599,7 +1528,6 @@ const RENDER: &[RenderRow] = &[
         540000000000,
         "+09:00",
         "astral2",
-        false,
         "Session –\nWeekly 99% · resets Fri y🌇🌇🌇🌇🌇 8:00\nSpend 74% · resets Sun 29 Nov x🌅🌅🌅🌅🌅 4:00\nas of Sun y🌇🌇🌇🌇🌇 9:02",
     ),
     (
@@ -1647,7 +1575,6 @@ const RENDER: &[RenderRow] = &[
         -252000000000,
         "+09:00",
         "en-US",
-        false,
         "Session 69% · resets 1:20 PM\nWeekly 2% · resets Wed 5:00 AM\nSpend 74% · resets Sat 21 Nov 8:00 PM\nas of 6:56 AM",
     ),
     (
@@ -1695,7 +1622,6 @@ const RENDER: &[RenderRow] = &[
         972000000000,
         "+09:00",
         "en-GB",
-        false,
         "Session 0% · resets 02:46\nWeekly 0% · resets Wed 18 Nov 16:00\nSpend 69%\nas of Mon 17:57",
     ),
     (
@@ -1743,7 +1669,6 @@ const RENDER: &[RenderRow] = &[
         0,
         "-05:00",
         "pt-PT",
-        false,
         "Session 100% · resets 06:47\nWeekly –\nSpend 69% · resets Sun 12:00\nas of Sun 10:01",
     ),
     (
@@ -1791,7 +1716,6 @@ const RENDER: &[RenderRow] = &[
         5724000000000,
         "-05:00",
         "long",
-        false,
         "Session 100% · resets 21:44:00 oclock and then some more words to make it long\nWeekly 69% · resets Sun 22 Nov 03:00:00 oclock a",
     ),
     (
@@ -1811,7 +1735,6 @@ const RENDER: &[RenderRow] = &[
         540000000000,
         "-05:00",
         "wide",
-        false,
         "Session –\nWeekly –\nSpend 0% · reset 8:00 post meridiem do dia 🌇\nas of 1:00 ÀÉÎÕÜ ante meridiem do dia",
     ),
     (
@@ -1859,7 +1782,6 @@ const RENDER: &[RenderRow] = &[
         6084000000000,
         "+05:45",
         "astral",
-        false,
         "Session 99% · resets 🌇🌇🌇🌇🌇🌇 10:05\nWeekly –\nSpend 2% · resets Tue 24 Nov 🌅🌅🌅🌅🌅🌅 5:45\nas of Sun 🌅🌅🌅🌅🌅🌅 5:54",
     ),
     (
@@ -1894,7 +1816,6 @@ const RENDER: &[RenderRow] = &[
         36000000000,
         "+05:45",
         "astral2",
-        false,
         "Session 69% · resets y🌇🌇🌇🌇🌇 7:52\nWeekly –\nSpend 0% · resets Tue 24 Nov y🌇🌇🌇🌇🌇 4:45\nas of Sun y🌇🌇🌇🌇🌇 4:37",
     ),
     (
@@ -1914,7 +1835,6 @@ const RENDER: &[RenderRow] = &[
         6516000000000,
         "+05:45",
         "en-US",
-        false,
         "Session –\nWeekly 0% · reset 4:45 AM\nas of Mon 11:01 PM",
     ),
     (
@@ -1962,7 +1882,6 @@ const RENDER: &[RenderRow] = &[
         4392000000000,
         "Europe/Lisbon",
         "en-GB",
-        false,
         "Session 2% · resets 13:47\nWeekly 100% · resets Fri 10:00\nas of Thu 13:53",
     ),
     (
@@ -1997,7 +1916,6 @@ const RENDER: &[RenderRow] = &[
         6840000000000,
         "Europe/Lisbon",
         "pt-PT",
-        false,
         "Session 100% · resets 13:26\nWeekly –\nas of Mon 09:48",
     ),
     (
@@ -2045,7 +1963,6 @@ const RENDER: &[RenderRow] = &[
         6984000000000,
         "Europe/Lisbon",
         "long",
-        false,
         "Session 0% · resets 15:23:00 oclock and then some more words to make it long\nWeekly 90% · resets Thu 00:00:00 oclock and then s",
     ),
     (
@@ -2065,7 +1982,6 @@ const RENDER: &[RenderRow] = &[
         5400000000000,
         "America/Santiago",
         "wide",
-        false,
         "Session –\nWeekly –\nSpend 0% · reset 1:00 post meridiem do dia 🌇\nas of Fri 3:43 post meridiem do dia 🌇",
     ),
     (
@@ -2085,7 +2001,6 @@ const RENDER: &[RenderRow] = &[
         -324000000000,
         "America/Santiago",
         "astral2",
-        false,
         "Session –\nWeekly 0% · resets Thu y🌇🌇🌇🌇🌇 8:00\nas of Sun x🌅🌅🌅🌅🌅 8:23",
     ),
     (
@@ -2133,7 +2048,6 @@ const RENDER: &[RenderRow] = &[
         6120000000000,
         "America/Havana",
         "en-US",
-        false,
         "Session 1% · resets 1:47 PM\nWeekly 0% · resets Tue 24 Nov 7:00 AM\nSpend 0%\nas of Sun 4:07 AM",
     ),
     (
@@ -2168,7 +2082,6 @@ const RENDER: &[RenderRow] = &[
         -144000000000,
         "America/Havana",
         "en-GB",
-        false,
         "Session 0% · resets 03:17\nWeekly 1% · resets Sat 01:00\nas of Sat 19:42",
     ),
     (
@@ -2203,7 +2116,6 @@ const RENDER: &[RenderRow] = &[
         6588000000000,
         "America/Havana",
         "pt-PT",
-        false,
         "Session 0% · resets 23:29\nWeekly –\nSpend 1% · resets 06:00\nas of Sun 17:00",
     ),
     (
@@ -2238,7 +2150,6 @@ const RENDER: &[RenderRow] = &[
         1260000000000,
         "Australia/Lord_Howe",
         "long",
-        false,
         "Session –\nWeekly 50% · resets Sun 18:00:00 oclock and then some more words to make it long\nas of Mon 08:16:00 oclock and then s",
     ),
     (
@@ -2258,7 +2169,6 @@ const RENDER: &[RenderRow] = &[
         -396000000000,
         "Australia/Lord_Howe",
         "wide",
-        false,
         "Session –\nWeekly 0% · reset 10:00 ÀÉÎÕÜ ante meridiem do dia\nas of Sat 10:30 post meridiem do dia 🌇",
     ),
     (
@@ -2306,7 +2216,6 @@ const RENDER: &[RenderRow] = &[
         4284000000000,
         "Australia/Lord_Howe",
         "astral",
-        false,
         "Session 0% · resets 🌇🌇🌇🌇🌇🌇 10:15\nWeekly 100% · resets Fri 🌇🌇🌇🌇🌇🌇 3:00\nSpend 100%\nas of 🌅🌅🌅🌅🌅🌅 11:24",
     ),
     (
@@ -2341,7 +2250,6 @@ const RENDER: &[RenderRow] = &[
         -360000000000,
         "UTC",
         "astral2",
-        false,
         "Session 89% · resets x🌅🌅🌅🌅🌅 3:58\nWeekly 74% · resets Tue 17 Nov x🌅🌅🌅🌅🌅 7:00\nas of Sat y🌇🌇🌇🌇🌇 7:57",
     ),
     (
@@ -2402,7 +2310,6 @@ const RENDER: &[RenderRow] = &[
         -972000000000,
         "UTC",
         "en-US",
-        false,
         "Session 70% · resets 11:27 AM\nWeekly 0% · resets Wed 8:00 AM\nSpend 100% · resets Wed 12:00 AM\nas of Fri 11:25 AM",
     ),
     (
@@ -2437,7 +2344,6 @@ const RENDER: &[RenderRow] = &[
         900000000000,
         "UTC",
         "en-GB",
-        false,
         "Session 99% · resets 16:49\nWeekly –\nSpend 0%\nas of Sun 19:21",
     ),
     (
@@ -2485,7 +2391,6 @@ const RENDER: &[RenderRow] = &[
         1908000000000,
         "+09:00",
         "pt-PT",
-        false,
         "Session 69% · resets 00:35\nWeekly 0% · resets Fri 20 Nov 07:00\nSpend 89% · resets Sat 12:00\nas of Wed 06:59",
     ),
     (
@@ -2533,7 +2438,6 @@ const RENDER: &[RenderRow] = &[
         1260000000000,
         "+09:00",
         "long",
-        false,
         "Session 70% · resets 08:58:00 oclock and then some more words to make it long\nWeekly 74% · resets Sun 14:00:00 oclock and then ",
     ),
     (
@@ -2568,7 +2472,6 @@ const RENDER: &[RenderRow] = &[
         6084000000000,
         "+09:00",
         "wide",
-        false,
         "Session –\nWeekly –\nSpend 50% · resets Tue 2:00 ÀÉÎÕÜ ante meridiem do dia\nas of 1:14 ÀÉÎÕÜ ante meridiem do dia",
     ),
     (
@@ -2603,7 +2506,6 @@ const RENDER: &[RenderRow] = &[
         3852000000000,
         "-05:00",
         "astral",
-        false,
         "Session –\nWeekly 0% · resets Tue 🌅🌅🌅🌅🌅🌅 7:00\nSpend 89% · resets Tue 🌇🌇🌇🌇🌇🌇 5:00\nas of Wed 🌇🌇🌇🌇🌇🌇 11:57",
     ),
     (
@@ -2638,7 +2540,6 @@ const RENDER: &[RenderRow] = &[
         6444000000000,
         "-05:00",
         "astral2",
-        false,
         "Session 69% · resets y🌇🌇🌇🌇🌇 10:57\nWeekly 0% · reset y🌇🌇🌇🌇🌇 4:00\nas of Sun x🌅🌅🌅🌅🌅 4:27",
     ),
     (
@@ -2673,7 +2574,6 @@ const RENDER: &[RenderRow] = &[
         -72000000000,
         "-05:00",
         "en-US",
-        false,
         "Session –\nWeekly 0% · resets Tue 17 Nov 7:00 AM\nSpend 69% · resets Sun 1:00 AM\nas of 2:33 AM",
     ),
     (
@@ -2708,7 +2608,6 @@ const RENDER: &[RenderRow] = &[
         -216000000000,
         "+05:45",
         "en-GB",
-        false,
         "Session 1% · resets 14:54\nWeekly 90% · resets Tue 03:45\nas of Sat 22:43",
     ),
     (
@@ -2743,7 +2642,6 @@ const RENDER: &[RenderRow] = &[
         4032000000000,
         "+05:45",
         "pt-PT",
-        false,
         "Session –\nWeekly 69% · resets Sun 13:45\nas of Thu 14:02",
     ),
     (
@@ -2778,7 +2676,6 @@ const RENDER: &[RenderRow] = &[
         6840000000000,
         "+05:45",
         "long",
-        false,
         "Session 69% · resets 15:06:00 oclock and then some more words to make it long\nWeekly 0% · reset 13:45:00 oclock and then some m",
     ),
     (
@@ -2826,7 +2723,6 @@ const RENDER: &[RenderRow] = &[
         -720000000000,
         "Europe/Lisbon",
         "wide",
-        false,
         "Session –\nWeekly 100% · resets 11:00 post meridiem do dia 🌇\nSpend 0%\nas of 10:45 ÀÉÎÕÜ ante meridiem do dia",
     ),
     (
@@ -2874,7 +2770,6 @@ const RENDER: &[RenderRow] = &[
         3420000000000,
         "Europe/Lisbon",
         "astral",
-        false,
         "Session 27% · resets 🌇🌇🌇🌇🌇🌇 2:40\nWeekly 0% · reset 🌅🌅🌅🌅🌅🌅 9:00\nas of Wed 🌇🌇🌇🌇🌇🌇 11:02",
     ),
     (
@@ -2909,7 +2804,6 @@ const RENDER: &[RenderRow] = &[
         -828000000000,
         "Europe/Lisbon",
         "astral2",
-        false,
         "Session 0% · resets y🌇🌇🌇🌇🌇 4:52\nWeekly 90% · resets y🌇🌇🌇🌇🌇 6:00\nas of Fri y🌇🌇🌇🌇🌇 4:58",
     ),
     (
@@ -2957,7 +2851,6 @@ const RENDER: &[RenderRow] = &[
         5256000000000,
         "America/Santiago",
         "en-US",
-        false,
         "Session –\nWeekly 1% · resets Tue 7:00 PM\nSpend 69% · resets Wed 3:00 PM\nas of 4:38 AM",
     ),
     (
@@ -3005,7 +2898,6 @@ const RENDER: &[RenderRow] = &[
         2592000000000,
         "America/Santiago",
         "en-GB",
-        false,
         "Session 74% · resets 09:08\nWeekly 74% · resets Thu 19 Nov 17:00\nas of Wed 23:17",
     ),
     (
@@ -3025,7 +2917,6 @@ const RENDER: &[RenderRow] = &[
         5976000000000,
         "America/Santiago",
         "pt-PT",
-        false,
         "Session –\nWeekly 99% · resets Fri 23:00\nas of Sun 20:45",
     ),
     (
@@ -3073,7 +2964,6 @@ const RENDER: &[RenderRow] = &[
         -504000000000,
         "America/Havana",
         "long",
-        false,
         "Session 100% · resets 20:14:00 oclock and then some more words to make it long\nWeekly 100% · resets Mon 16 Nov 12:00:00 oclock ",
     ),
     (
@@ -3108,7 +2998,6 @@ const RENDER: &[RenderRow] = &[
         5544000000000,
         "America/Havana",
         "wide",
-        false,
         "Session 50% · resets 6:18 post meridiem do dia 🌇\nWeekly 0% · resets Mon 4:00 post meridiem do dia 🌇\nas of 12:56 post meridiem",
     ),
     (
@@ -3143,7 +3032,6 @@ const RENDER: &[RenderRow] = &[
         324000000000,
         "America/Havana",
         "astral",
-        false,
         "Session 74% · resets 🌇🌇🌇🌇🌇🌇 7:40\nWeekly –\nSpend 0% · reset 🌇🌇🌇🌇🌇🌇 3:00\nas of Sun 🌅🌅🌅🌅🌅🌅 3:12",
     ),
     (
@@ -3191,7 +3079,6 @@ const RENDER: &[RenderRow] = &[
         3708000000000,
         "Australia/Lord_Howe",
         "astral2",
-        false,
         "Session 50% · resets x🌅🌅🌅🌅🌅 6:52\nWeekly 90% · resets Sat 21 Nov x🌅🌅🌅🌅🌅 2:00\nSpend 89% · resets Sat 28 Nov x🌅🌅🌅🌅🌅",
     ),
     (
@@ -3252,7 +3139,6 @@ const RENDER: &[RenderRow] = &[
         864000000000,
         "Australia/Lord_Howe",
         "en-US",
-        false,
         "Session 99% · resets 9:45 PM\nWeekly 69% · resets Wed 18 Nov 1:00 PM\nSpend 0% · reset 9:00 PM\nas of 4:08 AM",
     ),
     (
@@ -3313,7 +3199,6 @@ const RENDER: &[RenderRow] = &[
         -1008000000000,
         "Australia/Lord_Howe",
         "en-GB",
-        false,
         "Session 89% · resets 21:05\nWeekly 74% · resets Sun 15 Nov 00:00\nSpend 0% · reset 17:00\nas of 05:09",
     ),
     (
@@ -3361,7 +3246,6 @@ const RENDER: &[RenderRow] = &[
         1440000000000,
         "UTC",
         "pt-PT",
-        false,
         "Session 27% · resets 08:55\nWeekly 27% · resets Tue 08:00\nSpend 89%\nas of Tue 20:28",
     ),
     (
@@ -3381,7 +3265,6 @@ const RENDER: &[RenderRow] = &[
         4356000000000,
         "UTC",
         "long",
-        false,
         "Session –\nWeekly 0% · reset 11:00:00 oclock and then some more words to make it long\nas of Thu 20:15:00 oclock and then some mo",
     ),
     (
@@ -3401,7 +3284,6 @@ const RENDER: &[RenderRow] = &[
         6732000000000,
         "UTC",
         "wide",
-        false,
         "Session –\nWeekly 100% · resets Sat 12:00 post meridiem do dia 🌇\nas of 2:34 ÀÉÎÕÜ ante meridiem do dia",
     ),
     (
@@ -3449,7 +3331,6 @@ const RENDER: &[RenderRow] = &[
         2772000000000,
         "+09:00",
         "astral",
-        false,
         "Session 27% · resets 🌅🌅🌅🌅🌅🌅 6:55\nWeekly 27% · resets 🌅🌅🌅🌅🌅🌅 5:00\nSpend 0% · reset 🌅🌅🌅🌅🌅🌅 12:00\nas of Thu 🌇🌇",
     ),
     (
@@ -3497,7 +3378,6 @@ const RENDER: &[RenderRow] = &[
         3708000000000,
         "+09:00",
         "astral2",
-        false,
         "Session 2% · resets x🌅🌅🌅🌅🌅 2:42\nWeekly 74% · resets Tue x🌅🌅🌅🌅🌅 3:00\nSpend 0% · reset x🌅🌅🌅🌅🌅 2:00\nas of Fri y🌇🌇",
     ),
     (
@@ -3517,7 +3397,6 @@ const RENDER: &[RenderRow] = &[
         1908000000000,
         "+09:00",
         "en-US",
-        false,
         "Session 8%\nWeekly –\nas of Tue 5:04 PM",
     ),
     (
@@ -3565,7 +3444,6 @@ const RENDER: &[RenderRow] = &[
         360000000000,
         "-05:00",
         "en-GB",
-        false,
         "Session 0% · resets 18:18\nWeekly 100% · resets Wed 08:00\nSpend 100% · resets Wed 03:00\nas of Sun 15:11",
     ),
     (
@@ -3600,25 +3478,20 @@ const RENDER: &[RenderRow] = &[
         720000000000,
         "-05:00",
         "pt-PT",
-        false,
         "Session 0% · resets 06:50\nWeekly 0% · reset 01:00\nas of Sun 16:24",
     ),
 ];
 
 #[test]
 fn render_answers_as_the_csharp_did() {
-    for &(limits, now, zone, clock, legacy, expected) in RENDER {
+    for &(limits, now, zone, clock, expected) in RENDER {
         let text = tooltip_text::render(
             &limits_of(limits),
             at_ticks(now),
             &oracle_zone(zone),
             &oracle_clock(clock),
-            legacy,
         );
-        assert_eq!(
-            text, expected,
-            "{limits:?} at {now} {zone} {clock} legacy {legacy}"
-        );
+        assert_eq!(text, expected, "{limits:?} at {now} {zone} {clock}");
     }
 }
 
@@ -3670,19 +3543,17 @@ const CUT_IN_A_CHARACTER: RenderRow = (
     6876000000000,
     "America/Santiago",
     "astral",
-    false,
     "Session 50% · resets 🌅🌅🌅🌅🌅🌅 10:37\nWeekly 1% · resets 🌇🌇🌇🌇🌇🌇 5:00\nSpend 0% · reset 🌅🌅🌅🌅🌅🌅 6:00\nas of Sun 🌇🌇",
 );
 
 #[test]
 fn a_cut_between_the_two_halves_of_a_character_drops_the_half() {
-    let (limits, now, zone, clock, legacy, expected) = CUT_IN_A_CHARACTER;
+    let (limits, now, zone, clock, expected) = CUT_IN_A_CHARACTER;
     let text = tooltip_text::render(
         &limits_of(limits),
         at_ticks(now),
         &oracle_zone(zone),
         &oracle_clock(clock),
-        legacy,
     );
     assert_eq!(text, expected);
     assert_eq!(text.encode_utf16().count(), tooltip_text::MAX_LENGTH - 1);

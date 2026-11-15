@@ -121,9 +121,9 @@ What these hold was read off the C# of 1.1.0, run on 2026-11-14 in a data folder
 - `app_paths::an_override_is_taken_when_it_names_drive_and_folder`: which values of
   `SOBREIRO_DATA_DIR` the C# takes and which it ignores. It takes some that name no folder
   (`\\server`); ignoring one would send a copy told to keep to itself into the user's own data.
-- `app_paths::the_default_and_the_old_folder_do_not_follow_the_override` and
+- `app_paths::the_default_folder_does_not_follow_the_override` and
   `app_paths::the_data_folder_is_the_default_one_without_an_override_or_with_one_naming_it`:
-  the three functions the first-run migration asks, which no C# test of this area names.
+  two functions that no C# test of this area names.
 - `claude_paths::without_the_user_profile_variable_the_folder_windows_names_is_used` and
   `claude_paths::a_config_dir_that_starts_with_two_separators_is_taken`.
 - `app_config::save_gives_the_bytes_the_csharp_writes`: three files the C# wrote, each written
@@ -158,19 +158,30 @@ the words of the flow.
 | --- | --- | ---: | ---: | ---: |
 | `SettingsJsonTests.cs` | `core/tests/all/settings_json.rs` | 20 | 20 | 18, and 5 new |
 | `ConnectionTests.cs` | `core/tests/all/connection.rs` | 28 | 28 | 26, and 3 new |
-| `LegacyConnectionTests.cs` | `core/tests/all/legacy_connection.rs` | 18 | 18 | 12 |
+| `LegacyConnectionTests.cs` | `core/tests/all/elsewhere_connection.rs` | 18 | 3 | 3 |
 | `BridgeCommandTests.cs` | `core/tests/all/bridge_command.rs` | 18 | 18 | 6, and 4 new |
 | `BridgeInstallTests.cs` | `core/tests/all/bridge_install.rs` | 11 | 11 | 7, and 1 new |
 | `BridgeLocatorTests.cs` | `core/tests/all/bridge_locator.rs` | 7 | 7 | 7 |
 | `ConnectMessageTests.cs` | `core/tests/all/connect_message.rs` | 8 | 8 | 8, and 1 new |
 | | `core/tests/all/csharp_files.rs` | | | 2 new |
-| | | 110 | 110 | 84, and 16 new |
+| | | 110 | 95 | 75, and 16 new |
 
 `ClaudePathsTests.cs`, also of this folder, came with "Paths and config" above.
 
 ### C# tests with no Rust test
 
-None.
+- 15 cases of `LegacyConnectionTests.cs`, all about a status line that runs the bridge under
+  the app's earlier name: `IsLegacyBridge_recognises_only_the_old_bridge` (5 rows),
+  `IsBridge_counts_the_old_bridge_as_our_own` (3 rows),
+  `State_tells_not_connected_connected_and_legacy_apart`,
+  `IsConnected_is_true_for_a_legacy_connection`,
+  `Reconnect_points_the_status_line_at_the_new_bridge_and_keeps_the_original_backup`,
+  `Reconnect_without_a_saved_config_never_saves_the_old_bridge_as_the_users_own`,
+  `Disconnect_works_on_a_legacy_connection_and_restores_the_original_status_line`,
+  `Disconnect_of_a_legacy_connection_with_no_saved_config_removes_the_status_line` and
+  `Reconnect_then_Disconnect_still_restores_the_original`. The app's earlier name was never released, so no PC has its bridge, and 2.0 does not look for it.
+  Reconnect from a Sobreiro bridge in another folder stays, held by
+  `elsewhere_connection.rs` and `csharp_files.rs`.
 
 ### C# tests ported in part
 
@@ -184,11 +195,15 @@ None.
   by default. Without it the C# test ends early and passes, and so does the Rust one. CI has
   the privilege: there the Rust test fails if the link cannot be made, so it cannot pass by
   testing nothing.
-- The tests of `ConnectionTests.cs` and `LegacyConnectionTests.cs` hand in the time as a
+- The tests of `ConnectionTests.cs` hand in the time as a
   moment with its distance from UTC. Only the date and time on the user's clock name the
   backup, so the Rust takes those.
 - `LegacyConnectionTests.cs` builds its `settings.json` with the C# JSON writer, which
   writes a quote as `\u0022`. The Rust helper writes the same bytes by hand.
+- `LegacyConnectionTests.State_with_an_own_bridge_tells_connected_from_elsewhere` also held
+  that the bridge under the app's earlier name is its own state; that line is left out.
+  `ConnectMessageTests.Confirm_for_a_reconnect_from_another_folder_says_so` also held that
+  the words do not name it; that line is left out too. The app's earlier name was never released, so no PC has its bridge, and 2.0 does not look for it.
 - `BridgeInstallTests.cs` hands `Ensure` a function that opens a stream; the Rust hands
   `ensure` a function that opens a reader. A reader does not say how long it is, so the
   Rust compares the bytes where the C# first compares the lengths. The answer is the same.
@@ -198,9 +213,9 @@ None.
 What these hold was read off the C# of 1.1.0, run on 2026-11-14 on files in a folder of its
 own. The rows were written out by the C# itself and turned into Rust by a script, not typed.
 
-- `csharp_files::connect_and_disconnect_leave_the_bytes_the_csharp_left`: 21 runs on 19
+- `csharp_files::connect_and_disconnect_leave_the_bytes_the_csharp_left`: 19 runs on 18
   sample `settings.json` files (no file, no status line, another tool's, Sobreiro's own, a
-  Sobreiro bridge in another folder, the old `openheadroom-bridge`, odd spacing, comments
+  Sobreiro bridge in another folder, odd spacing, comments
   and a comma after the last key, tabs, a byte order mark, both line ends and a mix of them,
   the key twice, no line end at the end, letters outside ASCII). Connect or Reconnect, then
   Disconnect: `settings.json`, `config.json` and both backups come out as the C# left them,
@@ -227,7 +242,8 @@ own. The rows were written out by the C# itself and turned into Rust by a script
   dots and spaces at the end, `..`, doubled separators, paths that start with `\\?\`, a
   share on another computer, and which letters are the same when capitals are ignored.
 - `bridge_command::a_command_that_is_not_a_full_path_is_read_from_the_folder_the_program_runs_in`.
-- `bridge_command::is_bridge_and_is_legacy_bridge_answer_as_the_csharp_did`: 13 commands.
+- `bridge_command::is_bridge_answers_as_the_csharp_did`: 8 commands. Five more, which named
+  the bridge under the app's earlier name, are left out: 2.0 does not look for it.
 - `connection::half_a_character_in_the_command_stops_connect_and_disconnect`,
   `connection::half_a_character_in_another_key_of_the_status_line_stops_connect` and
   `connection::half_a_character_outside_the_status_line_is_left_as_it_is`: JSON can spell
@@ -815,9 +831,9 @@ and `tooltip_text::credits_figures_answers_as_the_csharp_did`.
 | `GlyphFillTests.cs` | `core/tests/all/glyph_fill.rs` | 5 | 5 | 5, and 1 new |
 | `PillModelTests.cs` | `core/tests/all/pill_model.rs` | 16 | 16 | 16, and 1 new |
 | `TooltipTextTests.cs` | `core/tests/all/tooltip_text.rs` | 9 | 9 | 9, and 5 new |
-| `LegacyDisplayTests.cs` | `flyout_model.rs`, `tooltip_text.rs` | 5 | 5 | 2 |
+| `LegacyDisplayTests.cs` | | 5 | 3 | 0 |
 | `CopilotStateTests.cs`, its `CopilotStateText` cases | `core/tests/all/copilot_state_text.rs` | 9 | 9 | 5, and 1 new |
-| | | 240 | 240 | 183, and 47 new |
+| | | 240 | 238 | 181, and 47 new |
 
 `LimitStatusTests.cs` also holds the class `BadgeColourTests` (13 of its 33 cases), ported as
 `limit_status::badge_colour_values` and `badge_text_on_fill_is_readable_in_both_palettes`.
@@ -826,7 +842,9 @@ file of its own.
 
 ### C# tests with no Rust test
 
-None.
+- `LegacyDisplayTests.Tooltip_asks_to_reconnect_when_there_is_no_data_on_a_legacy_connection`
+  and `LegacyDisplayTests.Flyout_footer_asks_to_reconnect_when_there_is_no_data_on_a_legacy_connection`:
+  the words for a status line that runs the bridge under the app's earlier name. The app's earlier name was never released, so no PC has its bridge, and 2.0 does not look for it.
 
 ### C# tests ported in part
 
@@ -837,8 +855,11 @@ None.
   `Default_data_directory_is_recognised_with_or_without_an_override_naming_it` by
   `app_paths::the_data_folder_is_the_default_one_without_an_override_or_with_one_naming_it`, and
   `Default_and_legacy_directories_sit_side_by_side_in_local_app_data` by
-  `app_paths::the_default_and_the_old_folder_do_not_follow_the_override`. The C# asked Windows
-  for the folders; there the test hands them in.
+  `app_paths::the_default_folder_does_not_follow_the_override`. The C# asked Windows
+  for the folders; there the test hands them in. What two of them held about the app's
+  earlier name (its folder, and the words of a Reconnect from its bridge) is left out: the
+  name was never released. `reconnect_has_its_own_words` holds the words of a Reconnect
+  from another folder instead.
 - `TooltipTextTests.Long_culture_pattern_is_truncated` used a pattern with `zzz`, the offset
   from UTC. A clock pattern from Windows has no such letter, so the test writes "+00:00" as text
   in the pattern. It still holds the cut at 127.
@@ -917,9 +938,10 @@ typed. A moment in a row is a count of ticks, and a double is held bit for bit.
   in the accent colour or not, both choices and 39 palettes, with the fill at each level.
 - `flyout_model::money_answers_as_the_csharp_did` (268 amounts, alone and with a cap, for each
   period) and `tooltip_text::credits_figures_answers_as_the_csharp_did` (104 pairs).
-- `flyout_model::flyout_model_from_answers_as_the_csharp_did`: 115 sets of limits, every
-  state, the old bridge or not, Claude shown or not, a note, both day choices and ages from
-  under a minute to three days; every field of the model is compared.
+- `flyout_model::flyout_model_from_answers_as_the_csharp_did`: 107 sets of limits, every
+  state, Claude shown or not, a note, both day choices and ages from under a minute to three
+  days; every field of the model is compared. The C# also wrote out 8 sets with no limits on
+  the bridge under the app's earlier name; those are left out, as 2.0 does not look for it.
 - `flyout_model::figures_that_are_not_finite_answer_as_the_csharp_did` (30 amounts of dollars
   and 30 limits whose percent is NaN, infinite or the largest double) and
   `tooltip_text::credits_that_are_not_finite_answer_as_the_csharp_did` (30 pairs): .NET writes
@@ -933,7 +955,8 @@ typed. A moment in a row is a count of ticks, and a double is held bit for bit.
 - `glyph_fill::glyph_fill_answers_as_the_csharp_did` (189 views, every tie of a twentieth) and
   `pill_model::pill_model_answers_as_the_csharp_did` (149 rows, the three ways to make a
   model, credits that reset in each zone at month ends and across changes).
-- `tooltip_text::render_answers_as_the_csharp_did` (82 rows) and
+- `tooltip_text::render_answers_as_the_csharp_did` (80 rows; the C# also wrote out 2 on the
+  bridge under the app's earlier name, left out as 2.0 does not look for it) and
   `render_copilot_answers_as_the_csharp_did` (80), with clocks whose words make the text longer
   than 127 units, so that it is cut.
 - `tooltip_text::a_cut_between_the_two_halves_of_a_character_drops_the_half`: the C# cut a

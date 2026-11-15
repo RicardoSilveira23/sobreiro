@@ -262,7 +262,6 @@ fn claude_is_on_pc_by_credentials_readings_or_connection() {
         (true, 0, ConnectionState::NotConnected, true),
         (false, 1, ConnectionState::NotConnected, true),
         (false, 0, ConnectionState::Connected, true),
-        (false, 0, ConnectionState::Legacy, true),
     ];
     for (file, count, state, expected) in rows {
         assert_eq!(

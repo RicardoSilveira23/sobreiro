@@ -41,24 +41,13 @@ pub fn credits_figures(limit: &Limit) -> Option<String> {
 }
 
 /// The tooltip for Claude Code's limits. Copilot's credits are not in it.
-pub fn render(
-    limits: &[Limit],
-    now: DateTime<Utc>,
-    zone: &Zone,
-    clock: &ClockFormat,
-    legacy_connection: bool,
-) -> String {
+pub fn render(limits: &[Limit], now: DateTime<Utc>, zone: &Zone, clock: &ClockFormat) -> String {
     let limits: Vec<&Limit> = limits
         .iter()
         .filter(|limit| limit.kind != LimitKind::Credits)
         .collect();
     if limits.is_empty() {
-        return if legacy_connection {
-            "Sobreiro · no data yet\nStill on the old bridge: reconnect from the tray menu."
-        } else {
-            "Sobreiro · no data yet"
-        }
-        .to_string();
+        return "Sobreiro · no data yet".to_string();
     }
 
     let mut lines = Vec::new();

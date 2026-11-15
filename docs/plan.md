@@ -2,8 +2,7 @@
 
 Written 2026-11-01. Milestone 0 is next.
 
-The app was named OpenHeadroom until 2026-11-09. Sobreiro is the Portuguese name of the cork oak, whose trunk in section
-is the tray's two rings.
+Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings.
 
 ## Goal
 
