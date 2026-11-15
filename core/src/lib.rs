@@ -13,7 +13,8 @@
 //! and a cached reading in memory, the timing of a provider's polls, and what is shown: the
 //! colours, the times in the user's zone and clock, the pace of a limit, and the models of the
 //! pill, the flyout and the tray tooltip, and the alerts: which to show and the file that
-//! remembers them, and the Run value that starts the app at sign-in.
+//! remembers them, and the Run value that starts the app at sign-in, and where the pill goes on the
+//! taskbar and when to ask where the taskbar's parts are.
 //! The tests are in `core/tests`.
 //!
 //! Core starts no thread, waits for no poll and looks at no clock. The shell tells it the
@@ -39,4 +40,5 @@ pub mod limits;
 pub mod live;
 pub mod polling;
 pub mod startup;
+pub mod taskbar;
 pub mod usage;
