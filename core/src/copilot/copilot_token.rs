@@ -54,7 +54,14 @@ const STARTS: [&str; 4] = ["gho_", "ghu_", "ghp_", "github_pat_"];
 /// The first GitHub token in the text: one of the four starts, and after it one or more
 /// letters, digits and underscores of ASCII, as many as there are.
 pub fn find(text: &str) -> Option<GitHubToken> {
-    let bytes = text.as_bytes();
+    find_in_utf8(text.as_bytes())
+}
+
+/// The first GitHub token in bytes that are meant as UTF-8, as [`find`] would find it in them
+/// read as a text. The bytes are searched where they lie, so what a program printed need not
+/// be copied into a text first. A byte that is no valid UTF-8 ends a token, as the character
+/// that reading would put in its place does.
+pub fn find_in_utf8(bytes: &[u8]) -> Option<GitHubToken> {
     // A character outside ASCII is two bytes or more in UTF-8, none of them an ASCII byte: it
     // ends a token, as it should.
     first_token(bytes.len(), |index| bytes.get(index).copied())

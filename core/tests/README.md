@@ -362,8 +362,8 @@ turned into Rust by a script, not typed.
 Copilot's half of the area: a GitHub token as Sobreiro holds it, finding one in a text, in
 the bytes of a sign-in entry and in the environment, the one request made with it, and
 reading the reply. Looking the bytes up in Windows, asking the GitHub CLI, the poll and the
-CLI's cache file belong to the area "Copilot: its provider, its sign-in and the CLI's cache
-file". Every token in these tests is made up, no test reads the real environment or a real
+CLI's cache file are in the last section of this page, "Copilot: its provider, its sign-in and
+the CLI's cache file". Every token in these tests is made up, no test reads the real environment or a real
 sign-in, and no test reaches the network: the client is handed the stand-in that Claude
 Code's client is handed, which now lives in `main.rs`.
 
@@ -477,8 +477,8 @@ When the next poll for Claude Code's usage is due and what each outcome does to 
 (`LiveSchedule`), one poll (`LivePoll`), the sentence for the foot of the flyout
 (`LiveState`), Claude Code as a provider that keeps its readings in `usage.json`
 (`ClaudeProvider`), and the folder `Polling`: what a provider is, the states it can be in, and
-the timing of its polls (`ProviderPoller`). Copilot's provider and its poll belong to the
-area "Copilot: its provider, its sign-in and the CLI's cache file".
+the timing of its polls (`ProviderPoller`). Copilot's provider and its poll are in the
+last section of this page, "Copilot: its provider, its sign-in and the CLI's cache file".
 
 Nothing in the area looks at a clock, waits for a poll or starts a thread. Every test hands
 in the time, a made-up token, a sign-in file and a `usage.json` of its own folder, and a
@@ -617,3 +617,146 @@ count of ticks, the ten-millionths of a second the C# clock counts in.
   apart. The test hands the poller one that does.
 - `provider_poller::stop_before_any_start_turns_it_off`,
   `a_stopped_poll_that_gave_up_is_dropped_too` and `the_poller_gives_its_provider`.
+
+## Copilot: its provider, its sign-in and the CLI's cache file
+
+Copilot's side of polling: where a GitHub token may be looked for and what a place gives back
+(`CopilotSignIn`), the name Windows Credential Manager keeps the CLI's entry under
+(`CopilotCliCredential`), asking the GitHub CLI (`GhCli`), one poll over the places
+(`CopilotPoll`), the Copilot CLI's own cache file (`CopilotCache`), which of two readings is
+shown (`CopilotShown`), and Copilot as a provider that keeps a live and a cached reading in
+memory (`CopilotProvider`).
+
+Core starts no thread and makes no call to the system beyond files and HTTP, so looking in
+Credential Manager and running `gh` are the shell's work: each place reaches the poll as a
+function the shell wrote. Every token in these tests is made up, no test runs `gh` or asks
+Windows, the cache files are ones a test writes in its own folder, and no test reaches the
+network: the client is handed a stand-in that answers as the test says.
+
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `CopilotCacheTests.cs` | `core/tests/all/copilot_cache.rs` | 14 | 14 | 12, and 13 new |
+| `CopilotCliCredentialTests.cs` | `core/tests/all/copilot_cli_credential.rs` | 14 | 14 | 7, and 2 new |
+| `CopilotPollTests.cs` | `core/tests/all/copilot_poll.rs` | 13 | 13 | 13, and 7 new |
+| `CopilotProviderTests.cs` | `core/tests/all/copilot_provider.rs` | 15 | 13 | 13, and 4 new |
+| `CopilotStateTests.cs` | `core/tests/all/copilot_shown.rs` | 10 | 1 | 1 |
+| `GhCliTests.cs` | `core/tests/all/gh_cli.rs` | 6 | 3 | 3, and 7 new |
+| | | 72 | 58 | 49, and 33 new |
+
+Nine of the ten cases of `CopilotStateTests.cs` are about the sentence under the figures, and
+come with the area "Display"; the one that picks between two readings is here.
+
+### C# tests with no Rust test
+
+- `CopilotStateTests.Fresh_live_ok_has_no_line`, `Old_live_ok_says_as_of`,
+  `Cache_says_from_the_copilot_cli`, `Problem_comes_before_source` and
+  `Each_problem_has_its_sentence` (five rows): the cases of `CopilotStateText.Line`, which
+  needs `When.Format`, a time zone and a culture. They come with the area "Display".
+- `GhCliTests.Missing_exe_gives_no_token`,
+  `Grandchild_holding_the_pipe_open_does_not_stall_the_read` and
+  `Hanging_exe_is_killed_after_the_timeout`: each starts a process. Core starts none, so the
+  shell, which runs `gh`, is where they belong; it hands what the run gave to
+  `gh_cli::tokens_from_run`.
+- `CopilotProviderTests.A_poll_that_throws_counts_as_a_bad_answer` and
+  `A_cache_read_that_throws_counts_as_a_bad_answer`: the C# provider turned any exception
+  into a bad answer with the line "copilot BadAnswer Failed". A Rust poll gives an answer or
+  `Cancelled`, and a cache read gives a reading or none, so there is nothing to catch. What
+  the first also held, that no token reaches a line of the log, is
+  `no_token_reaches_a_log_line_or_a_printed_answer`.
+
+### C# tests ported in part
+
+- `GhCliTests.Printed_token_is_returned` and `Non_zero_exit_gives_no_token` run `cmd.exe`.
+  The Rust tests hand what a run gave (its exit code and its output) to
+  `gh_cli::tokens_from_run`: `a_printed_token_is_returned` and
+  `a_non_zero_exit_gives_no_token`.
+- `CopilotPollTests.Throwing_source_is_error_and_skipped`, `Only_a_throwing_source_is_NoSignIn`
+  and the `Throwing(...)` sources the other tests never reach: the C# source threw an
+  exception whose words could hold a token. A Rust place that fails gives `SignInFailed`,
+  which has no words, so there is no check that the words of "boom" stay out of the log.
+- `CopilotPollTests.Network_failure_is_offline_and_stops_the_chain` hands the C# client an
+  exception. A Rust sender gives `NoAnswer::Unreachable`.
+- `CopilotPollTests.Cancellation_is_the_only_exception` and
+  `CopilotProviderTests.Cancellation_passes_through` expect an exception. The Rust gives
+  `Err(Cancelled)` back, and the first also holds that nothing was sent.
+- `CopilotProviderTests.A_poll_passes_on_the_schedule_the_state_and_the_line` asserts that the
+  schedule handed on is the very same object. A Rust schedule is a value that is copied; the
+  test hands in a schedule unlike the one the poll started with and holds that this one comes
+  out.
+- The tests of `CopilotProviderTests.cs` that assert `Assert.Same` on `Shown` compare
+  readings as values: `shown()` hands back a copy, since what the provider keeps is behind a
+  lock.
+
+### Rust tests with no C# test
+
+What the rows hold was read off the C# of 1.1.0, run on 2026-11-15 on made-up cache texts,
+made-up places and made-up replies, with a stand-in for the network. The rows were written
+out by the C# and turned into Rust by a script, not typed. A moment in a row is a count of
+ticks, the ten-millionths of a second the C# clock counts in.
+
+- `copilot_cache::parse_answers_as_the_csharp_did`: 85 cache texts. Comment lines (indented,
+  with tabs, with CRLF, `//` inside a string value or after the JSON), a file that is not the
+  expected shape, entries that are not objects, a `retrievedAt` that is missing, is not a
+  text, or is written in 25 ways (with and without fractions, with offsets, with a space for
+  the `T`, out of range), several entries where the newest has no budget, entries retrieved
+  together and entries in another offset, a free seat, and a few responses. Each row holds
+  the reading the C# gave, or none, field for field.
+- Five of the texts the C# was run on are left out of that test. Four have a `retrievedAt`
+  that does not say how far it is from UTC (three alone, one beside an entry that does). The
+  C# took such a time to be on the PC's own clock, so what it gave depended on the PC's time
+  zone; Core does not know the zone, and the entry is left out, as a time of Claude Code's
+  reply is: `copilot_cache::an_entry_whose_time_has_no_offset_is_left_out`. The fifth starts
+  with a byte order mark: the C# `Parse` gives no reading for it, but `Read` never hands
+  `Parse` one, since reading a file as text drops the mark first. The Rust `parse` drops it
+  too, so that `read` does the same:
+  `copilot_cache::a_file_that_starts_with_a_byte_order_mark_is_read`. A text where
+  `retrievedAt` holds half of a character made the C# `Parse` throw, which `Read` turns into
+  no reading; its row is none, and
+  `copilot_cache::a_time_with_half_a_character_makes_the_whole_file_no_use` holds that a good
+  entry beside it changes nothing.
+- `copilot_cache::a_file_over_a_megabyte_is_not_read`: the C# read a file of any size. The
+  CLI's file is a few thousand bytes, and Core reads no more than a megabyte of a file
+  another program writes.
+- A cache file in UTF-16 or UTF-32 that starts with its byte order mark was read by the C#,
+  which reads a file as text. Core reads the file as UTF-8, as the CLI writes it, and gives
+  no reading for another encoding: `copilot_cache::a_file_that_is_not_utf_8_does_not_fail_loudly`.
+- `copilot_cache::default_path_asks_the_folder_handed_in_when_the_variable_is_not_set_or_is_empty`
+  (the C# asks Windows), `of_two_entries_retrieved_together_the_first_wins`,
+  `the_snapshots_own_timestamp_wins_over_retrieved_at`,
+  `entries_that_cannot_be_used_are_skipped`,
+  `a_cache_that_is_not_the_expected_shape_gives_none`,
+  `a_byte_order_mark_and_windows_line_ends_are_no_trouble`,
+  `a_file_that_is_not_utf_8_does_not_fail_loudly` and
+  `a_folder_where_the_file_should_be_gives_none`.
+- `copilot_cli_credential::a_name_shorter_than_the_entrys_is_not_ours_and_does_not_fail` and
+  `an_error_of_zero_is_a_failure_too`.
+- `copilot_poll::a_poll_answers_as_the_csharp_did`: 125 polls. The three places, each giving
+  nothing, an entry with no token, a failure, one token or two; GitHub's answers (accepted,
+  refused with 401, 403 and 404, no budget, 429 with and without `Retry-After` of 30, 600 and
+  86400 seconds, unreachable, a 500, and three bodies that are no use) in the order the
+  requests come; and three schedules (fresh, after a success, deep in a back-off). Each row
+  holds how many requests were sent, the state, the line for the log, the next schedule and
+  whether a reading came.
+- `copilot_poll::the_flag_is_looked_at_before_each_source`,
+  `a_source_that_fails_while_the_poll_is_given_up_is_a_cancellation`,
+  `a_request_that_the_caller_gives_up_comes_back_as_cancelled`,
+  `no_sign_ins_at_all_is_no_sign_in_with_every_place_skipped`,
+  `a_good_reading_comes_with_the_schedule_of_a_success` and
+  `a_poll_result_printed_whole_and_its_log_never_show_a_token`, which holds both ways a result
+  can be printed.
+- `gh_cli::the_path_lookup_takes_the_first_entry_that_holds_gh_exe`,
+  `the_path_lookup_ignores_the_spaces_around_an_entry_and_a_folder_called_gh_exe`,
+  `gh_is_asked_for_the_token_of_github_com_in_five_seconds` (the arguments and the time the
+  shell is to use), `a_run_that_gave_no_exit_code_gives_no_token`,
+  `no_token_printed_gives_no_token`,
+  `only_the_first_token_is_returned_and_text_around_it_is_left_out` and
+  `output_that_is_not_valid_utf_8_ends_a_token_where_the_bad_byte_is`: what Core does with a
+  finished run.
+- `copilot_provider::a_poll_without_a_reading_still_has_something_to_keep`: the answer always
+  carries a `keep`, which takes the cache that was read and tells the log, reading or not.
+- `copilot_provider::a_cancelled_poll_reads_no_cache` and
+  `the_poll_is_handed_what_the_provider_was_handed`.
+- `copilot_provider::no_token_reaches_a_log_line_or_a_printed_answer`: five replies from
+  GitHub, two of them with a body that holds the made-up token. Neither a line told to the
+  log, nor the printed schedule, state and line of a poll, nor the printed reading and
+  limits, holds it.
