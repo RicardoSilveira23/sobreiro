@@ -75,4 +75,14 @@ public class AlertStateTests : IDisposable
         var only = Assert.Single(loaded.Marks);
         Assert.Equal(LimitKind.Session, only.Key);
     }
+
+    [Fact]
+    public void Key_that_is_a_lone_surrogate_escape_gives_Empty()
+    {
+        Directory.CreateDirectory(_dir);
+        // The root's first key is the JSON escape \ud800, which is valid JSON but not valid UTF-16 once unescaped.
+        var loneSurrogate = (char)92 + "ud800";
+        File.WriteAllText(PathFor(), "{\"" + loneSurrogate + "\":1,\"session\":{\"resets_at\":1738425600,\"threshold\":80}}");
+        Assert.Empty(AlertState.Load(PathFor()).Marks);
+    }
 }
