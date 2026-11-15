@@ -107,12 +107,11 @@ fn done_names_the_backup_when_there_is_one() {
 #[cfg(windows)]
 #[test]
 fn confirm_for_a_reconnect_from_another_folder_says_so() {
-    let text = confirm(&crate::legacy_connection::elsewhere_plan());
+    let text = confirm(&crate::elsewhere_connection::elsewhere_plan());
     assert!(
         text.contains("The status line runs a Sobreiro bridge from another folder. This points it at the one this Sobreiro uses."),
         "{text}"
     );
-    assert!(!text.contains("OpenHeadroom"), "{text}");
 }
 
 // What follows has no C# test. The words are the C#'s.
@@ -125,15 +124,16 @@ fn reconnect_has_its_own_words() {
         "Reconnected. The numbers arrive with Claude Code's next response."
     );
 
-    let legacy = "{ \"type\": \"command\", \"command\": \"\\\"C:/Apps/OpenHeadroom/openheadroom-bridge.exe\\\"\" }";
+    let elsewhere =
+        "{ \"type\": \"command\", \"command\": \"\\\"C:/Old/sobreiro-bridge.exe\\\"\" }";
     let reconnect = ConnectionPlan {
         reconnects: true,
-        ..plan(true, Some(legacy), Some(BRIDGE), true, true)
+        ..plan(true, Some(elsewhere), Some(BRIDGE), true, true)
     };
     assert_eq!(
         confirm(&reconnect),
         format!(
-            "{PATH}\n\nstatusLine now: {legacy}\nstatusLine after: {BRIDGE}\n\nThe status line still runs the old OpenHeadroom bridge. This points it at Sobreiro's.\n\nYour current status line keeps running: the bridge passes its output through.\n\nA backup is saved first."
+            "{PATH}\n\nstatusLine now: {elsewhere}\nstatusLine after: {BRIDGE}\n\nThe status line runs a Sobreiro bridge from another folder. This points it at the one this Sobreiro uses.\n\nYour current status line keeps running: the bridge passes its output through.\n\nA backup is saved first."
         )
     );
 }

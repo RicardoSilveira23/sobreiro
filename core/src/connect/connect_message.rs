@@ -2,9 +2,7 @@
 //! after.
 use std::path::Path;
 
-use super::bridge_command::is_legacy_bridge;
 use super::connection::ConnectionPlan;
-use super::settings_json::command_of;
 
 pub const RECONNECT_TITLE: &str = "Reconnect to Claude Code";
 
@@ -34,11 +32,7 @@ pub fn confirm(plan: &ConnectionPlan) -> String {
     };
     if plan.reconnects {
         paragraph(
-            if is_legacy_bridge(command_of(plan.before.as_deref()).as_deref()) {
-                "The status line still runs the old OpenHeadroom bridge. This points it at Sobreiro's."
-            } else {
-                "The status line runs a Sobreiro bridge from another folder. This points it at the one this Sobreiro uses."
-            },
+            "The status line runs a Sobreiro bridge from another folder. This points it at the one this Sobreiro uses.",
         );
     }
     if plan.chains {

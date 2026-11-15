@@ -26,5 +26,3 @@ page's design: [docs/design.md](docs/design.md); read it before styling anything
 - The bridge writes only `rate_limits` fields and a timestamp. Never the rest of stdin.
 - Edit the user's `settings.json` only through Connect/Disconnect, with a backup, and only the
   `statusLine` key.
-- The first-run migration from OpenHeadroom (`Sobreiro.Core/Migration`) never touches `settings.json`.
-  A status line still running `openheadroom-bridge` counts as connected; Reconnect repoints it.

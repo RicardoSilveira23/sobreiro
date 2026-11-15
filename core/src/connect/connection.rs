@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::NaiveDateTime;
 
-use super::bridge_command::{command_for, is_bridge, is_legacy_bridge, runs, status_line_json};
+use super::bridge_command::{command_for, is_bridge, runs, status_line_json};
 use super::json_reader::{self, Dialect};
 use super::settings_json::{
     SettingsError, command_of, command_or_error, read_status_line, with_status_line,
@@ -43,8 +43,8 @@ pub struct ConnectionPlan {
     pub new_config: AppConfig,
     /// True when the user's own status line keeps running, through the bridge.
     pub chains: bool,
-    /// True when the status line already ran a bridge, but not this Sobreiro's: the old
-    /// `openheadroom-bridge`, or a `sobreiro-bridge` in another folder.
+    /// True when the status line already ran a bridge, but not this Sobreiro's: a
+    /// `sobreiro-bridge` in another folder.
     pub reconnects: bool,
 }
 
@@ -55,9 +55,6 @@ pub enum ConnectionState {
     NotConnected,
     /// This install's bridge.
     Connected,
-    /// The bridge under its old name, from before the app was renamed. It still counts as
-    /// connected.
-    Legacy,
     /// A Sobreiro bridge in another folder than this install's.
     Elsewhere,
 }
@@ -202,13 +199,12 @@ fn command_or_none(command: Option<String>) -> Option<String> {
     command.filter(|command| !is_blank(command))
 }
 
-/// True when the status line runs the bridge, this app's or the old OpenHeadroom one.
+/// True when the status line runs a Sobreiro bridge, this install's or one elsewhere.
 pub fn is_connected(settings_text: &str) -> bool {
     state(settings_text, None) != ConnectionState::NotConnected
 }
 
-/// Connected, connected through the old `openheadroom-bridge` (`Legacy`: Reconnect points it
-/// at this app's), or not connected. A `settings.json` that cannot be read counts as not
+/// Connected or not connected. A `settings.json` that cannot be read counts as not
 /// connected.
 ///
 /// With `own_bridge_path`, a `sobreiro-bridge` that runs from anywhere else is `Elsewhere`
@@ -220,9 +216,6 @@ pub fn state(settings_text: &str, own_bridge_path: Option<&Path>) -> ConnectionS
     };
     let command = command_of(status_line);
     let command = command.as_deref();
-    if is_legacy_bridge(command) {
-        return ConnectionState::Legacy;
-    }
     if !is_bridge(command) {
         return ConnectionState::NotConnected;
     }
@@ -245,8 +238,8 @@ pub fn plan_connect(
     let old_command = command_or_none(command_or_error(before)?);
     let after = status_line_json(&command_for(bridge_exe_path), before)?;
 
-    // Already pointing at a bridge, this one, an older copy elsewhere or the old OpenHeadroom
-    // one (a Reconnect): never chain to it, and keep what the config already saved, so
+    // Already pointing at a bridge, this one or an older copy elsewhere (a Reconnect): never
+    // chain to it, and keep what the config already saved, so
     // Disconnect still restores the user's own status line.
     let already_a_bridge = is_bridge(old_command.as_deref());
     if !already_a_bridge

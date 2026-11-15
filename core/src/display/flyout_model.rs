@@ -52,8 +52,6 @@ pub struct FlyoutModel {
 pub struct FlyoutOptions {
     /// Where Live usage stands.
     pub live: ProviderState,
-    /// The status line still runs the old OpenHeadroom bridge.
-    pub legacy_connection: bool,
     /// The sentence under Copilot's figures.
     pub copilot_note: Option<String>,
     pub show_claude: bool,
@@ -64,7 +62,6 @@ impl Default for FlyoutOptions {
     fn default() -> FlyoutOptions {
         FlyoutOptions {
             live: ProviderState::Off,
-            legacy_connection: false,
             copilot_note: None,
             show_claude: true,
             days: PaceDays::EveryDay,
@@ -216,9 +213,6 @@ fn footer_text(
     options: &FlyoutOptions,
 ) -> String {
     let show_claude = options.show_claude;
-    if show_claude && limits.is_empty() && options.legacy_connection {
-        return "No numbers yet. The status line still runs the old OpenHeadroom bridge: choose Reconnect in the tray menu.".to_string();
-    }
     let sentence = if show_claude {
         live_state::footer(options.live)
     } else {
