@@ -1045,47 +1045,22 @@ in a row of the file it is seconds since 1970, as the file holds it.
   `a_byte_order_mark_is_dropped`) stay. The rows above hold the same files, and these name the
   rule each one holds.
 
-## The first-run migration from OpenHeadroom
+## Start with Windows, and the migration that is not ported
 
-The folder `Migration`: on the first run after the rename, the data folder moves from
-`OpenHeadroom` to `Sobreiro` (or is copied, when a file in it is held), and the Run value that
-starts the app at sign-in is replaced by one for this exe. Nothing moves while a data directory
-override is in use or while the old app runs. It never touches Claude Code's `settings.json`.
-The code is in `core/src/migration`. The shell hands in the disk, the registry and whether the
-old app's mutex is held.
-
-Ported with it, because the migration writes the Run value: the folder `Startup`, in
-`core/src/startup`.
+The folder `Startup`: the name of the Run value that starts the app at sign-in and the command it
+holds. The code is in `core/src/startup`; the shell reads and writes the registry.
 
 | C# test file | Rust file | C# cases | Ported | Rust tests |
 | --- | --- | ---: | ---: | ---: |
-| `LegacyMigrationTests.cs` | `core/tests/all/legacy_migration.rs` | 10 | 10 | 10, and 4 new |
-| `DiskMigrationFilesTests.cs` | `core/tests/all/disk_migration_files.rs` | 3 | 3 | 3, and 7 new |
 | `AutoStartCommandTests.cs` | `core/tests/all/auto_start_command.rs` | 6 | 6 | 4, and 1 new |
-| | | 19 | 19 | 17, and 12 new |
 
-The tests of the migration use made-up folders, not the C# tests' paths under a user folder.
-
-Differences in the shape of the code:
-
-- `MigrationFiles` and `RunValues` return an `io::Error` where the C# threw, and the migration
-  takes any error where the C# caught `IOException`, `UnauthorizedAccessException` and
-  `SecurityException`. `RunValues::get` can fail too: the registry can refuse a read.
-- `directory_exists` and `copy_directory` cannot fail, so the C#'s outer catch, which gave
-  `NothingToMove` when one of them threw, has no Rust counterpart.
-
-Where the copy on the disk differs from 1.x, each held by a new test:
-
-- A junction or link inside the old folder is not followed: it is skipped and counted. 1.x went
-  through it and copied what it pointed to.
-- A folder inside that cannot be read or made counts as one and the copy goes on. 1.x counted one
-  and stopped the whole copy there.
-- `move_directory` fails when the new folder exists, as `Directory.Move` did; the migration
-  checks that first, so this only matters if the folder appears in between.
+The folder `Migration` is not ported. It moved the data folder and the Run value of an earlier
+name of the app, which was never released, so 2.0 has nothing to migrate.
 
 ### C# tests with no Rust test
 
-None.
+- `LegacyMigrationTests.cs` (10 cases) and `DiskMigrationFilesTests.cs` (3 cases): the folder
+  `Migration` is not ported, as above.
 
 ### C# tests ported in part
 
@@ -1093,23 +1068,6 @@ None.
 
 ### Rust tests with no C# test
 
-Written from reading the C#:
-
-- `legacy_migration::the_run_value_moves_whatever_the_folder_does`: nothing to move, both
-  folders, a move and a copy all go on to replace the Run value.
-- `legacy_migration::a_run_value_that_cannot_be_read_is_a_failure_and_nothing_is_written`.
-- `legacy_migration::an_old_value_that_cannot_be_deleted_is_a_failure_and_both_values_stay`:
-  the new value is written before the old one is deleted, as in 1.x.
-- `legacy_migration::a_second_run_finds_nothing_to_do`.
-- `disk_migration_files::copy_carries_every_file_and_folder_and_keeps_the_old_folder`, with an
-  empty folder and one two levels down.
-- `disk_migration_files::copy_never_writes_over_a_file_already_there`, as `File.Copy` with
-  `overwrite: false` did.
-- `disk_migration_files::move_onto_a_folder_that_exists_fails_and_leaves_both`.
-- `disk_migration_files::copy_from_a_folder_that_is_not_there_counts_one` and
-  `copy_to_a_folder_that_cannot_be_made_counts_one`, as 1.x counted them.
-- `disk_migration_files::a_folder_is_there_and_a_file_or_nothing_is_not`.
-- `disk_migration_files::copy_does_not_follow_a_junction_and_counts_it`.
 - `auto_start_command::matches_with_white_space_around_and_letters_outside_ascii`: an ordinal
   comparison that ignores case, as `StringComparison.OrdinalIgnoreCase` did, for letters
   outside ASCII as well.
