@@ -56,12 +56,23 @@ The rows below were measured on one PC: Ryzen 7 7700X, 32 GB, Windows 11 Pro 262
 |---|---|---|---|---|---|---|---|---|---|
 | 0.10.0 | 2026-11-13 | 184 MB | 331 MB | 13.9 s | 0.62 s | 0.55 s | 80.4 MB | 17.0 MB | 43 ms |
 | 1.0.0 | 2026-11-13 | 97 MB | 173 MB | 14.9 s | 0.43 s | 0.40 s | 168.9 MB | 2.2 MB | 9 ms |
+| 1.1.0 | 2026-11-14 | 96 MB | 167 MB | 2.0 s | 0.54 s | 0.47 s | 168.9 MB | 2.2 MB | 9 ms |
 
 Notes on a row:
 
 - **0.10.0:** private memory was still rising at the end, from 169 MB after the first minute to
   184 MB after the tenth, so 10 minutes is not yet its resting level. Processor time was steady
   at about 0.2 s a minute, with a little more in the minute that held a poll.
+- **1.1.0:** the `Sobreiro.exe` in the row is the file attached to the release, downloaded and
+  measured as it is; the bridge was packaged on this PC from the `v1.1.0` tag. It is 1.0.0 with
+  the two changes under Experiments, "taskbar asked on change" and "tiered compilation off".
+  - 2.0 s of processor time per idle hour against 1.0.0's 14.9 s: the 5 s target is met in a
+    release. The run on `main` the evening before gave 3.0 s; that is one run of each, and two
+    runs of one build have differed by 1.9 s on this PC. Minute by minute: 0.05, 0.06, 0.03,
+    0.03, 0.03, 0.04, 0.03, 0.01 and 0.02 s.
+  - Private memory was still rising at the end, from 87.9 MB after the first minute to 95.8 MB
+    after the tenth, as it was in 1.0.0's run.
+  - The five starts took 542, 464, 471, 479 and 469 ms.
 
 ## Experiments
 
