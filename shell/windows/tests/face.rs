@@ -39,15 +39,16 @@ const SCALES: [(&str, f32); 3] = [("1", 1.0), ("1.5", 1.5), ("2", 2.0)];
 /// extras come from the font's advances, not from these pictures: in Unbounded Bold 11, `00%` is
 /// 34.58 DIPs and `45%` 32.58 (Claude's extra, 2.0), `17%` 28.2 (Copilot's extra, 6.4).
 ///
-/// The toolkit measures text a little wider than the font's advances say, so a block comes out up
-/// to `TOOLKIT_SLACK` DIPs wider than that, and never narrower. Measured at 100%: Claude's block
-/// 104 against 101, both blocks 179 against 175.4, Copilot's alone 80 against 78.4.
+/// The toolkit rounds each text's width up to a whole DIP (the label and the box), and 1.1's own
+/// line is about 1 DIP narrower than its advances add up to, so a block comes out up to
+/// `TOOLKIT_SLACK` DIPs wider than that, and never narrower. Measured at 100%: Claude's block 103
+/// against 101, both blocks 178 against 175.4, Copilot's alone 79 against 78.4.
 const FRESH: (f32, f32) = (99.0, 38.0);
 const BOTH: (f32, f32) = (167.0, 38.0);
 const COPILOT_ONLY: (f32, f32) = (72.0, 36.0);
 const CLAUDE_BOX_EXTRA: f32 = 2.0;
 const COPILOT_BOX_EXTRA: f32 = 6.4;
-const TOOLKIT_SLACK: f32 = 3.5;
+const TOOLKIT_SLACK: f32 = 1.5;
 
 /// A stopped fill is the ink at alpha 0x80, drawn over the track (the ink at 0x26), as 1.1 draws it:
 /// 0x80 + 0x26 * (1 - 0x80 / 255) = 147.
@@ -456,7 +457,8 @@ fn the_bar_fill_has_a_round_bottom_end() {
                 "{theme} {label}x: the middle of the bottom row is {middle}: {alphas:?}"
             );
             assert!(
-                bar[0] * 2 < middle && bar[bar.len() - 1] * 2 < middle,
+                u16::from(bar[0]) * 2 < u16::from(middle)
+                    && u16::from(bar[bar.len() - 1]) * 2 < u16::from(middle),
                 "{theme} {label}x: the corners are not rounded: {bar:?}"
             );
         }

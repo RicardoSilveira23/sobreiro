@@ -58,8 +58,9 @@ global Metrics {
     // the reset date (stills: 38 DIPs tall with Claude's block, 36 with Copilot's alone).
     out property <length> line-height: 15px;
     out property <length> reset-height: 13px;
-    // The space after a label: Inter's space advance at 12 (0.2817 em).
-    out property <length> label-space: 3.38px;
+    // The space after a label. Inter's space at 12 is 3.38; a whole 3 keeps what follows on whole
+    // pixels at 100%, so the rings' arcs and tracks fall on the same pixels.
+    out property <length> label-space: 3px;
 }
 
 // Measures a figure; never drawn.
