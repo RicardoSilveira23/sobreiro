@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 
 const EXE: &str = env!("CARGO_BIN_EXE_Sobreiro");
 
-const STATES: [&str; 9] = [
+const STATES: [&str; 11] = [
     "fresh",
     "amber",
     "red",
@@ -22,6 +22,8 @@ const STATES: [&str; 9] = [
     "copilot-only",
     "digits-11",
     "digits-88",
+    "levels",
+    "stale-claude",
 ];
 const THEMES: [(&str, bool); 2] = [("light", true), ("dark", false)];
 const COLOURS: [&str; 2] = ["purple", "accent"];
@@ -34,15 +36,18 @@ const SCALES: [(&str, f32); 3] = [("1", 1.0), ("1.5", 1.5), ("2", 2.0)];
 ///
 /// The heights are the same. Each figure is set in a box as wide as the widest of 00% to 99%, which
 /// is wider than 1.1's figure for 15%, 45% and 17%, so each block is wider by the box's extra. The
-/// extras were measured: the picture of each block alone, less 1.1's width of the same block, from
-/// the pictures at 100% (Claude's 103 - 99, Copilot's 79 - 72). They hold at 150% and 200% within
-/// the 1 px allowed, and are the box's width less the width of those figures, so they change when
-/// the font or its size does.
+/// extras come from the font's advances, not from these pictures: in Unbounded Bold 11, `00%` is
+/// 34.58 DIPs and `45%` 32.58 (Claude's extra, 2.0), `17%` 28.2 (Copilot's extra, 6.4).
+///
+/// The toolkit measures text a little wider than the font's advances say, so a block comes out up
+/// to `TOOLKIT_SLACK` DIPs wider than that, and never narrower. Measured at 100%: Claude's block
+/// 104 against 101, both blocks 179 against 175.4, Copilot's alone 80 against 78.4.
 const FRESH: (f32, f32) = (99.0, 38.0);
 const BOTH: (f32, f32) = (167.0, 38.0);
 const COPILOT_ONLY: (f32, f32) = (72.0, 36.0);
-const CLAUDE_BOX_EXTRA: f32 = 4.0;
-const COPILOT_BOX_EXTRA: f32 = 7.0;
+const CLAUDE_BOX_EXTRA: f32 = 2.0;
+const COPILOT_BOX_EXTRA: f32 = 6.4;
+const TOOLKIT_SLACK: f32 = 3.5;
 
 /// A stopped fill is the ink at alpha 0x80, drawn over the track (the ink at 0x26), as 1.1 draws it:
 /// 0x80 + 0x26 * (1 - 0x80 / 255) = 147.
@@ -171,7 +176,7 @@ fn it_writes_every_state_in_both_themes_both_colours_and_three_scales() {
             }
         }
     }
-    assert_eq!(expected.len(), 9 * 2 * 2 * 3);
+    assert_eq!(expected.len(), 11 * 2 * 2 * 3);
     let written: BTreeSet<_> = std::fs::read_dir(pictures())
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
@@ -182,23 +187,29 @@ fn it_writes_every_state_in_both_themes_both_colours_and_three_scales() {
 #[test]
 fn each_picture_is_the_size_of_1_1s_pill_at_that_scale() {
     let sizes = [
-        ("fresh", FRESH, CLAUDE_BOX_EXTRA),
-        ("amber", FRESH, CLAUDE_BOX_EXTRA),
-        ("red", FRESH, CLAUDE_BOX_EXTRA),
-        ("copilot-on", BOTH, CLAUDE_BOX_EXTRA + COPILOT_BOX_EXTRA),
-        ("copilot-only", COPILOT_ONLY, COPILOT_BOX_EXTRA),
+        ("fresh", FRESH, CLAUDE_BOX_EXTRA, 1.0),
+        ("amber", FRESH, CLAUDE_BOX_EXTRA, 1.0),
+        ("red", FRESH, CLAUDE_BOX_EXTRA, 1.0),
+        (
+            "copilot-on",
+            BOTH,
+            CLAUDE_BOX_EXTRA + COPILOT_BOX_EXTRA,
+            2.0,
+        ),
+        ("copilot-only", COPILOT_ONLY, COPILOT_BOX_EXTRA, 1.0),
     ];
-    for (state, (width, height), extra) in sizes {
+    for (state, (width, height), extra, blocks) in sizes {
         for (theme, _) in THEMES {
             for colour in COLOURS {
                 for (label, scale) in SCALES {
                     let picture = picture(state, theme, colour, label);
                     let want = |dips: f32| (dips * scale).round() as isize;
                     let name = name(state, theme, colour, label);
-                    let expected = want(width + extra);
+                    let least = want(width + extra) - 1;
+                    let most = want(width + extra + blocks * TOOLKIT_SLACK) + 1;
                     assert!(
-                        (picture.width as isize - expected).abs() <= 1,
-                        "{name} is {} wide, 1.1's plus the box is {expected}",
+                        (least..=most).contains(&(picture.width as isize)),
+                        "{name} is {} wide, 1.1's plus the box is {least}..={most}",
                         picture.width
                     );
                     assert!(
@@ -213,40 +224,241 @@ fn each_picture_is_the_size_of_1_1s_pill_at_that_scale() {
     }
 }
 
+/// The ring canvas of a Claude-only picture: its left and top in pixels, and its size, at a scale.
+/// The canvas is the last 26 DIPs before 8 of padding, and starts 6 DIPs down (4 of padding, 2 to
+/// centre it in the 30 DIPs of text).
+fn canvas(picture: &Picture, scale: f32) -> (f32, f32, f32) {
+    (
+        picture.width as f32 - (8.0 + 26.0) * scale,
+        6.0 * scale,
+        26.0 * scale,
+    )
+}
+
+/// What a ring's fill covers in the canvas: the rows and columns it reaches and its pixel count.
+#[derive(Debug)]
+struct Extent {
+    rows: (usize, usize),
+    columns: (usize, usize),
+    count: usize,
+}
+
+/// The pixels of `rgb` (opaque) in the outer ring (`outer`) or the inner one, told apart by their
+/// distance from the canvas centre: the outer centre line is 11.5 DIPs out, the inner one 6.5, so
+/// 9 DIPs is between them.
+fn extent(picture: &Picture, scale: f32, rgb: Rgb, outer: bool) -> Extent {
+    let (left, top, size) = canvas(picture, scale);
+    let mut found = Extent {
+        rows: (usize::MAX, 0),
+        columns: (usize::MAX, 0),
+        count: 0,
+    };
+    for row in 0..size.round() as usize {
+        for column in 0..size.round() as usize {
+            let (x, y) = (
+                (left.round() as usize) + column,
+                (top.round() as usize) + row,
+            );
+            let [r, g, b, a] = picture.pixel(x, y);
+            let near = |have: u8, want: u8| have.abs_diff(want) <= 6;
+            if a < 200 || !(near(r, rgb.r) && near(g, rgb.g) && near(b, rgb.b)) {
+                continue;
+            }
+            let (dx, dy) = (
+                column as f32 + 0.5 - size / 2.0,
+                row as f32 + 0.5 - size / 2.0,
+            );
+            if ((dx * dx + dy * dy).sqrt() > 9.0 * scale) != outer {
+                continue;
+            }
+            found.rows = (found.rows.0.min(row), found.rows.1.max(row));
+            found.columns = (found.columns.0.min(column), found.columns.1.max(column));
+            found.count += 1;
+        }
+    }
+    found
+}
+
+/// The pixel on a ring's centre line, `degrees` clockwise from 12 o'clock, of a Claude-only picture.
+fn on_ring(picture: &Picture, scale: f32, radius: f32, degrees: f32) -> [u8; 4] {
+    let (left, top, size) = canvas(picture, scale);
+    let angle = degrees.to_radians();
+    let x = left + size / 2.0 + radius * scale * angle.sin();
+    let y = top + size / 2.0 - radius * scale * angle.cos();
+    picture.pixel(x as usize, y as usize)
+}
+
+const OUTER_RADIUS: f32 = 11.5;
+const INNER_RADIUS: f32 = 6.5;
+
+fn is(pixel: [u8; 4], rgb: Rgb, alpha: u8) -> bool {
+    let room = 4 + 255 / u8::max(alpha, 1);
+    pixel[..3]
+        .iter()
+        .zip([rgb.r, rgb.g, rgb.b])
+        .all(|(have, want)| have.abs_diff(want) <= room)
+        && pixel[3].abs_diff(alpha) <= 4
+}
+
 #[test]
-fn the_ring_fills_carry_the_level_colours_in_every_theme_and_bar_colour() {
-    // The outer ring's stroke runs from 6 to 9 DIPs down from the top (4 of padding, 2 to centre
-    // the 26 DIP rings in the 30 DIP text), the inner ring's from 11 to 14.
-    let outer = (6.0, 9.0);
-    let inner = (11.0, 14.0);
-    let all_width = (0.0, 400.0);
+fn the_ring_fills_lie_where_1_1_draws_them() {
+    // 1.1's stills at 100% and 200%, at 15% and 45%: the rows and columns each fill reaches, and
+    // how many pixels it covers, within a pixel and 12% (and 4 pixels).
+    for (theme, light) in THEMES {
+        let base = colours(light, "purple").base;
+        for (label, scale) in [("1", 1.0), ("2", 2.0)] {
+            let still = decode(
+                &Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../media/stills/pill")
+                    .join(format!("claude-{theme}@{label}x.png")),
+            );
+            let ours = picture("fresh", theme, "purple", label);
+            for outer in [true, false] {
+                let (want, have) = (
+                    extent(&still, scale, base, outer),
+                    extent(&ours, scale, base, outer),
+                );
+                let which = if outer { "outer" } else { "inner" };
+                eprintln!("{theme} {label}x {which}: 1.1 {want:?}, 2.0 {have:?}");
+                let near = |a: (usize, usize), b: (usize, usize)| {
+                    a.0.abs_diff(b.0) <= 1 && a.1.abs_diff(b.1) <= 1
+                };
+                assert!(
+                    near(want.rows, have.rows) && near(want.columns, have.columns),
+                    "{theme} {label}x {which}: 1.1 reaches {want:?}, 2.0 {have:?}"
+                );
+                let (a, b) = (want.count as f32, have.count as f32);
+                assert!(
+                    (a - b).abs() <= a * 0.12 + 4.0,
+                    "{theme} {label}x {which}: 1.1 covers {a} pixels, 2.0 {b}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn each_ring_fill_is_on_its_own_centre_line_in_its_own_level_colour() {
+    // 15% outer and 91% inner in one picture, so a ring cannot pass for the other: the outer arc
+    // ends near 54 degrees and the inner one near 327.
     for (theme, light) in THEMES {
         for colour in COLOURS {
             let set = colours(light, colour);
             for (label, scale) in SCALES {
-                let check = |state: &str, band: (f32, f32), want: Rgb, alpha: u8| {
-                    let picture = picture(state, theme, colour, label);
-                    let found = picture.count(scale, all_width, band, want, alpha);
+                let at = |state: &str| picture(state, theme, colour, label);
+                let name = format!("{theme} {colour} {label}x");
+                let levels = at("levels");
+                assert!(
+                    is(on_ring(&levels, scale, OUTER_RADIUS, 20.0), set.base, 255),
+                    "{name} outer 20"
+                );
+                assert!(
+                    is(on_ring(&levels, scale, OUTER_RADIUS, 120.0), set.ink, 0x26),
+                    "{name} outer track"
+                );
+                assert!(
+                    is(on_ring(&levels, scale, INNER_RADIUS, 20.0), set.error, 255),
+                    "{name} inner 20"
+                );
+                assert!(
+                    is(on_ring(&levels, scale, INNER_RADIUS, 200.0), set.error, 255),
+                    "{name} inner 200"
+                );
+                assert!(
+                    is(on_ring(&levels, scale, INNER_RADIUS, 332.0), set.ink, 0x26),
+                    "{name} inner track"
+                );
+                // Both rings in the same level, a quarter round.
+                let fresh = at("fresh");
+                assert!(
+                    is(on_ring(&fresh, scale, OUTER_RADIUS, 20.0), set.base, 255),
+                    "{name} fresh outer"
+                );
+                assert!(
+                    is(on_ring(&fresh, scale, INNER_RADIUS, 90.0), set.base, 255),
+                    "{name} fresh inner"
+                );
+                assert!(
+                    is(on_ring(&fresh, scale, INNER_RADIUS, 250.0), set.ink, 0x26),
+                    "{name} fresh inner track"
+                );
+                for (state, level) in [("amber", set.warning), ("red", set.error)] {
+                    let picture = at(state);
                     assert!(
-                        found >= scale.ceil() as usize,
-                        "{}: {found} pixels of {} at alpha {alpha}",
-                        name(state, theme, colour, label),
-                        want.to_hex()
+                        is(on_ring(&picture, scale, OUTER_RADIUS, 90.0), level, 255),
+                        "{name} {state} outer"
                     );
-                };
-                check("fresh", outer, set.base, 255);
-                check("fresh", inner, set.base, 255);
-                check("amber", outer, set.warning, 255);
-                check("amber", inner, set.warning, 255);
-                check("red", outer, set.error, 255);
-                check("red", inner, set.error, 255);
-                // A stopped block: the ink at half strength, in place of the level colour.
-                check("stale", outer, set.ink, STALE_OVER_TRACK);
-                check("stale", inner, set.ink, STALE_OVER_TRACK);
-                // Text and tracks: the ink in full, and the track at 0x26.
-                check("fresh", (0.0, 38.0), set.ink, 255);
-                check("fresh", (0.0, 38.0), set.ink, 0x26);
+                    assert!(
+                        is(on_ring(&picture, scale, INNER_RADIUS, 90.0), level, 255),
+                        "{name} {state} inner"
+                    );
+                }
+                // A stopped block: the ink at half strength over the track, in place of the level.
+                let stale = at("stale-claude");
+                assert!(
+                    is(
+                        on_ring(&stale, scale, OUTER_RADIUS, 20.0),
+                        set.ink,
+                        STALE_OVER_TRACK
+                    ),
+                    "{name} stale outer"
+                );
+                assert!(
+                    is(
+                        on_ring(&stale, scale, INNER_RADIUS, 90.0),
+                        set.ink,
+                        STALE_OVER_TRACK
+                    ),
+                    "{name} stale inner"
+                );
             }
+        }
+    }
+}
+
+#[test]
+fn text_and_the_ground_are_in_the_ink() {
+    for (theme, light) in THEMES {
+        let set = colours(light, "purple");
+        for (label, scale) in SCALES {
+            let found = picture("fresh", theme, "purple", label).count(
+                scale,
+                (0.0, 60.0),
+                (4.0, 34.0),
+                set.ink,
+                255,
+            );
+            assert!(
+                found >= 20,
+                "{theme} {label}x: {found} pixels of ink in the text"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_bar_fill_has_a_round_bottom_end() {
+    // 1.1's bottom row at 100% is 29, 199, 255, 211, 41 across the five columns: the corners are
+    // nearly clear. The toolkit's own clip would leave all five at 255.
+    for (theme, _) in THEMES {
+        for (label, scale) in [("1", 1.0), ("2", 2.0)] {
+            let picture = picture("copilot-on", theme, "purple", label);
+            let row = (32.0 * scale) as usize - 1;
+            let from = picture.width - (14.0 * scale) as usize;
+            let alphas: Vec<u8> = (from..picture.width)
+                .map(|x| picture.pixel(x, row)[3])
+                .collect();
+            let bar: Vec<u8> = alphas.iter().copied().skip_while(|&a| a < 12).collect();
+            let bar: Vec<u8> = bar.iter().copied().take_while(|&a| a >= 12).collect();
+            let middle = bar[bar.len() / 2];
+            assert!(
+                middle >= 190,
+                "{theme} {label}x: the middle of the bottom row is {middle}: {alphas:?}"
+            );
+            assert!(
+                bar[0] * 2 < middle && bar[bar.len() - 1] * 2 < middle,
+                "{theme} {label}x: the corners are not rounded: {bar:?}"
+            );
         }
     }
 }

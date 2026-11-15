@@ -16,13 +16,15 @@ mod ui {
 }
 
 fn main() -> ExitCode {
-    match std::env::args().nth(1).as_deref() {
+    // Arguments are compared as they come: one that is not Unicode matches nothing.
+    let mut args = std::env::args_os().skip(1);
+    match args.next().as_deref().and_then(|arg| arg.to_str()) {
         Some("--version") => {
             println!("Sobreiro {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
         }
         Some("--specimen") => specimen::run(),
-        Some("--pill-pictures") => pictures::run(std::env::args().nth(2)),
+        Some("--pill-pictures") => pictures::run(args.next()),
         // Nothing to show yet.
         _ => ExitCode::from(2),
     }

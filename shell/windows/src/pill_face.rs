@@ -72,7 +72,12 @@ pub fn face_data(model: &PillModel, colours: &TaskbarColours, hovered: bool) -> 
     if let Some(copilot) = &model.copilot {
         data.copilot = face_line(&copilot.credits);
         data.reset_date = SharedString::from(copilot.reset_date.as_str());
-        data.bar_fraction = copilot.fraction.clamp(0.0, 1.0) as f32;
+        // Not a number is no fill, as 1.1 draws none.
+        data.bar_fraction = if copilot.fraction.is_nan() {
+            0.0
+        } else {
+            copilot.fraction.clamp(0.0, 1.0) as f32
+        };
         data.bar_fill = fill(colours, copilot.level, copilot.stale);
     }
     data
@@ -216,6 +221,19 @@ mod tests {
         assert!(stale.copilot.star);
         assert_eq!(stale.bar_fill, colour(colours.ink, 0x80));
         assert!(!stale.session.star, "Claude's block is not stale");
+    }
+
+    #[test]
+    fn a_bar_fraction_that_is_not_a_number_is_no_fill() {
+        let mut both = model(15, 45, false);
+        both.copilot = Some(PillCopilot {
+            credits: line("AI", "17%", false),
+            reset_date: "1 Dec".to_string(),
+            fraction: f64::NAN,
+            level: UsageLevel::Normal,
+            stale: false,
+        });
+        assert_eq!(face_data(&both, &dark(), false).bar_fraction, 0.0);
     }
 
     #[test]

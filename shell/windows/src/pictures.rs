@@ -58,6 +58,10 @@ pub fn states() -> Vec<(&'static str, PillModel)> {
         ("copilot-only", only),
         ("digits-11", claude(15, 11, false)),
         ("digits-88", claude(15, 88, false)),
+        // The rings at two levels, so a check on one ring cannot pass on the other.
+        ("levels", claude(15, 91, false)),
+        // Claude's block alone, stopped: its rings are where the other Claude-only states have them.
+        ("stale-claude", claude(15, 45, true)),
     ]
 }
 
@@ -120,7 +124,7 @@ fn copilot(percent: i32, stale: bool) -> PillCopilot {
     }
 }
 
-pub fn run(folder: Option<String>) -> ExitCode {
+pub fn run(folder: Option<std::ffi::OsString>) -> ExitCode {
     let Some(folder) = folder else {
         eprintln!("--pill-pictures needs a folder to write to.");
         return ExitCode::from(2);
@@ -228,7 +232,7 @@ mod tests {
     fn the_set_is_every_state_theme_colour_and_scale() {
         assert_eq!(
             states().len() * themes().len() * bar_colours().len() * SCALES.len(),
-            108
+            132
         );
     }
 

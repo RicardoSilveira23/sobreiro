@@ -58,8 +58,8 @@ global Metrics {
     // the reset date (stills: 38 DIPs tall with Claude's block, 36 with Copilot's alone).
     out property <length> line-height: 15px;
     out property <length> reset-height: 13px;
-    // The space after a label: as wide as Inter's at 12.
-    out property <length> label-space: 3px;
+    // The space after a label: Inter's space advance at 12 (0.2817 em).
+    out property <length> label-space: 3.38px;
 }
 
 // Measures a figure; never drawn.
@@ -68,6 +68,8 @@ component Digit inherits Text {
     font-weight: 700;
     font-size: Metrics.figure-size;
     visible: false;
+    // Not for a screen reader: it is only measured.
+    accessible-role: none;
 }
 
 // A ring: a track all the way round, and the fill as an arc from 12 o'clock.
@@ -102,9 +104,14 @@ component Ring inherits Rectangle {
         border-color: root.fill;
     }
 
+    // The toolkit fits a stroked path into its box less the stroke, offset by half a stroke, so the
+    // box is one stroke larger than the canvas and starts half a stroke before it: the viewbox
+    // then lies on the canvas unscaled, and the arc on its track.
     if root.sweep > 0 && root.sweep < 360: Path {
-        width: Metrics.rings-size;
-        height: Metrics.rings-size;
+        x: -Metrics.stroke / 2;
+        y: -Metrics.stroke / 2;
+        width: Metrics.rings-size + Metrics.stroke;
+        height: Metrics.rings-size + Metrics.stroke;
         viewbox-width: 26;
         viewbox-height: 26;
         stroke: root.fill;
@@ -247,18 +254,26 @@ export component PillFace inherits Rectangle {
             }
             VerticalLayout {
                 alignment: center;
-                // A rounded track, filled from the bottom and clipped to its own shape.
+                // A rounded track, and over it a rounded fill the height of the bar, shown through a
+                // rectangular window that covers the filled part from the bottom: both ends round,
+                // since the software renderer does not clip to a border radius.
                 Rectangle {
                     width: Metrics.bar-width;
                     height: Metrics.bar-height;
                     border-radius: Metrics.bar-width / 2;
                     background: root.data.track;
-                    clip: true;
                     Rectangle {
                         width: parent.width;
                         height: parent.height * max(0, min(1, root.data.bar-fraction));
                         y: parent.height - self.height;
-                        background: root.data.bar-fill;
+                        clip: true;
+                        Rectangle {
+                            y: -(parent.y);
+                            width: parent.width;
+                            height: Metrics.bar-height;
+                            border-radius: Metrics.bar-width / 2;
+                            background: root.data.bar-fill;
+                        }
                     }
                 }
             }
