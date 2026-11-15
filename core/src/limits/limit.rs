@@ -2,7 +2,7 @@
 use chrono::{DateTime, TimeDelta, Utc};
 
 /// Which limit it is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LimitKind {
     /// Claude Code's five-hour window.
     Session,

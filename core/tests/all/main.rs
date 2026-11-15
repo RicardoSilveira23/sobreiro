@@ -13,6 +13,9 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 mod accent_palette;
+mod alert_balloon;
+mod alert_policy;
+mod alert_state;
 mod app_config;
 mod app_paths;
 mod atomic_file;
