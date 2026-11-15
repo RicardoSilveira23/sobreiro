@@ -2,7 +2,9 @@
 //! the specimen of its fonts. The pill, the flyout and the tray icons come next.
 #![windows_subsystem = "windows"]
 
+mod born_test;
 mod specimen;
+mod win;
 
 use std::process::ExitCode;
 
@@ -20,6 +22,8 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         Some("--specimen") => specimen::run(),
+        // Hidden: what the born test launches.
+        Some("--born") => born_test::run(std::env::args().nth(2).as_deref()),
         // Nothing to show yet.
         _ => ExitCode::from(2),
     }
