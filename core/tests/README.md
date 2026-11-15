@@ -1044,3 +1044,30 @@ in a row of the file it is seconds since 1970, as the file holds it.
   `a_far_reset_time_in_an_entry_that_is_skipped_does_not_empty_the_file` and
   `a_byte_order_mark_is_dropped`) stay. The rows above hold the same files, and these name the
   rule each one holds.
+
+## Start with Windows, and the migration that is not ported
+
+The folder `Startup`: the name of the Run value that starts the app at sign-in and the command it
+holds. The code is in `core/src/startup`; the shell reads and writes the registry.
+
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `AutoStartCommandTests.cs` | `core/tests/all/auto_start_command.rs` | 6 | 6 | 4, and 1 new |
+
+The folder `Migration` is not ported. It moved the data folder and the Run value of an earlier
+name of the app, which was never released, so 2.0 has nothing to migrate.
+
+### C# tests with no Rust test
+
+- `LegacyMigrationTests.cs` (10 cases) and `DiskMigrationFilesTests.cs` (3 cases): the folder
+  `Migration` is not ported, as above.
+
+### C# tests ported in part
+
+None.
+
+### Rust tests with no C# test
+
+- `auto_start_command::matches_with_white_space_around_and_letters_outside_ascii`: an ordinal
+  comparison that ignores case, as `StringComparison.OrdinalIgnoreCase` did, for letters
+  outside ASCII as well.

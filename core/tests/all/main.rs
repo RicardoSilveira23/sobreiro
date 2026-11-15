@@ -19,6 +19,7 @@ mod alert_state;
 mod app_config;
 mod app_paths;
 mod atomic_file;
+mod auto_start_command;
 mod bar_colour;
 mod bash_locator;
 mod bridge_command;
