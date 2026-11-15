@@ -1,0 +1,59 @@
+/* The manual's parts, in the look of site.css: docs/design.md, "The manual". Nothing here moves. */
+.manual [hidden] { display: none; }
+.manual > * + * { margin-top: 24px; }
+
+/* Title and contents */
+.listing { font: 600 clamp(26px, 2.9vw, 36px)/1.12 Sora, system-ui, sans-serif; letter-spacing: -.025em; margin-top: 12px; }
+.contents { display: grid; gap: 6px; }
+.contents p { color: var(--soft); max-width: 62ch; }
+.contents ul { display: flex; flex-wrap: wrap; gap: 0 22px; }
+.contents a { display: inline-flex; align-items: center; min-height: 44px; color: var(--vt); font-weight: 600; font-size: 15px; }
+
+/* A section starts under a violet rule */
+.manual > .section { margin-top: 40px; padding-top: 16px; border-top: 2px solid var(--v); }
+.section h2 { font-size: 20px; margin-bottom: 8px; }
+.section h2 small { font: 500 .8em Inter, system-ui, sans-serif; color: var(--soft); margin-left: 4px; }
+
+/* A row: label and name on one line, the rest under them */
+.row { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; padding-block: 14px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row > * { min-width: 0; }
+.row > :not(.k):not(.n) { flex: 0 0 100%; }
+.k { font: 600 13px Sora, system-ui, sans-serif; color: var(--vt); }
+.k:empty { display: none; }
+.n { font: 600 16px Inter, system-ui, sans-serif; color: var(--ink); }
+.s { overflow-wrap: anywhere; font-size: 16px; line-height: 1.6; max-width: 62ch; margin-top: 4px; }
+.d { overflow-wrap: anywhere; max-width: 62ch; margin-top: 8px; padding-left: 18px; list-style: disc; font-size: 15px; line-height: 1.5; color: var(--soft); }
+.d li + li { margin-top: 6px; }
+.code { max-width: 62ch; margin: 8px 0 0; padding: 12px 14px; overflow-x: auto; background: var(--box); border: 1.5px solid var(--line); border-radius: 8px; font: 13px/1.5 'JetBrains Mono', ui-monospace, Consolas, monospace; color: var(--ink); }
+.code code { font: inherit; }
+
+/* The app's own pictures */
+.shot, .caps, .panel { margin-top: 12px; }
+.styles { margin-top: 8px; }
+.shot img, .caps img, .panel img { border-radius: 8px; }
+.caps { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.caps figure { max-width: 100%; }
+.caps img { max-width: 100%; height: auto; }
+figcaption { margin-top: 6px; font-size: 14px; color: var(--soft); }
+
+/* The details panel: the tallest picture sets the box, so a press moves nothing */
+.panel { display: flex; align-items: flex-end; height: 504px; }
+.panel img { width: 330px; max-width: 100%; height: auto; }
+.styles { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 600 13px Sora, system-ui, sans-serif; color: var(--soft); }
+.styles button { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--v); border-radius: 8px; background: none; color: var(--vt); font: 600 15px Inter, system-ui, sans-serif; cursor: pointer; }
+.styles button[aria-pressed="true"] { background: var(--v); color: var(--on); }
+.styles button[aria-pressed="true"]:focus-visible { outline-color: var(--ink); }
+
+/* The way home */
+.back { margin-top: 40px; }
+
+/* Desktop: label, name, then the text in the rest */
+@media (min-width: 1000px) {
+  .row { display: grid; grid-template-columns: 96px 240px minmax(0, 1fr); column-gap: 20px; }
+  .k { grid-column: 1; }
+  .n { grid-column: 2; }
+  .row > :not(.k):not(.n) { grid-column: 3; }
+  .k:empty { display: block; }
+  .s { margin-top: 0; }
+}

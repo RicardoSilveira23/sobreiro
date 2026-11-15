@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      - name: Package
+        run: |
+          ./scripts/package.ps1 -OutputDir dist -KeepBridge
+          Get-ChildItem dist -File | ForEach-Object { '{0}: {1} bytes' -f $_.Name, $_.Length }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Sobreiro-win-x64
+          path: dist/Sobreiro.exe
+          if-no-files-found: error
+          retention-days: 14
+
+      # Kept on its own so the bridge can be measured: scripts/baseline.ps1 -Exe ... -Bridge ...
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sobreiro-bridge-win-x64
+          path: dist/sobreiro-bridge.exe
+          if-no-files-found: error
+          retention-days: 14

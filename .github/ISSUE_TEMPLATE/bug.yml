@@ -1,0 +1,34 @@
+name: Bug
+description: Something Sobreiro does wrong
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Sobreiro version
+      description: About Sobreiro shows it
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: log
+    attributes:
+      label: Lines from log.txt
+      description: Right-click the pill or the tray icon, Open data folder. The log holds no tokens, but read it before you paste.
+      render: text

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sobreiro: Copilot and Claude Code usage on your taskbar</title>
+<meta name="description" content="A Windows 11 tray app that keeps GitHub Copilot's monthly AI credits and Claude Code's session and weekly limits in view on your taskbar.">
+<link rel="canonical" href="https://sobreiro.ricardosilveira.dev/">
+<meta property="og:title" content="Sobreiro: Copilot and Claude Code usage on your taskbar">
+<meta property="og:description" content="A Windows 11 tray app that keeps GitHub Copilot's monthly AI credits and Claude Code's session and weekly limits in view on your taskbar.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sobreiro.ricardosilveira.dev/">
+<meta property="og:image" content="https://sobreiro.ricardosilveira.dev/assets/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Sobreiro in white capitals on black, a purple rule under the name, then: Your GitHub Copilot and Claude Code usage, always in view on your taskbar.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/pill.js" defer></script>
+</head>
+<body>
+<div class="page">
+  <header class="top"><a class="brand" href="./"><img src="assets/img/sobreiro-mark.svg" width="32" height="32" alt="">Sobreiro</a></header>
+  <main class="home">
+  <div class="say">
+    <h1 class="line">Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</h1>
+    <div class="acts">
+      <a class="dl" href="https://github.com/RicardoSilveira23/sobreiro/releases/latest"><svg aria-hidden="true"><use href="#gh"/></svg>Download</a>
+      <a class="mn" href="manual/">Manual</a>
+    </div>
+    <p class="meta">Free, for Windows 11. Needs GitHub Copilot with AI credits, or Claude Code on Pro, Max or Ultra.</p>
+    <div class="run">
+      <h2>Run it</h2>
+      <ol class="steps">
+        <li><b>1</b>Download Sobreiro.exe, one file</li>
+        <li><b>2</b>Open it</li>
+        <li><b><img src="assets/img/sobreiro-mark.svg" width="30" height="30" alt=""></b>The pill appears beside the clock</li>
+      </ol>
+    </div>
+  </div>
+  <div class="flow">
+    <figure class="n a">
+      <div class="pill" data-k="pill">
+        <div class="nums"><span>5h <b data-k="v5">15%</b></span><span>7d <b data-k="v7">45%</b></span></div>
+        <svg class="rings" viewBox="0 0 52 52" aria-hidden="true">
+          <circle class="tr" cx="26" cy="26" r="21"/><circle class="tr" cx="26" cy="26" r="12.5"/>
+          <circle class="pr" data-k="r5" cx="26" cy="26" r="21" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="85"/>
+          <circle class="pr" data-k="r7" cx="26" cy="26" r="12.5" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="55"/>
+        </svg>
+        <div class="nums"><span>AI <b data-k="va">17%</b></span><span class="dim">1 Dec</span></div>
+        <i class="bar" aria-hidden="true"><b data-k="ba" style="height:17%"></b></i>
+      </div>
+      <ul class="keys"><li><b>5h</b>Session, the outer ring</li><li><b>7d</b>Week, the inner ring</li><li><b>AI</b>Copilot's monthly credits</li></ul>
+      <div class="scale" aria-hidden="true"><b class="mk" data-k="mk" style="left:15%">5h</b><div class="segs"><i></i><i></i><i></i></div><span style="left:70%">70%</span><span style="left:90%">90%</span></div>
+      <p class="sr">A ring is purple below 70%, amber from 70% and red from 90%.</p>
+    </figure>
+    <i class="w wab" aria-hidden="true"><b class="dot"></b></i>
+    <div class="n exe"><img src="assets/img/sobreiro-mark.svg" width="36" height="36" alt=""><strong>Sobreiro.exe</strong><span>asks every 5 minutes</span></div>
+    <i class="w w1" aria-hidden="true"><b class="dot"></b></i>
+    <div class="n ad n1"><b>Claude Code usage</b><code><span>api.anthropic.com</span><span>/api/oauth/usage</span></code></div>
+    <i class="w w2" aria-hidden="true"><b class="dot"></b></i>
+    <div class="n ad n2"><b>Copilot AI credits</b><code><span>api.github.com</span><span>/copilot_internal/user</span></code></div>
+  </div>
+  <div class="sends">
+    <h2>What it sends</h2>
+    <ul class="key">
+      <li><i></i>Two requests, with a sign-in already on this PC</li>
+      <li><i class="back"></i>The numbers come back and go to the taskbar</li>
+      <li><i class="none"></i>Nothing else leaves: no telemetry, no update checks, no token stored, logged or renewed</li>
+    </ul>
+  </div>
+  <div class="before">
+    <h2>Before you install</h2>
+    <p>Both addresses are undocumented and can change, and Anthropic's terms don't allow third-party apps to use Claude sign-ins. Windows may warn about an unknown publisher until the app is signed.</p>
+  </div>
+  </main>
+  <footer class="foot">
+    <a href="https://github.com/RicardoSilveira23/sobreiro/issues/new">Open an issue</a><a href="https://ricardosilveira.dev/">By Ricardo Silveira</a>
+    <p>Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings. Not affiliated with or endorsed by Anthropic or GitHub.</p>
+  </footer>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="gh" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol></svg>
+</body>
+</html>

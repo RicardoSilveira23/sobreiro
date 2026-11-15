@@ -1,0 +1,15 @@
+bin/
+obj/
+publish/
+.vs/
+*.user
+.env
+.env.*
+.DS_Store
+Thumbs.db
+dist/
+node_modules/
+.wrangler/
+scripts/.venv-media/
+scripts/__pycache__/
+media/.stage-*/
