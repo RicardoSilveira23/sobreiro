@@ -91,16 +91,17 @@ Code keeps its own, and `config.json` (reading it, and writing it back to the by
 
 | C# test file | Rust file | C# cases | Ported | Rust tests |
 | --- | --- | ---: | ---: | ---: |
-| `AppPathsTests.cs` | `core/tests/all/app_paths.rs` | 8 | 7 | 7, and 4 new |
+| `AppPathsTests.cs` | `core/tests/all/app_paths.rs` | 8 | 8 | 8, and 4 new |
 | `AppConfigTests.cs` | `core/tests/all/app_config.rs` | 33 | 33 | 21, and 10 new |
 | `ClaudePathsTests.cs` (Connect) | `core/tests/all/claude_paths.rs` | 5 | 5 | 3, and 2 new |
-| | | 46 | 45 | 31, and 16 new |
+| | | 46 | 46 | 32, and 16 new |
+
+`AppPathsTests.Log_written_with_the_override_lands_in_the_scratch_folder` came with the
+diagnostics log, further down.
 
 ### C# tests with no Rust test
 
-- `AppPathsTests.Log_written_with_the_override_lands_in_the_scratch_folder` writes a line with
-  the log, which is not ported yet. It comes with the log. That the log's path follows the
-  override is held by `app_paths::log_file_lives_in_the_data_directory`.
+None.
 
 ### C# tests ported in part
 
@@ -267,6 +268,18 @@ Ported ahead of its own area, because its words came with this one:
 The client is handed something that sends a request, as the C# client is handed a handler.
 The tests of `live_usage_client.rs` hand it a stand-in. The tests of `http.rs` run the real
 sender against a server on 127.0.0.1, written with the standard library.
+
+Issue 5 noted that a spike could not cancel a request under way. Neither can Core: the C#
+aborted the request, and the Rust client is handed a flag instead. Set before the request, it
+stops the request from being sent; set while the request is out, the request ends by itself
+within the sender's ten seconds and its answer is dropped. Both give `Err(Cancelled)`, as the
+C# gave its cancellation. The request is a GET that changes nothing, so letting it finish
+costs at most ten seconds of one thread and sends nothing new.
+`live_usage_client::cancelling_while_the_request_is_under_way_drops_the_answer` and its
+Copilot twin hold the dropped answer, `http::an_answer_slower_than_the_timeout_is_unreachable`
+that the sender gives up at its timeout, and
+`provider_poller::stop_then_start_while_a_poll_runs_waits_for_it` that the answer of a poll
+given up is not kept and the next poll waits for it.
 
 ### C# tests with no Rust test
 
@@ -1115,3 +1128,76 @@ The C# sums of pixels wrap at the ends of an `int`, and the Rust wraps the same 
   `a_step_gives_a_new_schedule_and_leaves_the_old_one`.
 - `taskbar_query_schedule::spans_at_the_ends_do_not_overflow`: the C# `TimeSpan` threw on a
   difference past its ends; here the difference stays at the end, which no clock reaches.
+
+## The diagnostics log
+
+The folder `Diagnostics`: the log file and its roll to `log.1.txt` at 256 KiB, one entry of it,
+how many times one kind of event is logged in a run, and the texts shown when the app cannot
+start. The code is in `core/src/diagnostics`. Core looks at no clock and knows no process id, so
+there is no `Write` that formats an entry for now: the shell formats it with
+`log_entry::format`, handing in the time and its process id, and appends it.
+
+1.x wrote into an entry the type and the stack trace of each .NET exception, never its words,
+which can hold a path or a token. Rust has no exceptions: an entry holds the event the caller
+gives and, at most, the name of a kind of error. What a panic writes is the shell's to decide,
+under the same rule.
+
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `DiagnosticsLogTests.cs` | `core/tests/all/diagnostics_log.rs` | 8 | 7 | 7, and 7 new |
+| `LogBudgetTests.cs` | `core/tests/all/log_budget.rs` | 1 | 1 | 1, and 2 new |
+| `LogEntryTests.cs` | `core/tests/all/log_entry.rs` | 11 | 6 | 6, and 4 new |
+| | | 20 | 14 | 14, and 13 new |
+
+`LogEntryTests.cs` also holds the tests of `DiagnosticsMessage`, the texts shown when the app
+cannot start.
+
+### C# tests with no Rust test
+
+- `DiagnosticsLogTests.Write_uses_this_process_id`: there is no `Write`, as above. The way the
+  shell writes an entry is held by `app_paths::log_written_with_the_override_lands_in_the_scratch_folder`.
+- `LogEntryTests.Format_adds_the_type_and_stack_trace`, `Format_never_includes_the_message`,
+  `Format_walks_inner_and_aggregate_exceptions`, `Format_stops_after_eight_exceptions` and
+  `Format_marks_a_missing_stack_trace`: each hands in a .NET exception, which Rust has not.
+
+### C# tests ported in part
+
+- `LogEntryTests.Format_records_a_non_exception_by_type_only` handed in a text and found its
+  type's name and not its words. Here the caller hands in the name itself, so the test holds
+  that it is written on a line of its own.
+- `LogEntryTests.Format_cuts_an_entry_over_the_cap` counts the cap in UTF-16 units, as the C#
+  counted a string's length.
+
+### Rust tests with no C# test
+
+- `diagnostics_log::a_roll_that_fails_does_not_stop_the_append`,
+  `a_cap_of_zero_rolls_every_entry_after_the_first`,
+  `an_entry_that_brings_the_file_to_the_cap_exactly_does_not_roll`,
+  `the_cap_counts_bytes_not_characters`,
+  `the_previous_file_keeps_the_extension_and_has_none_without_one`,
+  `the_default_cap_is_256_kib` and `threads_appending_together_lose_no_entry`.
+- `log_budget::a_budget_of_zero_logs_nothing` and `threads_together_get_exactly_the_limit`. The
+  C# count could wrap after 2^31 events; the Rust one does not.
+- `log_entry::a_cut_inside_a_surrogate_pair_leaves_the_replacement_character`: the C# cut could
+  leave half of a character, which its UTF-8 writer wrote as U+FFFD; Core writes the same.
+  Also `a_pair_that_fits_exactly_is_kept_whole_before_the_cut`,
+  `an_entry_of_exactly_the_cap_is_not_cut` and `an_offset_west_of_utc_is_written_with_a_minus`.
+
+## The measuring tool and the pictures, which are not ported
+
+Two folders of `src/Sobreiro.Core` serve tools, not the app, and stay in C# with them:
+
+- `Baseline` is read only by `Sobreiro.Baseline`, the console tool that measures a release build
+  from outside for `docs/baseline.md`. It is not shipped, and it measures the exes it is
+  given, whatever language they are written in.
+- `Media` is read only by the mode `Sobreiro.exe --media`, which renders the pictures of the
+  README and the site from the app's own views. It draws, so it moves with the shell that
+  draws the pill and the flyout, not with Core.
+
+### C# tests with no Rust test
+
+- `BaselineMathTests.cs` (6 cases), `BaselineTableTests.cs` (10 cases) and
+  `PillSightingTests.cs` (7 cases): the folder `Baseline` is not ported, as above.
+- `MediaStillsTests.cs` (5 cases), `MediaTimelineTests.cs` (18 cases),
+  `SampleReadingsTests.cs` (10 cases) and `TaskbarPlateTests.cs` (13 cases): the folder `Media`
+  is not ported, as above.
