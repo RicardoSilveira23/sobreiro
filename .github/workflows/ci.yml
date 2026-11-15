@@ -58,6 +58,7 @@ jobs:
   # rust-toolchain.toml pins, and --locked keeps every library at its version in Cargo.lock.
   rust:
     runs-on: windows-latest
+    timeout-minutes: 30
     defaults:
       run:
         shell: pwsh
