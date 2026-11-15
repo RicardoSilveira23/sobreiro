@@ -95,6 +95,22 @@ test("no other host", () => {
   ]);
 });
 
+test("a comment hides what is in it, and ends where a browser ends it", () => {
+  const far = '<script src="//cdn.example/x.js"></script>';
+  const found = ["index.html: other host //cdn.example/x.js"];
+  const body = (html) => check({ "index.html": page("", html) });
+
+  // In a comment, and in one that is never closed: not on the page.
+  assert.deepEqual(body(`<!-- ${far} -->`), []);
+  assert.deepEqual(body(`<!-- ${far}`), []);
+  // After a comment that a browser has ended already: on the page.
+  assert.deepEqual(body(`<!-->${far}-->`), found);
+  assert.deepEqual(body(`<!--->${far}-->`), found);
+  assert.deepEqual(body(`<!-- x --!>${far}-->`), found);
+  // Between two halves that read as a comment only once the comment between them is gone.
+  assert.deepEqual(body(`<!<!-- x -->-- ${far} -->`), found);
+});
+
 test("images need alt, width and height", () => {
   const problems = check({
     "index.html": page(

@@ -43,6 +43,20 @@ pub fn parse(body: &str, now: DateTime<Utc>) -> Reply {
 /// How far from the reading a reset may be. A date further off than this is nonsense.
 const FURTHEST_RESET: TimeDelta = TimeDelta::days(400);
 
+/// The reading in a reply the Copilot CLI cached: `response` is the value under the cache
+/// entry's `response`, `retrieved_at` is when the entry was retrieved, which stands in for a
+/// moment the reply does not name, and the reading's source is the cache. `Ok(None)` when the
+/// value is no object or has no budget to show.
+pub(crate) fn from_cached_response(
+    response: &Kind,
+    retrieved_at: DateTime<Utc>,
+) -> Result<Option<CopilotReading>, HalfACharacter> {
+    match response {
+        Kind::Object(members) => from_response(members, retrieved_at, CopilotSource::Cache),
+        _ => Ok(None),
+    }
+}
+
 /// The reading in a reply that is a JSON object, whose members are `response`. `Ok(None)`
 /// when it has no budget to show.
 fn from_response(
