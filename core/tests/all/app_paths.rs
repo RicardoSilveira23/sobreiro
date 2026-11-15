@@ -4,9 +4,15 @@
 //! The C# tests set `SOBREIRO_DATA_DIR` for the whole test run and ask Windows for the user's
 //! folder. Here both are handed in, so no test changes what another one reads.
 use std::ffi::OsStr;
+use std::fs;
 use std::path::Path;
 
+use chrono::DateTime;
 use sobreiro_core::app_paths::AppPaths;
+use sobreiro_core::diagnostics::diagnostics_log::DiagnosticsLog;
+use sobreiro_core::diagnostics::log_entry::format;
+
+use crate::TestFolder;
 
 /// Stands in for the user's local application data folder.
 const LOCAL_APP_DATA: &str = r"C:\Users\me\AppData\Local";
@@ -119,6 +125,26 @@ fn log_file_lives_in_the_data_directory() {
     assert_eq!(
         with_override(dir).log_file(),
         Path::new(dir).join("log.txt")
+    );
+}
+
+#[test]
+fn log_written_with_the_override_lands_in_the_scratch_folder() {
+    let folder = TestFolder::new("app_paths_log_written_with_the_override");
+    let paths = AppPaths::new(Some(folder.path().as_os_str()), Path::new(LOCAL_APP_DATA));
+    let entry = format(
+        DateTime::parse_from_rfc3339("2026-11-09T14:03:12.345+01:00").unwrap(),
+        1,
+        "start version=test instance=x",
+        None,
+    );
+
+    assert!(DiagnosticsLog::new(&paths.log_file()).append(&entry));
+
+    assert!(
+        fs::read_to_string(folder.file("log.txt"))
+            .unwrap()
+            .contains("start version=test instance=x")
     );
 }
 
