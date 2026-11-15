@@ -12,7 +12,8 @@
 //! and one poll over them, the Copilot CLI's cache file, Copilot as a provider that keeps a live
 //! and a cached reading in memory, the timing of a provider's polls, and what is shown: the
 //! colours, the times in the user's zone and clock, the pace of a limit, and the models of the
-//! pill, the flyout and the tray tooltip.
+//! pill, the flyout and the tray tooltip, and the alerts: which to show and the file that
+//! remembers them.
 //! The tests are in `core/tests`.
 //!
 //! Core starts no thread, waits for no poll and looks at no clock. The shell tells it the
@@ -25,6 +26,7 @@
 // Core never prints: what it knows goes back to the caller. This also keeps a token off the console.
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 
+pub mod alerts;
 pub mod app_paths;
 pub mod bridge;
 pub mod colours;

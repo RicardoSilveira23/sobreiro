@@ -942,3 +942,105 @@ typed. A moment in a row is a count of ticks, and a double is held bit for bit.
   so Core drops it and the tooltip is 126 units long. This row is left out of the one above.
 - `copilot_state_text::copilot_state_text_answers_as_the_csharp_did`: 100 rows, every state,
   a live and a cached reading, ages around 15 minutes, five clocks and the zones.
+
+## Alerts: which toasts to show and the file that remembers them
+
+The folder `Alerts`: the policy that picks, on each refresh, the one alert per limit and reset
+period for the highest threshold crossed (80% and 95%), the one balloon that holds a refresh's
+alerts, and `alerts.json`, which keeps which alerts were already shown. The code is in
+`core/src/alerts`. Core shows nothing and writes nothing but that file: the shell shows the
+balloon and decides when to save.
+
+The policy asks for the zone and the clock, as the area above does, for the text under each
+alert.
+
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `AlertPolicyTests.cs` | `core/tests/all/alert_policy.rs` | 19 | 19 | 19, and 3 new |
+| `AlertBalloonTests.cs` | `core/tests/all/alert_balloon.rs` | 5 | 5 | 5, and 2 new |
+| `AlertStateTests.cs` | `core/tests/all/alert_state.rs` | 5 | 5 | 5, and 12 new |
+| | | 29 | 29 | 29, and 17 new |
+
+Two differences in the shape of the code, held by the ported tests:
+
+- `alert_policy::check` returns the state to keep as an `Option`: `None` where the C# gave back
+  the state it was given, so the caller skips the save. The C# callers compared references.
+- `AlertState::save` returns the `io::Error` where the C# threw. `load` never fails: it gives an
+  empty state for what 1.x gave an empty state.
+
+`load` reads the file with Connect's JSON reader (`connect/json_reader.rs`, strict), not
+`serde_json`, since `serde_json` differs from `JsonDocument.Parse` on what this file can hold:
+it refuses a number out of the range of a double (`1e400`) and a lone surrogate escape in a
+string, reads `-0` as a float, and takes nesting up to 128 levels where .NET takes 64. The
+reader allows 64 levels and keeps a number and a text as written, so `load` reads a whole
+number from the text itself, as `TryGetInt32` and `TryGetInt64` did.
+
+A file in UTF-16 or UTF-32 that starts with its byte order mark was read by the C#, which reads
+a file as text. Core reads the file as UTF-8, as 1.x writes it, and gives the empty state for
+another encoding: `alert_state::a_file_in_another_encoding_gives_the_empty_state`.
+
+### C# tests with no Rust test
+
+None.
+
+### C# tests ported in part
+
+None.
+
+### Rust tests with no C# test
+
+What the rows hold was read off the C# of 1.x, run on 2026-11-15 on made-up limits, states,
+files and alerts. The rows were written out by the C# and turned into Rust by a script, not
+typed. A moment in a row of the policy is a count of ticks and a double is held bit for bit;
+in a row of the file it is seconds since 1970, as the file holds it.
+
+- `alert_policy::check_answers_as_the_csharp_did`: 420 rows over the eight zones, the clocks
+  en-US, en-GB and pt-PT and both day choices. Each has one to four limits of the four kinds
+  (a kind may come twice), with Claude's and Copilot's provider and labels, odd labels,
+  percents around 79, 80, 94, 95 and 100, fractions, negatives, values over 100 and infinities,
+  windows of none, 5 hours, 7 days and 30 days, reset times of none, past and future, and some
+  limits that are reset. The state before is empty, or holds marks for some kinds at a lower,
+  equal or higher threshold, whose reset time is the limit's, an hour either side of it (so that
+  `ResetPeriod.Same` is held at its edge), days away, none, or a tick off. Each row holds the
+  alerts (kind, threshold, title, text) and the state after, or that it is unchanged. 268 rows
+  give alerts and 152 are unchanged. A percent that is NaN is not in the rows: both show it as
+  0% and give no alert, which `alert_policy::a_percent_that_is_not_a_number_gives_no_alert`
+  holds.
+- `alert_policy::the_rows_hold_alerts_and_unchanged_states` holds that the rows reach both
+  thresholds, every kind, and both ends of the answer.
+- `alert_balloon::for_alerts_answers_as_the_csharp_did`: 282 lists of alerts: none, every
+  title and text of a set of 11 alone (empty, a space, plain, several lines, `\r\n`, a tab,
+  non-ASCII, outside the first plane), and 160 lists of two to four. The last test of the file,
+  `the_rows_hold_no_alerts_and_empty_and_multi_line_texts`, holds the corners.
+- `alert_state::load_answers_as_the_csharp_did`: 288 files, written as bytes and read by the
+  C#. They hold: duplicate keys (the last one is taken, for an entry and for a member of an
+  entry); nesting of 62 to 200 levels, in the root and in an entry, as arrays and as objects
+  (64 is read, 65 is not); invalid UTF-8 in a value, in a key and around the text; a UTF-8 byte
+  order mark, twice, after white space, and alone; UTF-16 without a mark (not read); `-0`, `1E0`, `80.0`, `8e1`, long strings of digits, the
+  ends of an `i32` and of an `i64`, numbers out of range of a double, and the other numbers
+  JSON does not allow; a reset time at and one second past years 1 and 9999, in an entry that
+  is read and in one that is not; trailing commas; comments of both kinds; white space of other
+  kinds (form feed, no-break space, a byte order mark in the text); lone surrogate escapes;
+  control characters in strings; strings of 100,000 characters; values of the wrong type;
+  entries of the wrong type; `null`, an empty file and one of white space only.
+- `alert_state::a_file_in_another_encoding_gives_the_empty_state`: a UTF-16 and a UTF-32 file
+  with its mark in each order, which the load rows leave out, and a UTF-16 one without a mark.
+  The C# read the first four; Core gives none for all five.
+- `alert_state::the_load_rows_hold_marks_and_files_that_give_none` holds that the rows give
+  both marks and no marks.
+- `alert_state::save_answers_as_the_csharp_did`: 174 states and the bytes the C# wrote for them:
+  empty, each kind alone with 13 reset times (none, 0, 1, -1, the ends of years 1 and 9999, and
+  others) at 80 and 95, each kind with 9 thresholds (among them the ends of an `i32`), 30
+  states from a random pick, and all four kinds with the same mark.
+- `alert_state::a_key_with_a_lone_surrogate_escape_does_not_stop_the_load`: the one file left
+  out of the load rows. In 1.x, a key with a lone surrogate escape (`"\ud800"`) made
+  `TryGetProperty` throw `InvalidOperationException`, which `Load` did not catch, so the app
+  stopped on reading such a file. Core cannot fail there: the key gives no text, so it matches
+  nothing, and the rest of the file is read. Inside an entry such a key stopped neither.
+- The seven tests that came with the port and were written from reading the C# (`saves_the_bytes_the_csharp_wrote`, `an_empty_state_saves_an_empty_object`,
+  `an_entry_that_is_not_read_is_skipped`,
+  `a_reset_time_that_is_no_whole_number_is_left_out_of_the_mark`,
+  `a_reset_time_outside_the_years_1_to_9999_empties_the_whole_file`,
+  `a_far_reset_time_in_an_entry_that_is_skipped_does_not_empty_the_file` and
+  `a_byte_order_mark_is_dropped`) stay. The rows above hold the same files, and these name the
+  rule each one holds.
