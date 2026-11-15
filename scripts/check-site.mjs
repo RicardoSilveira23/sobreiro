@@ -110,8 +110,32 @@ function checkShare(root, html, name, address) {
   return problems;
 }
 
+// The page without its comments, each cut where a browser ends it: at "-->" or "--!>", at once
+// for "<!-->" and "<!--->", and at the end of the file for one that is never closed. One walk
+// from the start: what is kept is never searched again, so the text either side of a comment
+// stays text, as it does in a browser, even where the two halves read "<!--" together.
+function withoutComments(html) {
+  let kept = "";
+  let at = 0;
+  for (;;) {
+    const start = html.indexOf("<!--", at);
+    if (start < 0) return kept + html.slice(at);
+    kept += html.slice(at, start);
+    const body = start + 4;
+    if (html.startsWith(">", body)) at = body + 1;
+    else if (html.startsWith("->", body)) at = body + 2;
+    else {
+      const end = /--!?>/g;
+      end.lastIndex = body;
+      const close = end.exec(html);
+      if (!close) return kept;
+      at = close.index + close[0].length;
+    }
+  }
+}
+
 function checkPage(root, file, name, address) {
-  const html = readFileSync(file, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  const html = withoutComments(readFileSync(file, "utf8"));
   const problems = [];
   if (address) problems.push(...checkCanonical(html, name, address), ...checkShare(root, html, name, address));
   if (!/<html\b[^>]*\slang\s*=/i.test(html)) problems.push(`${name}: missing <html lang>`);
