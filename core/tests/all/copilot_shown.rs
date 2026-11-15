@@ -1,6 +1,6 @@
 //! Ported from the `Pick_takes_the_newer_and_live_on_a_tie` test of
-//! `tests/Sobreiro.Tests/CopilotStateTests.cs`. The sentence under the figures, which that file
-//! mostly tests, is not ported yet: it comes with the area that formats times.
+//! `tests/Sobreiro.Tests/CopilotStateTests.cs`. The other tests of that file, about the sentence
+//! under the figures, are in `copilot_state_text.rs`.
 use chrono::{DateTime, TimeDelta, Utc};
 use sobreiro_core::copilot::copilot_shown::pick;
 use sobreiro_core::copilot::{CopilotReading, CopilotSource};

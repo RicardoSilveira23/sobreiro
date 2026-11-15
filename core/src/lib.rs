@@ -10,7 +10,9 @@
 //! Code's usage is due and what each outcome does to that, one poll, Claude Code as a
 //! provider that keeps its readings in `usage.json`, the places a GitHub token is looked for
 //! and one poll over them, the Copilot CLI's cache file, Copilot as a provider that keeps a live
-//! and a cached reading in memory, and the timing of a provider's polls.
+//! and a cached reading in memory, the timing of a provider's polls, and what is shown: the
+//! colours, the times in the user's zone and clock, the pace of a limit, and the models of the
+//! pill, the flyout and the tray tooltip.
 //! The tests are in `core/tests`.
 //!
 //! Core starts no thread, waits for no poll and looks at no clock. The shell tells it the

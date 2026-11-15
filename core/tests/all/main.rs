@@ -12,9 +12,11 @@
 // A test fails by panicking, in the helpers below as in the tests themselves.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+mod accent_palette;
 mod app_config;
 mod app_paths;
 mod atomic_file;
+mod bar_colour;
 mod bash_locator;
 mod bridge_command;
 mod bridge_config;
@@ -26,39 +28,58 @@ mod claude_paths;
 mod claude_provider;
 mod connect_message;
 mod connection;
+mod contrast;
 mod copilot_cache;
 mod copilot_cli_credential;
 mod copilot_poll;
 mod copilot_provider;
 mod copilot_shown;
+mod copilot_state_text;
 mod copilot_token;
 mod copilot_usage_client;
 mod copilot_user_json;
 mod csharp_files;
+mod duration;
+mod flyout_model;
+mod flyout_placement;
 mod gh_cli;
+mod glyph_fill;
 mod http;
 mod legacy_connection;
 mod limit_list;
+mod limit_status;
 mod live_poll;
 mod live_schedule;
 mod live_state;
 mod live_usage_client;
+mod pace;
+mod pill_model;
+mod pill_stale;
 mod provider_poller;
 mod rate_limits_json;
 mod reset_period;
+mod rings_model;
 mod settings_json;
 mod status_line_text;
+mod taskbar_colours;
+mod tooltip_text;
 mod usage_api_json;
 mod usage_file;
 mod usage_level;
 mod usage_merge;
+mod when;
+mod working_time;
+mod zone;
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, FixedOffset, TimeDelta, Utc};
+use sobreiro_core::display::{ClockFormat, Zone, ZoneChange};
 use sobreiro_core::io::http::{Answer, NoAnswer, Sender};
+use sobreiro_core::limits::{Limit, LimitKind};
 use sobreiro_core::live::live_schedule::{LiveSchedule, RefusedSignIn};
+use sobreiro_core::polling::ProviderState;
 use sobreiro_core::usage::{LimitWindow, SpendLimit};
 
 /// A moment written as in the C# tests, for example `"2026-11-09T12:00:00Z"`.
@@ -113,6 +134,39 @@ fn schedule_of(row: ScheduleRow) -> LiveSchedule {
             }),
         },
         misses,
+    }
+}
+
+/// A span given in ticks, the way the C# counts them: ten-millionths of a second.
+fn span(ticks: i64) -> TimeDelta {
+    TimeDelta::new(ticks.div_euclid(S), (ticks.rem_euclid(S) * 100) as u32).unwrap()
+}
+
+/// The offset of a zone that is so many seconds east of UTC.
+fn east(seconds: i32) -> FixedOffset {
+    FixedOffset::east_opt(seconds).unwrap()
+}
+
+/// How a clock is written with the culture en-US, as .NET 10 on this PC gives it.
+fn en_us() -> ClockFormat {
+    clock("h:mm tt", "AM", "PM")
+}
+
+/// How a clock is written with the culture en-GB.
+fn en_gb() -> ClockFormat {
+    clock("HH:mm", "am", "pm")
+}
+
+/// How a clock is written with the culture pt-PT.
+fn pt_pt() -> ClockFormat {
+    clock("HH:mm", "da manh\u{e3}", "da tarde")
+}
+
+fn clock(pattern: &str, am: &str, pm: &str) -> ClockFormat {
+    ClockFormat {
+        pattern: pattern.to_string(),
+        am: am.to_string(),
+        pm: pm.to_string(),
     }
 }
 
@@ -299,4 +353,193 @@ fn hold_alone(path: &Path) -> std::fs::File {
         .share_mode(0)
         .open(path)
         .unwrap()
+}
+
+/// The zones that the rows of the `..._as_the_csharp_did` tests name, as the C# printed their
+/// changes from 2025-12-01 to 2027-02-01.
+fn oracle_zone(name: &str) -> Zone {
+    match name {
+        "UTC" => Zone::utc(),
+        "+09:00" => Zone::fixed(east(32400)),
+        "-05:00" => Zone::fixed(east(-18000)),
+        "+05:45" => Zone::fixed(east(20700)),
+        "Europe/Lisbon" => Zone::new(
+            east(0),
+            vec![
+                ZoneChange {
+                    at: time("2026-03-29T01:00:00.0000000+00:00"),
+                    offset: east(3600),
+                },
+                ZoneChange {
+                    at: time("2026-10-25T01:00:00.0000000+00:00"),
+                    offset: east(0),
+                },
+            ],
+        ),
+        "America/Santiago" => Zone::new(
+            east(-10800),
+            vec![
+                ZoneChange {
+                    at: time("2026-04-05T03:00:00.0000000+00:00"),
+                    offset: east(-14400),
+                },
+                ZoneChange {
+                    at: time("2026-09-06T04:00:00.0000000+00:00"),
+                    offset: east(-10800),
+                },
+            ],
+        ),
+        "America/Havana" => Zone::new(
+            east(-14400),
+            vec![
+                ZoneChange {
+                    at: time("2025-11-02T05:00:00.0000000+00:00"),
+                    offset: east(-18000),
+                },
+                ZoneChange {
+                    at: time("2026-03-08T05:00:00.0000000+00:00"),
+                    offset: east(-14400),
+                },
+            ],
+        ),
+        "Australia/Lord_Howe" => Zone::new(
+            east(39600),
+            vec![
+                ZoneChange {
+                    at: time("2026-04-04T15:00:00.0000000+00:00"),
+                    offset: east(37800),
+                },
+                ZoneChange {
+                    at: time("2026-10-03T15:30:00.0000000+00:00"),
+                    offset: east(39600),
+                },
+            ],
+        ),
+        _ => panic!("no zone named {name}"),
+    }
+}
+
+/// The names `oracle_zone` knows.
+const ORACLE_ZONES: [&str; 8] = [
+    "UTC",
+    "+09:00",
+    "-05:00",
+    "+05:45",
+    "Europe/Lisbon",
+    "America/Santiago",
+    "America/Havana",
+    "Australia/Lord_Howe",
+];
+
+/// How a made-up or system culture is written, as the rows of the `..._as_the_csharp_did` tests
+/// of the models name them. The last four are made up: a pattern with a long quoted text, and
+/// designators that are long, non-ASCII or outside the first plane, so that texts pass the
+/// tooltip's 127 units.
+fn oracle_clock(name: &str) -> ClockFormat {
+    match name {
+        "en-US" => en_us(),
+        "en-GB" => en_gb(),
+        "pt-PT" => pt_pt(),
+        "long" => clock(
+            "HH:mm:ss 'oclock and then some more words to make it long'",
+            "AM",
+            "PM",
+        ),
+        "wide" => clock(
+            "h:mm tt",
+            "\u{c0}\u{c9}\u{ce}\u{d5}\u{dc} ante meridiem do dia",
+            "post meridiem do dia \u{1f307}",
+        ),
+        "astral" => clock(
+            "tt h:mm",
+            "\u{1f305}\u{1f305}\u{1f305}\u{1f305}\u{1f305}\u{1f305}",
+            "\u{1f307}\u{1f307}\u{1f307}\u{1f307}\u{1f307}\u{1f307}",
+        ),
+        "astral2" => clock(
+            "tt h:mm",
+            "x\u{1f305}\u{1f305}\u{1f305}\u{1f305}\u{1f305}",
+            "y\u{1f307}\u{1f307}\u{1f307}\u{1f307}\u{1f307}",
+        ),
+        _ => panic!("no clock named {name}"),
+    }
+}
+
+/// A provider state by the name of its C# enum member.
+fn state_of(name: &str) -> ProviderState {
+    match name {
+        "Off" => ProviderState::Off,
+        "Ok" => ProviderState::Ok,
+        "Expired" => ProviderState::Expired,
+        "NoSignIn" => ProviderState::NoSignIn,
+        "Refused" => ProviderState::Refused,
+        "RateLimited" => ProviderState::RateLimited,
+        "Offline" => ProviderState::Offline,
+        "BadAnswer" => ProviderState::BadAnswer,
+        _ => panic!("no state named {name}"),
+    }
+}
+
+/// A limit as the rows of the model tests hold it: the kind (0 session, 1 weekly, 2 spend,
+/// 3 credits), the percentage, when it resets, when it was read, whether it is reset, the window,
+/// the dollars used and the cap, the period (empty for none), and the credits used and the budget.
+type LimitRow = (
+    u8,
+    f64,
+    i64,
+    i64,
+    bool,
+    i64,
+    Option<f64>,
+    Option<f64>,
+    &'static str,
+    Option<f64>,
+    Option<f64>,
+);
+
+fn limit_of(row: &LimitRow) -> Limit {
+    let (
+        kind,
+        percent,
+        resets,
+        observed,
+        is_reset,
+        window,
+        used_usd,
+        limit_usd,
+        period,
+        used,
+        budget,
+    ) = *row;
+    let (kind, label) = match kind {
+        0 => (LimitKind::Session, "Session"),
+        1 => (LimitKind::Weekly, "Weekly"),
+        2 => (LimitKind::Spend, "Spend"),
+        _ => (LimitKind::Credits, "AI credits"),
+    };
+    let provider = if kind == LimitKind::Credits {
+        "GitHub Copilot"
+    } else {
+        "Claude Code"
+    };
+    Limit {
+        window: (window != NONE).then(|| span(window)),
+        used_usd,
+        limit_usd,
+        period: (!period.is_empty()).then(|| period.to_string()),
+        used_credits: used,
+        credit_budget: budget,
+        ..Limit::new(
+            provider,
+            kind,
+            label,
+            percent,
+            maybe_at(resets),
+            at_ticks(observed),
+            is_reset,
+        )
+    }
+}
+
+fn limits_of(rows: &[LimitRow]) -> Vec<Limit> {
+    rows.iter().map(limit_of).collect()
 }
