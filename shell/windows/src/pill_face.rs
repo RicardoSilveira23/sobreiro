@@ -1,8 +1,8 @@
 //! From Core's `PillModel` and the taskbar's colours to what `ui/pill.slint` draws. The .slint
 //! file only draws; every decision about what it draws (which colour a ring takes, what a stale
 //! block looks like, where a ring's arc ends) is made here, where it is tested.
-use crate::ui::{FaceData, FaceLine, Glyph};
-use slint::{Color, ModelRc, SharedString, VecModel};
+use crate::ui::{FaceData, FaceLine};
+use slint::{Color, SharedString};
 use sobreiro_core::colours::taskbar_colours::{STALE_ALPHA, TRACK_ALPHA};
 use sobreiro_core::colours::{Rgb, TaskbarColours};
 use sobreiro_core::display::pill_model::{PillLine, PillModel};
@@ -27,19 +27,11 @@ fn colour(rgb: Rgb, alpha: u8) -> Color {
     Color::from_argb_u8(alpha, rgb.r, rgb.g, rgb.b)
 }
 
-/// The label, and the figure one character at a time so each digit gets a cell of one width.
+/// The label and the figure as text; the .slint file sets the figure in a box of one width.
 fn face_line(line: &PillLine) -> FaceLine {
-    let glyphs: Vec<Glyph> = line
-        .figure
-        .chars()
-        .map(|c| Glyph {
-            text: SharedString::from(c.to_string()),
-            digit: c.is_ascii_digit(),
-        })
-        .collect();
     FaceLine {
         label: SharedString::from(line.label),
-        glyphs: ModelRc::new(VecModel::from(glyphs)),
+        figure: SharedString::from(line.figure.as_str()),
         star: line.stale,
     }
 }
@@ -91,7 +83,6 @@ pub fn face_data(model: &PillModel, colours: &TaskbarColours, hovered: bool) -> 
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use slint::Model;
     use sobreiro_core::colours::{BarColourOption, WINDOWS_BLUE};
     use sobreiro_core::display::pill_model::PillCopilot;
     use sobreiro_core::display::rings::RingsModel;
@@ -133,30 +124,13 @@ mod tests {
         TaskbarColours::for_taskbar(false, false, BarColourOption::Purple, None)
     }
 
-    fn glyphs(line: &FaceLine) -> Vec<(String, bool)> {
-        line.glyphs
-            .iter()
-            .map(|g| (g.text.to_string(), g.digit))
-            .collect()
-    }
-
     #[test]
-    fn a_figure_is_one_glyph_a_character_and_only_digits_get_a_cell() {
+    fn a_line_is_its_label_its_figure_as_text_and_its_star() {
         let data = face_data(&model(5, 100, false), &dark(), false);
         assert_eq!(data.session.label, "5h");
-        assert_eq!(
-            glyphs(&data.session),
-            [("5".into(), true), ("%".into(), false)]
-        );
-        assert_eq!(
-            glyphs(&data.weekly),
-            [
-                ("1".into(), true),
-                ("0".into(), true),
-                ("0".into(), true),
-                ("%".into(), false)
-            ]
-        );
+        assert_eq!(data.session.figure, "5%");
+        assert_eq!(data.weekly.figure, "100%");
+        assert!(!data.session.star);
     }
 
     #[test]
@@ -211,11 +185,8 @@ mod tests {
             has_inner: true,
         };
         let data = face_data(&none, &dark(), false);
-        assert_eq!(
-            glyphs(&data.session),
-            [("–".to_string(), false)],
-            "a dash is not a digit"
-        );
+        assert_eq!(data.session.figure, "–");
+        assert_eq!(data.weekly.figure, "–");
         assert_eq!(data.outer_sweep, 0.0);
         assert_eq!(data.inner_sweep, 0.0);
     }

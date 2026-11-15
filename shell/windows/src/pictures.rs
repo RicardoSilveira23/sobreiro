@@ -31,7 +31,7 @@ impl Platform for InMemory {
 }
 
 /// One state of the pill, by the name its pictures carry. `digits-11` and `digits-88` differ in
-/// one figure only: the test of equal-width digits compares them.
+/// one figure only: the test of the figure box compares them.
 pub fn states() -> Vec<(&'static str, PillModel)> {
     let mut both = claude(15, 45, false);
     both.copilot = Some(copilot(17, false));

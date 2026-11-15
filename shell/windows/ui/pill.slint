@@ -6,17 +6,11 @@ import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
 import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
 import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
 
-// One character of a figure. A digit is laid in a cell as wide as the widest digit, since the
-// toolkit sets no OpenType features and Unbounded's default digits are not all one width.
-export struct Glyph {
-    text: string,
-    digit: bool,
-}
-
-// A label and its figure; `star` adds "*" after the figure of a block whose numbers have stopped.
+// A label and its figure as text ("45%", or a dash); `star` adds "*" after the figure of a block
+// whose numbers have stopped.
 export struct FaceLine {
     label: string,
-    glyphs: [Glyph],
+    figure: string,
     star: bool,
 }
 
@@ -68,7 +62,7 @@ global Metrics {
     out property <length> label-space: 3px;
 }
 
-// Measures a digit; never drawn.
+// Measures a figure; never drawn.
 component Digit inherits Text {
     font-family: "Unbounded";
     font-weight: 700;
@@ -131,11 +125,13 @@ component Ring inherits Rectangle {
     }
 }
 
-// A label, a figure in digits of one width, and "*" when the figure is a last reading.
+// A label, a figure right-aligned in a box, and "*" when the figure is a last reading.
 component Line inherits HorizontalLayout {
     in property <FaceLine> line;
     in property <color> ink;
-    in property <length> digit-cell;
+    // As wide as the widest figure from 00% to 99%: the figure ends at the same place whatever it
+    // says, so the percent sign and what follows it stay put. A wider figure (100%) widens it.
+    in property <length> box;
     alignment: end;
     height: Metrics.line-height;
 
@@ -151,15 +147,15 @@ component Line inherits HorizontalLayout {
         width: Metrics.label-space;
     }
 
-    for glyph in root.line.glyphs: Text {
-        text: glyph.text;
+    Text {
+        text: root.line.figure;
         font-family: "Unbounded";
         font-weight: 700;
         font-size: Metrics.figure-size;
         color: root.ink;
-        horizontal-alignment: center;
+        horizontal-alignment: right;
         vertical-alignment: center;
-        min-width: glyph.digit ? root.digit-cell : 0px;
+        min-width: root.box;
         horizontal-stretch: 0;
     }
 
@@ -182,21 +178,20 @@ export component PillFace inherits Rectangle {
     border-radius: 4px;
     background: root.data.hovered ? root.data.ground-hover : root.data.ground;
 
-    // The widest digit of the figures' font, measured here and never typed in.
-    private property <length> digit-cell: max(
-        max(max(d0.preferred-width, d1.preferred-width), max(d2.preferred-width, d3.preferred-width)),
-        max(max(d4.preferred-width, d5.preferred-width), max(max(d6.preferred-width, d7.preferred-width), max(d8.preferred-width, d9.preferred-width))));
+    // The widest two-digit figure of the figures' font, measured here and never typed in. Two
+    // digits of one kind are the widest sum of advances, and the percent sign is part of it.
+    private property <length> box: max(max(max(p0.preferred-width, p1.preferred-width), max(p2.preferred-width, p3.preferred-width)), max(max(p4.preferred-width, p5.preferred-width), max(max(p6.preferred-width, p7.preferred-width), max(p8.preferred-width, p9.preferred-width))));
 
-    d0 := Digit { text: "0"; }
-    d1 := Digit { text: "1"; }
-    d2 := Digit { text: "2"; }
-    d3 := Digit { text: "3"; }
-    d4 := Digit { text: "4"; }
-    d5 := Digit { text: "5"; }
-    d6 := Digit { text: "6"; }
-    d7 := Digit { text: "7"; }
-    d8 := Digit { text: "8"; }
-    d9 := Digit { text: "9"; }
+    p0 := Digit { text: "00%"; }
+    p1 := Digit { text: "11%"; }
+    p2 := Digit { text: "22%"; }
+    p3 := Digit { text: "33%"; }
+    p4 := Digit { text: "44%"; }
+    p5 := Digit { text: "55%"; }
+    p6 := Digit { text: "66%"; }
+    p7 := Digit { text: "77%"; }
+    p8 := Digit { text: "88%"; }
+    p9 := Digit { text: "99%"; }
 
     row := HorizontalLayout {
         padding-left: Metrics.pad-x;
@@ -209,8 +204,8 @@ export component PillFace inherits Rectangle {
             spacing: Metrics.text-to-rings;
             VerticalLayout {
                 alignment: center;
-                Line { line: root.data.session; ink: root.data.ink; digit-cell: root.digit-cell; }
-                Line { line: root.data.weekly; ink: root.data.ink; digit-cell: root.digit-cell; }
+                Line { line: root.data.session; ink: root.data.ink; box: root.box; }
+                Line { line: root.data.weekly; ink: root.data.ink; box: root.box; }
             }
             VerticalLayout {
                 alignment: center;
@@ -239,7 +234,7 @@ export component PillFace inherits Rectangle {
             padding-left: root.data.show-claude ? Metrics.block-gap : 0px;
             VerticalLayout {
                 alignment: center;
-                Line { line: root.data.copilot; ink: root.data.ink; digit-cell: root.digit-cell; }
+                Line { line: root.data.copilot; ink: root.data.ink; box: root.box; }
                 Text {
                     text: root.data.reset-date;
                     font-family: "Inter";

@@ -1,5 +1,6 @@
 //! The pill's face, drawn by `Sobreiro.exe --pill-pictures`: the full set of pictures, each at the
-//! size 1.1's pill has, in the colours Core gives, with digits of one width.
+//! size 1.1's pill has (plus the figure box), in the colours Core gives, with every figure ending
+//! where the others do.
 // A test fails by panicking, in the helpers below as in the tests themselves.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -31,16 +32,17 @@ const SCALES: [(&str, f32); 3] = [("1", 1.0), ("1.5", 1.5), ("2", 2.0)];
 /// 99 x 38, both blocks 167 x 38, Copilot's alone 72 x 36 (the @2x stills are exactly twice that).
 /// Claude's two lines are 15 DIPs tall each, Copilot's 15 and 13, with 4 of padding above and below.
 ///
-/// The heights are the same. The widths are 1.1's plus what equal-width digits cost: 1.1 sets each
-/// digit at its own advance, here each takes a cell as wide as the widest digit (11.5 DIPs in
-/// Unbounded Bold 11, against 9.5 for a 4 and less for a 1), so a block with two digits in its
-/// widest line is up to `DIGIT_SLACK` DIPs wider per digit, and never narrower.
+/// The heights are the same. Each figure is set in a box as wide as the widest of 00% to 99%, which
+/// is wider than 1.1's figure for 15%, 45% and 17%, so each block is wider by the box's extra. The
+/// extras were measured: the picture of each block alone, less 1.1's width of the same block, from
+/// the pictures at 100% (Claude's 103 - 99, Copilot's 79 - 72). They hold at 150% and 200% within
+/// the 1 px allowed, and are the box's width less the width of those figures, so they change when
+/// the font or its size does.
 const FRESH: (f32, f32) = (99.0, 38.0);
 const BOTH: (f32, f32) = (167.0, 38.0);
 const COPILOT_ONLY: (f32, f32) = (72.0, 36.0);
-const DIGIT_SLACK: f32 = 5.0;
-/// Digits in the widest line of a block, in the states above: 15%, 45%, 17%.
-const DIGITS: f32 = 2.0;
+const CLAUDE_BOX_EXTRA: f32 = 4.0;
+const COPILOT_BOX_EXTRA: f32 = 7.0;
 
 /// A stopped fill is the ink at alpha 0x80, drawn over the track (the ink at 0x26), as 1.1 draws it:
 /// 0x80 + 0x26 * (1 - 0x80 / 255) = 147.
@@ -179,27 +181,25 @@ fn it_writes_every_state_in_both_themes_both_colours_and_three_scales() {
 
 #[test]
 fn each_picture_is_the_size_of_1_1s_pill_at_that_scale() {
-    // The blocks a state shows: each may be wider by its digits' slack.
     let sizes = [
-        ("fresh", FRESH, 1.0),
-        ("amber", FRESH, 1.0),
-        ("red", FRESH, 1.0),
-        ("copilot-on", BOTH, 2.0),
-        ("copilot-only", COPILOT_ONLY, 1.0),
+        ("fresh", FRESH, CLAUDE_BOX_EXTRA),
+        ("amber", FRESH, CLAUDE_BOX_EXTRA),
+        ("red", FRESH, CLAUDE_BOX_EXTRA),
+        ("copilot-on", BOTH, CLAUDE_BOX_EXTRA + COPILOT_BOX_EXTRA),
+        ("copilot-only", COPILOT_ONLY, COPILOT_BOX_EXTRA),
     ];
-    for (state, (width, height), blocks) in sizes {
+    for (state, (width, height), extra) in sizes {
         for (theme, _) in THEMES {
             for colour in COLOURS {
                 for (label, scale) in SCALES {
                     let picture = picture(state, theme, colour, label);
                     let want = |dips: f32| (dips * scale).round() as isize;
                     let name = name(state, theme, colour, label);
-                    let most = want(width + blocks * DIGITS * DIGIT_SLACK);
+                    let expected = want(width + extra);
                     assert!(
-                        (want(width) - 1..=most + 1).contains(&(picture.width as isize)),
-                        "{name} is {} wide, 1.1's is {} (at most {most} with equal digits)",
-                        picture.width,
-                        want(width)
+                        (picture.width as isize - expected).abs() <= 1,
+                        "{name} is {} wide, 1.1's plus the box is {expected}",
+                        picture.width
                     );
                     assert!(
                         (picture.height as isize - want(height)).abs() <= 1,
@@ -298,8 +298,9 @@ fn the_ground_is_nearly_clear_and_the_corners_are_round() {
 }
 
 #[test]
-fn a_line_with_11_percent_and_one_with_88_percent_leave_the_percent_sign_in_one_column() {
-    // At 200%, the weekly line is the 30 DIPs of text's second 15: rows 19 to 34 DIPs. Its text
+fn a_line_with_11_percent_and_one_with_88_percent_leave_everything_from_the_percent_sign_on_in_one_column()
+ {
+    // Each figure ends at the box's right edge, so only the digits differ. At 200%, the weekly line is the 30 DIPs of text's second 15: rows 19 to 34 DIPs. Its text
     // ends 42 DIPs before the right edge (8 of padding, the rings' 26, 8 between).
     let scale = 2.0;
     let profile = |state: &str| {
