@@ -14,9 +14,8 @@ requests are open to collaborators only. You can still help:
 
 Not every idea gets built, and a reply can take a few days.
 
-An exposure check runs on every pull request: the check's own tests, then the tracked files, and
-on a pull request also the commit addresses. `npm run check:exposure` runs the first two
-locally. The tree check refuses 32-digit hexadecimal ids, GUIDs, email addresses, folders under
-a user's home or under a `Dev` folder on drive C, and words that name a PC or a hosting
-subdomain. The commit check refuses commits whose author or committer address is not a GitHub
-no-reply address.
+Before a push, `npm run check:exposure` runs an exposure check: its own tests, then the tracked
+files. It refuses 32-digit hexadecimal ids, GUIDs, email addresses, folders under a user's home
+or under a `Dev` folder on drive C, and words that name a PC or a hosting subdomain.
+`node scripts/check-exposure.mjs --commits <range>` refuses commits whose author or committer
+address is not a GitHub no-reply address.

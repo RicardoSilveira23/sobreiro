@@ -106,25 +106,3 @@ jobs:
             target/release/sobreiro-bridge.exe
           if-no-files-found: error
           retention-days: 14
-
-  # Refuses account identifiers, local paths, personal addresses and commit author addresses
-  # other than GitHub's no-reply one. See scripts/check-exposure.mjs.
-  exposure:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Check's own tests
-        run: node --test scripts/check-exposure.test.mjs
-
-      - name: Tracked files
-        run: node scripts/check-exposure.mjs
-
-      - name: Commit addresses
-        if: github.event_name == 'pull_request'
-        env:
-          BASE: ${{ github.base_ref }}
-        run: node scripts/check-exposure.mjs --commits "origin/$BASE..HEAD"

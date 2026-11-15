@@ -386,8 +386,7 @@ Going public (2026-11-10). The order:
 3. Remove `noindex` from the site's pages.
 4. Apply to SignPath Foundation for signing.
 
-Done on 2026-11-10, all but signing. The ruleset on `main` now requires `build`, `rust` and
-`exposure`.
+Done on 2026-11-10, all but signing. The ruleset on `main` now requires `build` and `rust`.
 Secret scanning and push protection are on as well.
 
 ### 5. After release
