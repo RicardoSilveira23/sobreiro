@@ -48,7 +48,8 @@ public sealed record AlertState(IReadOnlyDictionary<LimitKind, AlertMark> Marks)
             }
             return marks.Count == 0 ? Empty : new AlertState(marks);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentOutOfRangeException)
+        // InvalidOperationException: TryGetProperty throws it for a key that is a lone surrogate escape.
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentOutOfRangeException or InvalidOperationException)
         {
             return Empty;
         }
