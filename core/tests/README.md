@@ -1094,3 +1094,47 @@ None.
 - `auto_start_command::matches_with_white_space_around_and_letters_outside_ascii`: an ordinal
   comparison that ignores case, as `StringComparison.OrdinalIgnoreCase` did, for letters
   outside ASCII as well.
+
+## The taskbar: where the pill goes
+
+The folder `Taskbar`: whether a full-screen app is in front, where the pill goes left of the tray
+icons or why it is hidden, whether placing it moves or raises its window, the parts of the
+taskbar read from UI Automation's rectangles, and when a tick asks for them again. The code is in
+`core/src/taskbar`; the shell asks Windows and hands the answers in. A moment in
+`TaskbarQuerySchedule` is a span since a start the shell counts from, as the C# `TimeSpan` was.
+
+| C# test file | Rust file | C# cases | Ported | Rust tests |
+| --- | --- | ---: | ---: | ---: |
+| `FullScreenTests.cs` | `core/tests/all/full_screen.rs` | 6 | 6 | 1, and 1 new |
+| `PillPlacementTests.cs` | `core/tests/all/pill_placement.rs` | 11 | 11 | 10, and 2 new |
+| `PillShowTests.cs` | `core/tests/all/pill_show.rs` | 14 | 14 | 10, and 2 new |
+| `TaskbarLayoutTests.cs` | `core/tests/all/taskbar_layout.rs` | 8 | 8 | 8, and 2 new |
+| `TaskbarQueryScheduleTests.cs` | `core/tests/all/taskbar_query_schedule.rs` | 21 | 21 | 18, and 4 new |
+| | | 60 | 60 | 47, and 11 new |
+
+`PillShowTests.cs` also holds the class `ZOrderTests` (6 of its 14 cases).
+
+### C# tests with no Rust test
+
+None.
+
+### C# tests ported in part
+
+None.
+
+### Rust tests with no C# test
+
+The C# sums of pixels wrap at the ends of an `int`, and the Rust wraps the same way.
+
+- `full_screen::states_at_the_ends_of_an_i32_and_below_zero_are_not_full_screen`.
+- `pill_placement::a_hidden_pill_has_no_place` and
+  `a_width_whose_sum_wraps_around_an_i32_is_placed_as_the_csharp_would`.
+- `pill_show::the_walk_looks_at_4096_windows_and_no_more` and
+  `the_walk_stops_at_the_top_without_asking_again`.
+- `taskbar_layout::an_own_tray_item_is_not_a_tray_item` and
+  `offsets_wrap_around_at_the_ends_of_an_i32`.
+- `taskbar_query_schedule::a_clock_set_back_counts_the_slow_check_from_the_question_asked_after_it`,
+  `the_count_of_questions_stops_at_30` and
+  `a_step_gives_a_new_schedule_and_leaves_the_old_one`.
+- `taskbar_query_schedule::spans_at_the_ends_do_not_overflow`: the C# `TimeSpan` threw on a
+  difference past its ends; here the difference stays at the end, which no clock reaches.
