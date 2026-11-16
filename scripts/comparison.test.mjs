@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { comparison, docsBlock, METRICS, multiple, outputs, pageSection, releaseRows, svg } from "./comparison.mjs";
+import { comparison, docsBlock, METRICS, multiple, outputs, pageSection, readmeBlock, releaseRows, svg } from "./comparison.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const md = readFileSync(join(root, "docs/baseline.md"), "utf8").replace(/\r/g, "");
@@ -104,4 +104,12 @@ test("each card carries its two figures for the count, as the table writes them"
   assert.match(html, /<figure class="m" data-a="96" data-b="7" data-u="MB" data-dp="0">/);
   assert.match(html, /<figure class="m" data-a="0.47" data-b="0.06" data-u="s" data-dp="2">/);
   assert.match(html, /<figure class="m" data-a="168.9" data-b="9.3" data-u="MB" data-dp="1">/);
+});
+
+test("the README says the same, and shows the picture and table once 2.0 has a row", () => {
+  assert.doesNotMatch(readmeBlock(comparison(without20)), /comparison\.svg|\| 2\.0\.0/);
+  const r = readmeBlock(comparison(with20));
+  assert.match(r, /<img src="docs\/images\/comparison\.svg" width="760" alt="Private memory: 1\.1 96 MB, 2\.0 7 MB\./);
+  assert.match(r, /^\| Sobreiro\.exe \| 168\.9 MB \| 9\.3 MB, 18× smaller \|$/m);
+  assert.match(r, /2\.0 rewrites the shell in Rust, and is set against 1\.1 here\./);
 });
