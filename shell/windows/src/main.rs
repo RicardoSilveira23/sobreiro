@@ -8,6 +8,7 @@ mod born_test;
 mod carried_bridge;
 mod clock;
 mod diagnostics;
+mod icon_pictures;
 mod licences;
 mod pictures;
 mod pill_face;
@@ -46,6 +47,7 @@ fn main() -> ExitCode {
         // Hidden: what the exe test launches.
         Some("--refresh-bridge") => carried_bridge::refresh_now(),
         Some("--pill-pictures") => pictures::run(args.next()),
+        Some("--icon-pictures") => icon_pictures::run(args.next()),
         _ => ExitCode::from(2),
     }
 }
