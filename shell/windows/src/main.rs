@@ -8,6 +8,7 @@ mod born_test;
 mod carried_bridge;
 mod clock;
 mod diagnostics;
+mod licences;
 mod pictures;
 mod pill_face;
 mod pill_feed;
@@ -27,6 +28,7 @@ mod ui {
 }
 
 fn main() -> ExitCode {
+    licences::keep();
     // Arguments are compared as they come: one that is not Unicode matches nothing.
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {

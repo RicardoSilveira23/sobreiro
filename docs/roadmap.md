@@ -290,7 +290,7 @@ Settled before Core is ported.
 - **The release build is one exe with nothing beside it.** The three fonts and the C runtime
   are inside. The tests take the exe apart to see that, and run a copy alone in an empty
   folder, where it draws a line of text in each font without a window. The bridge, built in
-  the same build, is inside it too; the debug build looks for it beside the exe. 9.9 MB as it
+  the same build, is inside it too; the debug build looks for it beside the exe. 10.5 MB as it
   stands, with the toolkit, the pill and the bridge inside.
 - **Versions.** The compiler is pinned in `rust-toolchain.toml` and every library in
   `Cargo.lock`, which CI does not let move. The UI toolkit is pinned to one exact version on
@@ -305,7 +305,9 @@ Settled before Core is ported.
   has read against GPL-3.0-or-later. All 337 fit: MIT, Apache 2.0, BSD, ISC, Zlib, Boost and
   Unicode licences, and the toolkit, taken under GPL version 3 only. So the exe as shipped is
   under version 3, while Sobreiro's own files stay "or later". These are readings, not legal
-  advice.
+  advice. The exe carries the notices of the libraries it is built from, made by a test from
+  the libraries' own licence files and kept in `shell/windows/notices.txt`, with Sobreiro's
+  licence and the two font licences.
 
 **Done when:** every feature in the manual works, the 2.0 baseline beats 1.0 by the margin the
 spike measured, upgrading over 1.0 needs no step from the user, and the comparison is published.
