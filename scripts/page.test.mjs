@@ -79,13 +79,13 @@ test("the meta line and the steps read as the design has them", () => {
 });
 
 test("the parts come in the phone's order", () => {
-  const at = ['class="say"', 'class="flow"', 'class="sends"', 'class="before"', 'class="foot"'].map((s) => {
+  const at = ['class="say"', 'class="flow"', 'class="sends"', 'class="before"', '<section class="cmp', 'class="foot"'].map((s) => {
     assert.equal(count(home, new RegExp(s, "g")), 1, s);
     return home.indexOf(s);
   });
   assert.deepEqual(at, [...at].sort((a, b) => a - b));
   const main = inner(home, '<main class="home"', "main");
-  for (const s of ['class="say"', 'class="flow"', 'class="sends"', 'class="before"']) assert.ok(main.includes(s), `${s} inside main`);
+  for (const s of ['class="say"', 'class="flow"', 'class="sends"', 'class="before"', '<section class="cmp']) assert.ok(main.includes(s), `${s} inside main`);
   assert.ok(!main.includes('class="foot"') && !main.includes('class="top"'));
 });
 
@@ -136,14 +136,14 @@ test("no other company's mark", () => {
 
 test("colours are the closed list", () => {
   const allowed = new Set(
-    ["#ebe6ff", "#1d1447", "#4d457c", "#6f4df6", "#5a3dd1", "#ffffff", "#b9adf5", "#f6f3ff", "#1c1c1c", "#9a9a9a", "#a594ff", "#ffb020", "#ff6b6b"],
+    ["#ebe6ff", "#1d1447", "#4d457c", "#6f4df6", "#5a3dd1", "#ffffff", "#b9adf5", "#f6f3ff", "#1c1c1c", "#9a9a9a", "#a594ff", "#ffb020", "#ff6b6b", "#b7410e"],
   );
   const hexes = (s) => (s.replace(/href="#[^"]*"/g, "").match(/#[0-9a-fA-F]{3,8}\b/g) || []).map((h) => h.toLowerCase());
   const roots = [...css.matchAll(/:root\s*\{[^}]*\}/g)].map((m) => m[0]).join("\n");
   const outside = css.replace(/:root\s*\{[^}]*\}/g, "");
   assert.deepEqual(hexes(outside), [], "hex outside :root in site.css");
   for (const h of hexes(roots)) assert.ok(allowed.has(h), h);
-  assert.equal(new Set(hexes(roots)).size, allowed.size, "all thirteen are defined");
+  assert.equal(new Set(hexes(roots)).size, allowed.size, "all fourteen are defined");
   for (const [name, src] of [["index.html", home], ["manual/index.html", manual], ...sources]) {
     if (name === "site/assets/site.css") continue;
     assert.deepEqual(hexes(src), [], `hex in ${name}`);
