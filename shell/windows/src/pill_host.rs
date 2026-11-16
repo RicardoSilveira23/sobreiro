@@ -12,6 +12,7 @@
 //! Windows calls back with no data of ours, so the tracker lives in a value of the UI thread.
 //! A callback that comes while the tracker is busy (Windows can call back inside a call the
 //! tracker makes) runs a turn of the event loop later. Each step that fails is let go.
+use crate::about;
 use crate::app_host;
 use crate::auto_start;
 use crate::connect_flow;
@@ -930,10 +931,19 @@ impl Host {
             Some(Command::Connect(connect)) => self.connect(connect),
             // The error box is a modal loop, so it runs once this tracker is let go.
             Some(Command::ToggleAutoStart) => Timer::single_shot(Duration::ZERO, toggle_auto_start),
+            Some(Command::OpenDataFolder) => self.open_data_folder(),
+            Some(Command::About) => about::show_about(),
             Some(Command::Quit) => {
                 let _ = slint::quit_event_loop();
             }
             None => {}
+        }
+    }
+
+    /// Opens the data folder in Explorer; a failure is logged as one fixed line.
+    fn open_data_folder(&self) {
+        if !about::open_data_folder() {
+            self.diagnostics.say("the data folder could not be opened");
         }
     }
 

@@ -4,8 +4,8 @@
 //! says why a change was not saved is made here too.
 //!
 //! The first items connect Claude Code's status line to the bridge or disconnect it, by where it
-//! stands now; the connect flow (`connect_flow`) does the work. Open data folder and About come
-//! with later tickets.
+//! stands now; the connect flow (`connect_flow`) does the work. Open data folder and About
+//! Sobreiro follow Start with Windows; `about` does their work.
 use crate::win::menu::{Entry, Item};
 use sobreiro_core::colours::BarColourOption;
 use sobreiro_core::config::{AppConfig, ConfigError, ShowOption};
@@ -28,6 +28,8 @@ const QUIT: u32 = 11;
 const CONNECT: u32 = 12;
 const RECONNECT: u32 = 13;
 const DISCONNECT: u32 = 14;
+const OPEN_DATA_FOLDER: u32 = 15;
+const ABOUT: u32 = 16;
 
 /// The one key of `config.json` a choice in the menu changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,6 +47,8 @@ pub enum Command {
     /// Runs the connect flow: true to connect (or reconnect), false to disconnect.
     Connect(bool),
     ToggleAutoStart,
+    OpenDataFolder,
+    About,
     Quit,
 }
 
@@ -115,6 +119,8 @@ pub fn entries(config: &AppConfig, auto_start: bool, state: ConnectionState) -> 
         },
         Entry::Separator,
         Entry::Item(item(AUTO_START, "Start with Windows", auto_start)),
+        Entry::Item(item(OPEN_DATA_FOLDER, "Open data folder", false)),
+        Entry::Item(item(ABOUT, "About Sobreiro", false)),
         Entry::Separator,
         Entry::Item(item(QUIT, "Quit", false)),
     ]);
@@ -137,6 +143,8 @@ pub fn command(id: u32) -> Option<Command> {
         CONNECT | RECONNECT => Some(Command::Connect(true)),
         DISCONNECT => Some(Command::Connect(false)),
         AUTO_START => Some(Command::ToggleAutoStart),
+        OPEN_DATA_FOLDER => Some(Command::OpenDataFolder),
+        ABOUT => Some(Command::About),
         QUIT => Some(Command::Quit),
         _ => None,
     }
@@ -287,6 +295,8 @@ mod tests {
                 "Show",
                 "-",
                 "Start with Windows",
+                "Open data folder",
+                "About Sobreiro",
                 "-",
                 "Quit",
             ]);
@@ -297,9 +307,9 @@ mod tests {
     #[test]
     fn the_menu_is_in_1_1s_order_with_its_texts() {
         let menu = connected(&AppConfig::default(), false);
-        assert_eq!(menu.len(), 9);
+        assert_eq!(menu.len(), 11);
         assert_eq!(menu[5], Entry::Separator);
-        assert_eq!(menu[7], Entry::Separator);
+        assert_eq!(menu[9], Entry::Separator);
         let titles: Vec<_> = (1..5).map(|at| submenu(&menu, at).0).collect();
         assert_eq!(titles, ["Style", "Bar colour", "Pace", "Show"]);
         let names = |at: usize| {
@@ -315,7 +325,9 @@ mod tests {
         assert_eq!(names(3), ["Tray icon only", "Tray icon and taskbar pill"]);
         assert_eq!(item(&menu, 0).0, "Disconnect from Claude Code");
         assert_eq!(item(&menu, 6).0, "Start with Windows");
-        assert_eq!(item(&menu, 8).0, "Quit");
+        assert_eq!(item(&menu, 7).0, "Open data folder");
+        assert_eq!(item(&menu, 8).0, "About Sobreiro");
+        assert_eq!(item(&menu, 10).0, "Quit");
     }
 
     #[test]
@@ -362,7 +374,7 @@ mod tests {
                 Entry::Submenu { items, .. } => ids.extend(items.iter().map(|item| item.id)),
             }
         }
-        assert_eq!(ids.len(), 13);
+        assert_eq!(ids.len(), 15);
         assert!(ids.iter().all(|id| *id != 0 && command(*id).is_some()));
         let mut unique = ids.clone();
         unique.sort_unstable();
@@ -390,6 +402,8 @@ mod tests {
             Some(Command::Change(ConfigChange::Show(ShowOption::TrayOnly)))
         );
         assert_eq!(command(AUTO_START), Some(Command::ToggleAutoStart));
+        assert_eq!(command(OPEN_DATA_FOLDER), Some(Command::OpenDataFolder));
+        assert_eq!(command(ABOUT), Some(Command::About));
         assert_eq!(command(QUIT), Some(Command::Quit));
         assert_eq!(command(0), None);
         assert_eq!(command(99), None);
