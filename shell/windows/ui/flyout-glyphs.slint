@@ -1,0 +1,96 @@
+// The glyphs of the Battery and Thermometer styles, in DIPs, drawn as 1.1's WPF card draws them.
+// What fills them is decided in Rust from Core's GlyphFill; this file only draws.
+
+// 128 x 40: an outline and a nub, ten cells. Lit cells are what is left now, the faint ones what
+// the pace will use by the reset, the rest the track.
+export component BatteryGlyph inherits Rectangle {
+    // Cells that are left, and of those the ones the pace will have used.
+    in property <int> left-cells;
+    in property <int> soon-cells;
+    in property <color> fill;
+    in property <color> track;
+    in property <color> soft;
+    width: 128px;
+    height: 40px;
+
+    // 1.1 strokes a 117 x 38 rectangle at (1, 1) with a line 1.5 wide centred on its edge, so
+    // the line spans from a quarter in to 118.75 across and 39.75 down, with a radius of 5 on
+    // the geometry and so 5.75 on the outside of the line.
+    Rectangle {
+        x: 0.25px;
+        y: 0.25px;
+        width: 118.5px;
+        height: 39.5px;
+        border-width: 1.5px;
+        border-color: root.soft;
+        border-radius: 5.75px;
+    }
+
+    Rectangle {
+        x: 120px;
+        y: 13px;
+        width: 5px;
+        height: 14px;
+        border-radius: 1.5px;
+        background: root.soft;
+    }
+
+    for i in 10: Rectangle {
+        x: 5px + 11px * i;
+        y: 5px;
+        width: 8px;
+        height: 30px;
+        border-radius: 1.5px;
+        background: i < root.left-cells - root.soon-cells ? root.fill : (i < root.left-cells ? root.fill.with-alpha(0.35) : root.track);
+    }
+}
+
+// 30 x 104: the tube, the faint share the pace will use, the solid rest and the bulb. The tube is
+// 80 high from 4 down, and its fill runs on into the bulb, which is centred 93 down.
+export component ThermometerGlyph inherits Rectangle {
+    // What is left now, and the share of the tube of that the pace will have used, in percent.
+    in property <float> left-percent;
+    in property <float> soon-percent;
+    // The colour of the fill: the level's, or the track with no reading.
+    in property <color> fill;
+    in property <color> track;
+    width: 30px;
+    height: 104px;
+
+    private property <length> top-left: 4px + 80px * (1 - root.left-percent / 100);
+    private property <length> top-soon: root.top-left + 80px * root.soon-percent / 100;
+
+    Rectangle {
+        x: 10px;
+        y: 4px;
+        width: 10px;
+        height: 86px;
+        border-radius: 5px;
+        background: root.track;
+    }
+
+    Rectangle {
+        x: 10px;
+        y: root.top-left;
+        width: 10px;
+        height: root.top-soon - root.top-left;
+        background: root.fill.with-alpha(0.35);
+    }
+
+    Rectangle {
+        x: 10px;
+        y: root.top-soon;
+        width: 10px;
+        height: 90px - root.top-soon;
+        background: root.fill;
+    }
+
+    Rectangle {
+        x: 6px;
+        y: 84px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: root.fill;
+    }
+}
