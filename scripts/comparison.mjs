@@ -146,7 +146,7 @@ export function pageSection(c) {
     const bar = (r, f, cls) =>
       `<p${cls}><span>${esc(r.name)}</span><i style="--w:${share(f.share)}${cls ? `;--from:${share(a.share)}` : ""}"></i><em>${esc(f.text)}</em></p>`;
     return [
-      `      <figure class="m">`,
+      `      <figure class="m" data-a="${a.value}" data-b="${b.value}" data-u="${b.unit}" data-dp="${(b.text.split(" ")[0].split(".")[1] ?? "").length}">`,
       `<figcaption>${esc(m.title)}</figcaption>`,
       `<p class="big"><b>${esc(x)}</b> ${esc(word)}</p>`,
       `<div class="pair">${bar(c.charted[0], a, "")}${bar(c.charted[1], b, ' class="new"')}</div>`,

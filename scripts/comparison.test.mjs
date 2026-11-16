@@ -98,3 +98,10 @@ test("a cell that is not a figure stops the build", () => {
   const bad2 = with20.replace(/^(\| 2\.0\.0 \| [^|]+\| )7 MB/m, "$1not measured");
   assert.throws(() => comparison(bad2), /2\.0\.0, Private memory: "not measured"/);
 });
+
+test("each card carries its two figures for the count, as the table writes them", () => {
+  const html = pageSection(comparison(with20));
+  assert.match(html, /<figure class="m" data-a="96" data-b="7" data-u="MB" data-dp="0">/);
+  assert.match(html, /<figure class="m" data-a="0.47" data-b="0.06" data-u="s" data-dp="2">/);
+  assert.match(html, /<figure class="m" data-a="168.9" data-b="9.3" data-u="MB" data-dp="1">/);
+});

@@ -114,7 +114,9 @@ the table differ: no figure is typed on the page.
   released before this repository was public and has no button.
 - 2.0's bars play the diagram's 5-second loop: each appears at 1.1's length, shrinks to its own
   in 0.9 s on the page's easing, holds, and fades out before the loop starts again, so it is
-  never seen growing. With no script it still plays; with reduced motion the bars stand still.
+  never seen growing. The figure at its tip counts down with it and the multiple counts up
+  (script). The multiple keeps a width of 2.6 em so the word after it does not move. With no
+  script the bars still play and the figures stand; with reduced motion nothing moves.
 
 | Thing | Size |
 |---|---|
@@ -215,6 +217,7 @@ on the page moves: no entrances, nothing on scroll, nothing on hover. The compar
 | Figures count | The answer dot lands | 0.8 s | The same reading, as a number |
 | Marker on the scale | The answer dot lands | 0.9 s | Where the session stands against 70% and 90%, so the colour change has a reason |
 | 2.0's bars | The loop starts | Fade in 0.4 s at 1.1's length, shrink 0.9 s from 0.4 s, fade out from 4.6 s | How much lighter 2.0 is than 1.1, figure by figure |
+| 2.0's figures and the multiples | With the bars' shrink | 0.9 s | The figure counts from 1.1's down to 2.0's, and the multiple up from 1.0×: always 1.1's figure over the one shown |
 | Pulse | The answer dot lands | 0.6 s | A new reading has just arrived. A violet outline grows 12 px from the pill and fades from 55% to nothing. |
 
 The rings, bar and marker share one easing, `cubic-bezier(.3, .7, .2, 1)`. Dots move at a
