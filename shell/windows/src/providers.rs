@@ -2,6 +2,7 @@
 //! reaches the network. Nothing else in the shell asks the network for anything. Tokens are read
 //! by the providers alone, for one request each, and are in no line this shell writes.
 use crate::diagnostics::Diagnostics;
+use crate::win::job::Job;
 use crate::win::{credentials, known_folders};
 use sobreiro_core::app_paths::{AppPaths, DATA_DIR_VARIABLE};
 use sobreiro_core::connect::claude_paths::{
@@ -23,7 +24,7 @@ use std::io::Read;
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 /// Keeps a console window from opening for `gh`.
@@ -151,8 +152,12 @@ fn gh_tokens() -> Result<TokenSearch, SignInFailed> {
     })
 }
 
+/// The most of `gh`'s output that is read: a token is far shorter.
+const OUTPUT_CAP: usize = 16 * 1024;
+
 /// Runs `gh` and gives its exit code and what it printed. None when it cannot be started or does
-/// not end in time, in which case it is stopped.
+/// not end and answer within Core's limit. `gh` runs in a job object, so that on a timeout, and
+/// when this returns, it and anything it started are ended, and no one keeps the pipe open.
 fn run_gh(exe: &Path) -> Option<(Option<i32>, Vec<u8>)> {
     let mut child = Command::new(exe)
         .args(gh_cli::ARGUMENTS)
@@ -162,26 +167,53 @@ fn run_gh(exe: &Path) -> Option<(Option<i32>, Vec<u8>)> {
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .ok()?;
+    let job = Job::kill_on_close();
+    if let Some(job) = &job {
+        let _ = job.assign(&child);
+    }
     let mut stdout = child.stdout.take()?;
-    let reader = std::thread::spawn(move || {
-        let mut bytes = Vec::new();
-        let _ = stdout.read_to_end(&mut bytes);
-        bytes
-    });
-    let started = Instant::now();
-    let status = loop {
-        match child.try_wait() {
-            Ok(Some(status)) => break Some(status),
-            Ok(None) if started.elapsed() < gh_cli::TIMEOUT => {
-                std::thread::sleep(Duration::from_millis(25));
+    let (sender, receiver) = mpsc::channel::<Vec<u8>>();
+    let reader = std::thread::Builder::new()
+        .name("gh-output".to_string())
+        .spawn(move || {
+            // Sized once and never grown: what is read is at most the cap.
+            let mut buffer = vec![0u8; OUTPUT_CAP];
+            let mut length = 0;
+            while length < OUTPUT_CAP {
+                match stdout.read(&mut buffer[length..]) {
+                    Ok(0) | Err(_) => break,
+                    Ok(read) => length += read,
+                }
             }
-            _ => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break None;
+            buffer.truncate(length);
+            // Nobody is waiting any more: the bytes are zeroed and dropped here.
+            if let Err(mpsc::SendError(mut late)) = sender.send(buffer) {
+                late.fill(0);
+            }
+        });
+    let deadline = Instant::now() + gh_cli::TIMEOUT;
+    let status = reader.ok().and_then(|_| {
+        loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break Some(status),
+                Ok(None) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(25));
+                }
+                _ => break None,
             }
         }
-    };
-    let bytes = reader.join().ok()?;
-    status.map(|status| (status.code(), bytes))
+    });
+    let output = status.and_then(|status| {
+        let left = deadline.saturating_duration_since(Instant::now());
+        receiver
+            .recv_timeout(left)
+            .ok()
+            .map(|bytes| (status.code(), bytes))
+    });
+    // Ended in every case: a finished `gh` has nothing left to end, and one that did not answer
+    // is stopped with what it started.
+    let _ = child.kill();
+    drop(job);
+    let _ = child.wait();
+    output
 }

@@ -68,7 +68,13 @@ pub fn run() -> ExitCode {
     // Made before the first pill: while `born` has a window pending it takes the next top-level
     // window this thread makes.
     let messages = MessageWindow::create(on_broadcast);
+    if messages.is_none() {
+        diagnostics.say("the message window could not be made");
+    }
     let foreground = WinEventHook::foreground(on_win_event);
+    if foreground.is_none() {
+        diagnostics.say("the foreground hook could not be set");
+    }
     let host = Host {
         started: Instant::now(),
         model: None,
@@ -78,6 +84,8 @@ pub fn run() -> ExitCode {
         diagnostics,
         copilot,
         config_unreadable: false,
+        component_failed: false,
+        window_failed: false,
         refresh_timer: Timer::default(),
         timer: Timer::default(),
         find_timer: Timer::default(),
@@ -99,15 +107,17 @@ pub fn run() -> ExitCode {
         return ExitCode::FAILURE;
     }
     with_host(|host| {
-        // Drawn once with what is there, as 1.1 does, and then the polls start.
+        // Drawn once with what is there, as 1.1 does.
         host.redraw();
-        host.start_polls();
         host.tick();
         host.timer
             .start(TimerMode::Repeated, TICK, || with_host(Host::tick));
         host.refresh_timer
             .start(TimerMode::Repeated, REFRESH, || with_host(Host::refresh));
     });
+    // The polls start from the loop's first turn: a poll that answers at once hands its answer
+    // back with `invoke_from_event_loop`, which fails until the toolkit has an event loop.
+    Timer::single_shot(Duration::ZERO, || with_host(Host::start_polls));
     // Runs until asked to quit: the pill's window can be destroyed under it (Explorer restarts).
     let ended = slint::run_event_loop_until_quit();
     // The tracker, its pill and its hooks go here, on the UI thread, before the thread's values
@@ -209,6 +219,9 @@ struct Host {
     copilot: Arc<CopilotProvider>,
     /// `config.json` could not be read at the last redraw, so it is told once.
     config_unreadable: bool,
+    /// The pill's component or window could not be made at the last try, so it is told once.
+    component_failed: bool,
+    window_failed: bool,
     refresh_timer: Timer,
     timer: Timer,
     find_timer: Timer,
@@ -271,6 +284,7 @@ impl Host {
             .name("copilot-cache".to_string())
             .spawn(move || {
                 if let Some(cache) = copilot.read_cache() {
+                    // As below: the loop exists, or has ended.
                     let _ = slint::invoke_from_event_loop(move || {
                         with_host(move |host| {
                             host.copilot.take_early(cache);
@@ -300,7 +314,8 @@ impl Host {
                 .name("poll".to_string())
                 .spawn(move || {
                     let finished = poll.run();
-                    // The loop has ended when this fails: nothing is left to draw.
+                    // Runs from the loop's first turn (see `run`), so the toolkit has its event
+                    // loop and this fails only when the loop has ended: nothing is left to draw.
                     let _ = slint::invoke_from_event_loop(move || {
                         with_host(move |host| host.on_poll_done(service, finished));
                     });
@@ -313,7 +328,10 @@ impl Host {
 
     fn on_poll_done(&mut self, service: Service, finished: Finished) {
         let handled = self.feed.done(service, finished, clock::now());
-        if let Some(line) = handled.log {
+        // Copilot's provider writes its own line, with the cache word, through the trace.
+        if service == Service::Claude
+            && let Some(line) = handled.log
+        {
             self.diagnostics.say(&line);
         }
         self.spawn(handled.runs);
@@ -393,9 +411,14 @@ impl Host {
         let Some(model) = self.model.as_ref() else {
             return;
         };
-        let Ok(component) = Pill::new() else {
+        let component = Pill::new();
+        let failed = component.is_err();
+        if failed && !self.component_failed {
             self.diagnostics
                 .say("the pill's component could not be made");
+        }
+        self.component_failed = failed;
+        let Ok(component) = component else {
             return;
         };
         component.set_data(face_data(model, &self.colours, false));
@@ -406,8 +429,12 @@ impl Host {
             .window()
             .set_position(slint::PhysicalPosition::new(OFF_SCREEN, OFF_SCREEN));
         let before = born::owned_windows();
-        if born::show(component.window(), self.taskbar).is_err() {
+        let shown = born::show(component.window(), self.taskbar);
+        if shown.is_err() && !self.window_failed {
             self.diagnostics.say("the pill's window could not be shown");
+        }
+        self.window_failed = shown.is_err();
+        if shown.is_err() {
             return;
         }
         self.pill = Some(PillWindow {

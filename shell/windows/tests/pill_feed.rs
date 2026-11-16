@@ -18,12 +18,18 @@ use pill_feed::{Feed, Run, Service, Surroundings, config_for_display};
 use sobreiro_core::colours::BarColourOption;
 use sobreiro_core::config::{AppConfig, ShowOption};
 use sobreiro_core::connect::ConnectionState;
+use sobreiro_core::copilot::copilot_poll::CopilotPollResult;
+use sobreiro_core::copilot::copilot_provider::CopilotProvider;
+use sobreiro_core::copilot::{CopilotReading, CopilotSource};
 use sobreiro_core::display::pill_model::PillModel;
 use sobreiro_core::display::zone::Zone;
 use sobreiro_core::limits::{Limit, LimitKind, providers};
+use sobreiro_core::live::claude_provider::ClaudeProvider;
+use sobreiro_core::live::live_poll::{LivePollResult, PollOutcome};
 use sobreiro_core::live::live_schedule::LiveSchedule;
 use sobreiro_core::live::live_usage_client::Cancelled;
 use sobreiro_core::polling::{Provider, ProviderPoll, ProviderState};
+use sobreiro_core::usage::{LimitWindow, RateLimits};
 use std::cell::Cell;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -375,4 +381,65 @@ fn the_theme_picks_the_ink() {
     .colours(BarColourOption::Purple);
     assert_ne!(dark.ink, light.ink);
     assert_eq!(dark, Theme::default().colours(BarColourOption::Purple));
+}
+
+/// Core's own providers, with polls that ask nobody: the readings they bring are kept (Claude's in
+/// a `usage.json` of the test's own) and come back through `limits()` into the model.
+#[test]
+fn cores_providers_feed_the_pill() {
+    let folder = folder("pill_feed_providers");
+    let schedule = LiveSchedule::start(now());
+    let claude = ClaudeProvider::with_poll(
+        move |_, _, _| {
+            Ok(LivePollResult {
+                schedule,
+                state: ProviderState::Ok,
+                limits: Some(RateLimits {
+                    five_hour: Some(LimitWindow {
+                        used_percentage: 27.0,
+                        resets_at: Some(now() + TimeDelta::hours(2)),
+                        observed_at: None,
+                    }),
+                    seven_day: None,
+                    spend: None,
+                }),
+                outcome: PollOutcome::Ok,
+            })
+        },
+        &folder.join("usage.json"),
+        None,
+    );
+    let copilot = CopilotProvider::with_poll(
+        move |_, _, _| {
+            Ok(CopilotPollResult {
+                schedule,
+                state: ProviderState::Ok,
+                reading: Some(CopilotReading {
+                    budget: 100.0,
+                    used: 17.0,
+                    resets_at: Some(now() + TimeDelta::days(15)),
+                    observed_at: now(),
+                    source: CopilotSource::Live,
+                }),
+                log: "Copilot poll ok".to_string(),
+            })
+        },
+        || None,
+        Arc::new(|_: &str| {}),
+    );
+    let mut feed = Feed::new(Arc::new(claude), Arc::new(copilot));
+
+    // Before a poll is kept there is nothing to show: dashes, and no Copilot block.
+    let empty = model(&feed, ShowOption::TrayAndPill, false).unwrap();
+    assert_eq!(empty.session.figure, "–");
+    assert!(empty.copilot.is_none());
+
+    let runs = feed.start(now());
+    answer(&mut feed, runs);
+    let pill = model(&feed, ShowOption::TrayAndPill, true).unwrap();
+    assert_eq!(pill.session.figure, "27%");
+    assert!(!pill.claude_stale);
+    let copilot = pill.copilot.unwrap();
+    assert_eq!(copilot.credits.figure, "17%");
+    assert_eq!(copilot.reset_date, "1 Dec");
 }
