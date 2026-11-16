@@ -23,7 +23,7 @@ use crate::tooltip_window::TooltipWindow;
 use crate::ui::Pill;
 use crate::win::probe::Prober;
 use crate::win::taskbar::{self, Broadcast, WinEvent, WinEventHook};
-use crate::win::{born, menu};
+use crate::win::{born, menu, message_box};
 use chrono::TimeDelta;
 use slint::{ComponentHandle, Timer, TimerMode};
 use sobreiro_core::colours::{BarColourOption, TaskbarColours};
@@ -233,7 +233,7 @@ fn error_box(text: String, tries: u32) {
         Timer::single_shot(FIND_POLL, move || error_box(text, tries - 1));
         return;
     }
-    menu::error_box(&text);
+    message_box::error(&text);
 }
 
 fn on_win_event(event: WinEvent) {
