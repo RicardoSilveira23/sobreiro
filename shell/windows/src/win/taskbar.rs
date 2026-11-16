@@ -245,7 +245,7 @@ unsafe extern "system" fn win_event(
     handler(event);
 }
 
-/// A hidden top-level window that hears "TaskbarCreated", display changes and setting changes. Top-level, not
+/// A hidden top-level window that hears "TaskbarCreated", display changes, setting changes and time changes. Top-level, not
 /// message-only: broadcasts skip message-only windows. Destroyed when dropped.
 /// Not Send: only the thread that made a window may destroy it.
 pub struct MessageWindow(isize, PhantomData<*const ()>);

@@ -887,10 +887,12 @@ impl Host {
         }
     }
 
-    /// Saves the bar colour through Core and asks the app host to draw it at once.
+    /// Saves the bar colour through Core and asks the app host to draw it at once. The redraw is
+    /// asked for once this tracker is let go: made now, its snapshot would wait for the tracker
+    /// and could land after a newer one.
     fn set_bar_colour(&mut self, colour: BarColourOption) {
         match pill_menu::change_bar_colour(&self.config_file, colour) {
-            Ok(true) => app_host::redraw(),
+            Ok(true) => Timer::single_shot(Duration::ZERO, app_host::redraw),
             Ok(false) => {}
             Err(_) => self
                 .diagnostics
