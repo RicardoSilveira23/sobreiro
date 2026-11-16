@@ -264,6 +264,12 @@ In this order:
    Its text is lighter ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)), and
    it is a pixel or two taller at 150% and 200%
    ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
+   The flyout's card was set beside 1.1's on 2026-11-16, in every state, style, theme, bar
+   colour and scale ([note](shell-comparison.md#b-for-20-the-flyout-beside-11s)). Size, words,
+   shapes and colours match; the thermometer and the detail line were a DIP or so off and are
+   fixed; the text is a little lighter, for the pill's reason
+   ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)). The manual's lines on the
+   flyout hold in the code and its tests; those that need the running app are checked by hand.
 4. **The release:** its baseline row, and the comparison below.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
