@@ -3,6 +3,7 @@
 pub mod bridge_command;
 pub mod bridge_install;
 pub mod bridge_locator;
+pub mod bridge_refresh;
 pub mod claude_paths;
 pub mod connect_message;
 pub mod connection;

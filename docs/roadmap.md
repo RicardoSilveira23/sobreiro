@@ -289,8 +289,9 @@ Settled before Core is ported.
   format, lint with warnings as errors, the tests, and the release build kept as an artifact.
 - **The release build is one exe with nothing beside it.** The three fonts and the C runtime
   are inside. The tests take the exe apart to see that, and run a copy alone in an empty
-  folder, where it draws a line of text in each font without a window. 8.8 MB as it stands,
-  with the toolkit linked in and only that specimen to draw.
+  folder, where it draws a line of text in each font without a window. The bridge, built in
+  the same build, is inside it too; the debug build looks for it beside the exe. 9.9 MB as it
+  stands, with the toolkit, the pill and the bridge inside.
 - **Versions.** The compiler is pinned in `rust-toolchain.toml` and every library in
   `Cargo.lock`, which CI does not let move. The UI toolkit is pinned to one exact version on
   top of that, because the pill leans on how that version makes a window. Every library the

@@ -26,6 +26,7 @@ mod bridge_command;
 mod bridge_config;
 mod bridge_install;
 mod bridge_locator;
+mod bridge_refresh;
 mod bridge_runner;
 mod claude_credentials;
 mod claude_paths;
