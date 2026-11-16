@@ -1,5 +1,5 @@
 //! The licence and notice texts the exe carries: those of the libraries it is built from, Sobreiro's
-//! own, and the two fonts'. A later licence window reads them from here.
+//! own, and the two fonts'. The licence window (`about.rs`) reads them from here.
 
 /// The notices of the libraries the exe is built from, made by the licence test.
 pub static NOTICES: &str = include_str!("../notices.txt");
