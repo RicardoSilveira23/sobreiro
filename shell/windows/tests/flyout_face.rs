@@ -877,3 +877,232 @@ fn a_detail_line_is_where_1_1_puts_it() {
         assert_eq!(last, bottom, "bottom at {scale}x");
     }
 }
+
+/// Like `pictures()`, with `--shapes`: the card drawn with no text, in a folder of its own.
+fn shapes() -> &'static Path {
+    static FOLDER: OnceLock<PathBuf> = OnceLock::new();
+    FOLDER.get_or_init(|| {
+        let folder = Path::new(env!("CARGO_TARGET_TMPDIR")).join("flyout-shapes");
+        let _ = std::fs::remove_dir_all(&folder);
+        std::fs::create_dir_all(&folder).unwrap();
+        let exe = folder.join("Sobreiro.exe");
+        std::fs::copy(EXE, &exe).unwrap();
+        let output = Command::new(&exe)
+            .arg("--flyout-pictures")
+            .arg("pictures")
+            .arg("--shapes")
+            .current_dir(&folder)
+            .env("SOBREIRO_DATA_DIR", folder.join("data"))
+            .env("CLAUDE_CONFIG_DIR", folder.join("claude"))
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        folder.join("pictures")
+    })
+}
+
+#[test]
+fn a_shapes_picture_has_no_text() {
+    let palette = NightPalette::for_dark(false);
+    let card = decode(&shapes().join(name("claude-only", "bars", "light", "purple", "1")));
+    // The heading's band, clear of the rounded corners, is all ground where the picture with text has its title.
+    assert!(!card.differs((12, 318), (2, 33), palette.ground, 2));
+    let with_text = picture("claude-only", "light", "purple", "1");
+    assert!(with_text.differs((12, 318), (2, 33), palette.ground, 2));
+}
+
+/// The summed distance from the card's shapes picture of 1.1's own pictures (`FlyoutView` of the
+/// 1.x app, as #43 drew them), purple bar colour, per state, style and theme at 100%, 150% and
+/// 200%. Before the second pass 2.0 had 0.91, 0.91 and 0.95 of it.
+#[rustfmt::skip]
+const INK_1_1: [(&str, &str, &str, [u64; 3]); 108] = [
+    ("claude-only", "bars", "light", [1_913_844, 4_281_821, 7_323_201]),
+    ("claude-only", "bars", "dark", [1_810_425, 4_067_594, 6_979_848]),
+    ("claude-only", "battery", "light", [1_976_597, 4_377_261, 7_548_135]),
+    ("claude-only", "battery", "dark", [1_870_787, 4_156_749, 7_200_171]),
+    ("claude-only", "thermometer", "light", [2_079_242, 4_594_951, 7_922_097]),
+    ("claude-only", "thermometer", "dark", [1_962_638, 4_360_468, 7_544_925]),
+    ("copilot-only", "bars", "light", [1_327_884, 2_957_230, 5_069_601]),
+    ("copilot-only", "bars", "dark", [1_245_156, 2_784_685, 4_799_754]),
+    ("copilot-only", "battery", "light", [1_327_884, 2_957_230, 5_069_601]),
+    ("copilot-only", "battery", "dark", [1_245_156, 2_784_685, 4_799_754]),
+    ("copilot-only", "thermometer", "light", [1_327_884, 2_957_230, 5_069_601]),
+    ("copilot-only", "thermometer", "dark", [1_245_156, 2_784_685, 4_799_754]),
+    ("both", "bars", "light", [3_072_330, 6_872_943, 11_762_805]),
+    ("both", "bars", "dark", [2_899_215, 6_513_153, 11_188_086]),
+    ("both", "battery", "light", [3_135_521, 6_968_383, 11_987_835]),
+    ("both", "battery", "dark", [2_960_741, 6_602_308, 11_411_865]),
+    ("both", "thermometer", "light", [3_237_416, 7_186_571, 12_361_692]),
+    ("both", "thermometer", "dark", [3_050_813, 6_807_641, 11_750_718]),
+    ("with-spend", "bars", "light", [2_941_074, 6_559_596, 11_218_878]),
+    ("with-spend", "bars", "dark", [2_779_740, 6_224_493, 10_684_743]),
+    ("with-spend", "battery", "light", [3_004_187, 6_655_036, 11_443_791]),
+    ("with-spend", "battery", "dark", [2_840_780, 6_313_648, 10_907_316]),
+    ("with-spend", "thermometer", "light", [3_105_950, 6_872_726, 11_817_723]),
+    ("with-spend", "thermometer", "dark", [2_930_690, 6_517_367, 11_245_998]),
+    ("no-reading", "bars", "light", [1_371_660, 3_071_100, 5_264_736]),
+    ("no-reading", "bars", "dark", [1_270_149, 2_857_203, 4_939_254]),
+    ("no-reading", "battery", "light", [1_374_021, 3_027_048, 5_237_415]),
+    ("no-reading", "battery", "dark", [1_270_560, 2_820_651, 4_906_587]),
+    ("no-reading", "thermometer", "light", [1_479_495, 3_246_018, 5_618_403]),
+    ("no-reading", "thermometer", "dark", [1_367_814, 3_020_907, 5_266_158]),
+    ("empty-and-full", "bars", "light", [1_982_451, 4_426_262, 7_591_876]),
+    ("empty-and-full", "bars", "dark", [1_860_389, 4_171_386, 7_182_464]),
+    ("empty-and-full", "battery", "light", [1_987_557, 4_378_655, 7_570_804]),
+    ("empty-and-full", "battery", "dark", [1_865_924, 4_127_196, 7_167_212]),
+    ("empty-and-full", "thermometer", "light", [2_091_390, 4_598_981, 7_950_100]),
+    ("empty-and-full", "thermometer", "dark", [1_958_609, 4_330_644, 7_514_225]),
+    ("badge-on-track", "bars", "light", [1_913_844, 4_281_821, 7_323_201]),
+    ("badge-on-track", "bars", "dark", [1_810_425, 4_067_594, 6_979_848]),
+    ("badge-on-track", "battery", "light", [1_976_597, 4_377_261, 7_548_135]),
+    ("badge-on-track", "battery", "dark", [1_870_787, 4_156_749, 7_200_171]),
+    ("badge-on-track", "thermometer", "light", [2_079_242, 4_594_951, 7_922_097]),
+    ("badge-on-track", "thermometer", "dark", [1_962_638, 4_360_468, 7_544_925]),
+    ("badge-ends", "bars", "light", [1_927_806, 4_285_987, 7_351_777]),
+    ("badge-ends", "bars", "dark", [1_805_707, 4_034_043, 6_936_088]),
+    ("badge-ends", "battery", "light", [1_976_572, 4_357_639, 7_525_936]),
+    ("badge-ends", "battery", "dark", [1_852_274, 4_100_626, 7_106_575]),
+    ("badge-ends", "thermometer", "light", [2_079_079, 4_574_986, 7_899_217]),
+    ("badge-ends", "thermometer", "dark", [1_944_419, 4_304_518, 7_452_298]),
+    ("badge-likely-used-up", "bars", "light", [1_973_247, 4_414_485, 7_553_500]),
+    ("badge-likely-used-up", "bars", "dark", [1_849_578, 4_157_063, 7_128_091]),
+    ("badge-likely-used-up", "battery", "light", [1_832_305, 4_034_703, 6_977_752]),
+    ("badge-likely-used-up", "battery", "dark", [1_714_813, 3_792_155, 6_579_478]),
+    ("badge-likely-used-up", "thermometer", "light", [1_935_293, 4_252_523, 7_352_899]),
+    ("badge-likely-used-up", "thermometer", "dark", [1_807_232, 3_994_810, 6_925_288]),
+    ("badge-used-up", "bars", "light", [1_974_423, 4_434_048, 7_582_567]),
+    ("badge-used-up", "bars", "dark", [1_862_078, 4_197_688, 7_200_914]),
+    ("badge-used-up", "battery", "light", [1_781_380, 3_943_529, 6_805_153]),
+    ("badge-used-up", "battery", "dark", [1_677_489, 3_727_764, 6_458_519]),
+    ("badge-used-up", "thermometer", "light", [1_884_320, 4_161_454, 7_180_168]),
+    ("badge-used-up", "thermometer", "dark", [1_769_794, 3_930_563, 6_804_128]),
+    ("badge-not-used-yet", "bars", "light", [1_877_556, 4_169_059, 7_148_505]),
+    ("badge-not-used-yet", "bars", "dark", [1_768_161, 3_944_239, 6_789_621]),
+    ("badge-not-used-yet", "battery", "light", [2_059_735, 4_541_250, 7_834_938]),
+    ("badge-not-used-yet", "battery", "dark", [1_942_558, 4_299_135, 7_452_159]),
+    ("badge-not-used-yet", "thermometer", "light", [2_162_531, 4_759_409, 8_209_653]),
+    ("badge-not-used-yet", "thermometer", "dark", [2_034_383, 4_502_708, 7_796_736]),
+    ("badge-too-early", "bars", "light", [1_961_772, 4_389_046, 7_509_822]),
+    ("badge-too-early", "bars", "dark", [1_849_407, 4_155_232, 7_137_228]),
+    ("badge-too-early", "battery", "light", [1_954_915, 4_308_774, 7_442_997]),
+    ("badge-too-early", "battery", "dark", [1_843_381, 4_079_613, 7_078_221]),
+    ("badge-too-early", "thermometer", "light", [2_057_810, 4_526_807, 7_817_964]),
+    ("badge-too-early", "thermometer", "dark", [1_935_473, 4_282_775, 7_423_362]),
+    ("badge-resetting", "bars", "light", [2_000_631, 4_478_209, 7_664_241]),
+    ("badge-resetting", "bars", "dark", [1_885_803, 4_238_305, 7_283_433]),
+    ("badge-resetting", "battery", "light", [1_994_203, 4_399_503, 7_591_770]),
+    ("badge-resetting", "battery", "dark", [1_879_990, 4_164_627, 7_219_107]),
+    ("badge-resetting", "thermometer", "light", [2_097_098, 4_617_536, 7_966_737]),
+    ("badge-resetting", "thermometer", "dark", [1_972_082, 4_367_789, 7_564_248]),
+    ("far-ends", "bars", "light", [1_539_144, 3_367_261, 5_820_428]),
+    ("far-ends", "bars", "dark", [1_416_732, 3_113_694, 5_401_124]),
+    ("far-ends", "battery", "light", [1_539_144, 3_367_261, 5_820_428]),
+    ("far-ends", "battery", "dark", [1_416_732, 3_113_694, 5_401_124]),
+    ("far-ends", "thermometer", "light", [1_539_144, 3_367_261, 5_820_428]),
+    ("far-ends", "thermometer", "dark", [1_416_732, 3_113_694, 5_401_124]),
+    ("long-footer", "bars", "light", [2_995_794, 6_643_568, 11_381_652]),
+    ("long-footer", "bars", "dark", [2_803_989, 6_246_845, 10_763_808]),
+    ("long-footer", "battery", "light", [3_058_547, 6_739_008, 11_606_586]),
+    ("long-footer", "battery", "dark", [2_864_351, 6_336_000, 10_984_131]),
+    ("long-footer", "thermometer", "light", [3_161_192, 6_956_698, 11_980_548]),
+    ("long-footer", "thermometer", "dark", [2_956_202, 6_539_719, 11_328_885]),
+    ("long-note", "bars", "light", [2_382_261, 5_266_786, 9_037_476]),
+    ("long-note", "bars", "dark", [2_212_599, 4_914_757, 8_491_386]),
+    ("long-note", "battery", "light", [2_382_261, 5_266_786, 9_037_476]),
+    ("long-note", "battery", "dark", [2_212_599, 4_914_757, 8_491_386]),
+    ("long-note", "thermometer", "light", [2_382_261, 5_266_786, 9_037_476]),
+    ("long-note", "thermometer", "dark", [2_212_599, 4_914_757, 8_491_386]),
+    ("spend-no-reset", "bars", "light", [2_728_068, 6_109_559, 10_427_082]),
+    ("spend-no-reset", "bars", "dark", [2_576_271, 5_791_508, 9_923_916]),
+    ("spend-no-reset", "battery", "light", [2_790_821, 6_204_999, 10_652_016]),
+    ("spend-no-reset", "battery", "dark", [2_636_633, 5_880_663, 10_144_239]),
+    ("spend-no-reset", "thermometer", "light", [2_893_106, 6_422_689, 11_025_999]),
+    ("spend-no-reset", "thermometer", "dark", [2_727_806, 6_084_382, 10_486_743]),
+    ("copilot-note", "bars", "light", [1_604_580, 3_561_997, 6_101_424]),
+    ("copilot-note", "bars", "dark", [1_499_763, 3_343_366, 5_761_806]),
+    ("copilot-note", "battery", "light", [1_604_580, 3_561_997, 6_101_424]),
+    ("copilot-note", "battery", "dark", [1_499_763, 3_343_366, 5_761_806]),
+    ("copilot-note", "thermometer", "light", [1_604_580, 3_561_997, 6_101_424]),
+    ("copilot-note", "thermometer", "dark", [1_499_763, 3_343_366, 5_761_806]),
+];
+
+/// The text ink of a picture: its distance from the shapes picture `shapes` (the card with no
+/// text), summed over the pixels that are opaque and have the same colour all round in the shapes
+/// picture, which leaves out every shape's edges.
+fn flyout_ink(picture: &Picture, shapes: &Picture) -> u64 {
+    assert_eq!(
+        (picture.width, picture.height),
+        (shapes.width, shapes.height)
+    );
+    let rgba = |of: &Picture, x: usize, y: usize| {
+        let at = (y * of.width + x) * 4;
+        [
+            of.rgba[at],
+            of.rgba[at + 1],
+            of.rgba[at + 2],
+            of.rgba[at + 3],
+        ]
+    };
+    let mut sum = 0;
+    for y in 1..picture.height - 1 {
+        for x in 1..picture.width - 1 {
+            let ground = rgba(shapes, x, y);
+            if ground[3] != 255 {
+                continue;
+            }
+            let flat = (y - 1..=y + 1)
+                .all(|row| (x - 1..=x + 1).all(|column| rgba(shapes, column, row) == ground));
+            if flat {
+                let have = rgba(picture, x, y);
+                sum += (0..3)
+                    .map(|channel| u64::from(have[channel].abs_diff(ground[channel])))
+                    .sum::<u64>();
+            }
+        }
+    }
+    sum
+}
+
+#[test]
+fn the_text_carries_1_1s_ink_in_every_state_at_every_scale() {
+    // Each picture within 3% and each style, theme and scale within 2% over its 18 states.
+    let mut spread = (f64::MAX, 0.0_f64);
+    for style in STYLES {
+        for (theme, _) in THEMES {
+            for (at, (label, _)) in SCALES.into_iter().enumerate() {
+                let (mut have, mut want) = (0, 0);
+                for state in STATES {
+                    let ink = INK_1_1
+                        .iter()
+                        .find(|entry| (entry.0, entry.1, entry.2) == (state, style, theme))
+                        .unwrap_or_else(|| panic!("no 1.1 ink for {state} {style} {theme}"))
+                        .3[at];
+                    let file = name(state, style, theme, "purple", label);
+                    let sum = flyout_ink(
+                        &decode(&pictures().join(&file)),
+                        &decode(&shapes().join(&file)),
+                    );
+                    let ratio = sum as f64 / ink as f64;
+                    assert!(
+                        (0.97..=1.03).contains(&ratio),
+                        "{state} {style} {theme} {label}x: 2.0's text ink is {ratio:.3} of 1.1's"
+                    );
+                    spread = (spread.0.min(ratio), spread.1.max(ratio));
+                    have += sum;
+                    want += ink;
+                }
+                let ratio = have as f64 / want as f64;
+                println!("{style} {theme} {label}x: 2.0's text ink is {ratio:.3} of 1.1's");
+                assert!(
+                    (0.98..=1.02).contains(&ratio),
+                    "{style} {theme} {label}x: 2.0's text ink is {ratio:.3} of 1.1's"
+                );
+            }
+        }
+    }
+    println!("per picture: {:.3}..{:.3}", spread.0, spread.1);
+}
