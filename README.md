@@ -258,7 +258,7 @@ The bundled fonts, Inter and Unbounded, are under the SIL Open Font License; the
 are in `src/Sobreiro/Fonts/`, and the fonts and licences are inside `Sobreiro.exe`; About Sobreiro
 shows the licences. The site carries its own copies, in `site/assets/fonts/`, with two more faces
 under the same licence, Sora and JetBrains Mono, and their licence files.
-The 2.0 flyout draws its figures, badges and detail lines with copies of Inter and Unbounded that
+The 2.0 flyout draws its figures, badge texts, resets-in texts and detail lines with copies of Inter and Unbounded that
 have tabular digits as their default; `scripts/tabular-fonts.py` makes them from the originals into
 `shell/windows/fonts/`, with the licence files and a note of what is changed.
 

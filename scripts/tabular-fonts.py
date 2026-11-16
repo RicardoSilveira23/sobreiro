@@ -2,11 +2,15 @@
 
 Each copy is its original with one change in the character map: every character whose default
 glyph the font's `tnum` feature (default language system) replaces now shows the tabular glyph.
-That is the digits 0-9 and the punctuation the feature also covers. The family, full, PostScript
-and unique names gain "Tabular", so a copy can be imported beside its original. No glyph outline
-or metric changes, and the head table's timestamps are kept, so a rerun writes the same bytes.
+That is the digits 0-9, the space and the punctuation and signs the feature also covers, except
+the colon. In Inter the `calt` feature raises a colon between digits (a time such as 9:15); it
+runs before `tnum` in the original, but a colon that already shows its tabular glyph matches no
+`calt` rule and would sit lower than in the original. So the colon keeps its default glyph and
+`calt` raises it as before. The family, full, PostScript and unique names gain "Tabular", so a
+copy can be imported beside its original. No glyph outline or metric changes, and the head
+table's timestamps are kept, so a rerun writes the same bytes.
 
-    python -I scripts/tabular-fonts.py          writes the three copies
+    python -I scripts/tabular-fonts.py          checks, then writes the three copies
     python -I scripts/tabular-fonts.py --check  rebuilds them in memory; exits 1 if the files on
                                                 disk differ, if 0-9 differ in advance, or if any
                                                 glyph differs from the original's
@@ -19,6 +23,7 @@ import io
 import sys
 from pathlib import Path
 
+import fontTools
 from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,6 +37,8 @@ FONTS = [
     ("Unbounded-Bold.ttf", "UnboundedTabular-Bold.ttf", "Unbounded", "Unbounded Tabular"),
 ]
 DIGITS = "0123456789"
+# Left on its default glyph so that Inter's `calt` can raise it between digits.
+KEEP = {ord(":")}
 
 
 def open_font(data):
@@ -64,9 +71,7 @@ def rename(font, old, new):
     old_ps, new_ps = old.replace(" ", ""), new.replace(" ", "")
     for record in font["name"].names:
         text = record.toUnicode()
-        if record.nameID in (1, 16, 21):
-            text = new + text[len(old):] if text.startswith(old) else text
-        elif record.nameID == 4:
+        if record.nameID in (1, 4, 16, 21):
             text = new + text[len(old):] if text.startswith(old) else text
         elif record.nameID in (3, 6):
             text = text.replace(old_ps + "-", new_ps + "-")
@@ -83,7 +88,7 @@ def build(original, old, new):
     remapped = set()
     for table in font["cmap"].tables:
         for code, glyph in list(table.cmap.items()):
-            if glyph in mapping:
+            if glyph in mapping and code not in KEEP:
                 table.cmap[code] = mapping[glyph]
                 remapped.add(code)
     rename(font, old, new)
@@ -121,9 +126,27 @@ def glyph_problems(original, derived, label):
     return problems
 
 
+def pinned_version():
+    for line in (ROOT / "scripts" / "requirements-fonts.txt").read_text().splitlines():
+        if line.startswith("fonttools=="):
+            return line.split("==")[1].strip()
+    raise SystemExit("scripts/requirements-fonts.txt does not pin fonttools")
+
+
 def main():
-    check = "--check" in sys.argv[1:]
+    args = sys.argv[1:]
+    if args not in ([], ["--check"]):
+        print("usage: python -I scripts/tabular-fonts.py [--check]", file=sys.stderr)
+        return 2
+    if fontTools.version != pinned_version():
+        print(
+            f"fontTools {fontTools.version} is installed, {pinned_version()} is pinned",
+            file=sys.stderr,
+        )
+        return 1
+    check = bool(args)
     problems = []
+    built = []
     for source, target, old, new in FONTS:
         original = (ORIGINALS / source).read_bytes()
         data, remapped = build(original, old, new)
@@ -131,20 +154,25 @@ def main():
         if data != again:
             problems.append(f"{target}: two builds differ")
         problems += glyph_problems(original, data, target)
-        listing = "".join(chr(c) for c in remapped if c < 0x2000)
         if check:
             path = OUT / target
             if not path.is_file() or path.read_bytes() != data:
                 problems.append(f"{target}: the file on disk is not what the script writes")
-        else:
-            OUT.mkdir(parents=True, exist_ok=True)
-            (OUT / target).write_bytes(data)
-            print(f"{target}: {len(remapped)} characters remapped: {listing!a}")
+        built.append((target, data, remapped))
     for line in problems:
         print(line, file=sys.stderr)
+    if problems:
+        print("check failed" if check else "nothing written", file=sys.stderr)
+        return 1
     if check:
-        print("the fonts are as the script makes them" if not problems else "check failed")
-    return 1 if problems else 0
+        print("the fonts are as the script makes them")
+        return 0
+    OUT.mkdir(parents=True, exist_ok=True)
+    for target, data, remapped in built:
+        (OUT / target).write_bytes(data)
+        listing = "".join(chr(c) for c in remapped)
+        print(f"{target}: {len(remapped)} characters remapped: {listing!a}")
+    return 0
 
 
 if __name__ == "__main__":
