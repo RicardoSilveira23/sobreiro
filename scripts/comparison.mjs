@@ -2,35 +2,42 @@
 // landing page's section, the block at the top of docs/baseline.md and docs/images/comparison.svg.
 // Every figure is copied from that table as it is written there; nothing here holds a figure.
 //
+// It opens with what 1.0 to 1.1 changed, in words, then sets 2.0 against 1.1 in charts. Until
+// 2.0.0 has a row there are no charts and no picture.
+//
 //   node scripts/comparison.mjs          write the three
 //   node scripts/comparison.mjs --check  exit 1 when one of them is not what the table gives
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO = "https://github.com/RicardoSilveira23/sobreiro";
 
-// The releases compared, oldest first. One without a row in the table is left out.
+// The releases, oldest first. One without a row in the table is left out.
 export const RELEASES = [
   { build: "1.0.0", name: "1.0" },
   { build: "1.1.0", name: "1.1" },
   { build: "2.0.0", name: "2.0" },
 ];
+// The two the charts set side by side: the new shell against the release it replaces.
+export const BASE = "1.1.0";
+export const NEW = "2.0.0";
 
 // Releases cut before this repository went public: measured, but with no GitHub Release here.
-// Every other compared release gets a download button once it has a row, since a release row
-// is measured from the file attached to the release, after it is out.
+// Every other release gets a download button once it has a row, since a release row is
+// measured from the file attached to the release, after it is out.
 export const NOT_ON_GITHUB = new Set(["1.0.0"]);
 
-// The figures shown, by their column in the table. Each says how a lower and a higher figure
+// The figures charted, by their column in the table. Each says how a lower and a higher figure
 // read beside a multiple.
 export const METRICS = [
   { column: "Private memory", title: "Private memory", less: "less", more: "more" },
-  { column: "CPU per idle hour", title: "Processor time per idle hour", less: "less", more: "more" },
+  { column: "CPU per idle hour", title: "CPU per idle hour", less: "less", more: "more" },
   { column: "First pill, later starts", title: "Start to the pill", less: "faster", more: "slower" },
   { column: "Sobreiro.exe", title: "Sobreiro.exe", less: "smaller", more: "larger" },
 ];
+const [, CPU, START] = METRICS;
 
 export const FILES = {
   page: "site/index.html",
@@ -70,26 +77,7 @@ export function releaseRows(md) {
 function figure(text, where) {
   const m = /^(\d+(?:\.\d+)?) (MB|s)$/.exec(text ?? "");
   if (!m) throw new Error(`${where}: "${text}" is not a figure like "97 MB" or "0.40 s"`);
-  return { text, value: Number(m[1]) };
-}
-
-// What the page and the docs show: the compared releases that have a row, and each metric's
-// figures with their share of that metric's largest.
-export function comparison(md) {
-  const rows = releaseRows(md);
-  const releases = RELEASES.filter((r) => rows.has(r.build)).map((r) => ({
-    ...r,
-    download: NOT_ON_GITHUB.has(r.build) ? null : `${REPO}/releases/tag/v${r.build}`,
-  }));
-  const metrics = METRICS.map((m) => {
-    const figs = releases.map((r) => figure(rows.get(r.build)[m.column], `${r.build}, ${m.column}`));
-    const max = Math.max(...figs.map((f) => f.value));
-    return { ...m, figures: figs.map((f) => ({ ...f, share: max ? f.value / max : 0 })) };
-  });
-  const missing = RELEASES.filter((r) => !rows.has(r.build));
-  // The multiples are against the release before the newest, so the newest shows what it buys.
-  const base = releases.length > 1 ? releases[releases.length - 2].name : null;
-  return { releases, metrics, missing, base };
+  return { text, value: Number(m[1]), unit: m[2] };
 }
 
 // A figure beside another as a multiple: "14× less", "1.2× slower", or "about the same" within 5%.
@@ -100,66 +88,85 @@ export function multiple(value, base, m) {
   if (r <= 1 / 1.05) return `${x(1 / r)}× ${m.more}`;
   return "about the same";
 }
-// Each figure's multiples, against every release but the newest (which is never the base) and
-// itself: [[base name, text]].
-const multiples = (c, m, k) =>
-  c.releases
-    .slice(0, -1)
-    .map((r, j) => [r.name, j === k ? null : multiple(m.figures[k].value, m.figures[j].value, m)])
-    .filter(([, t]) => t);
+
+// What the page and the docs show: the releases that have a row, what 1.0 to 1.1 changed, and,
+// once 2.0.0 has a row, each metric's figures for 1.1 and 2.0 with 2.0's multiple.
+export function comparison(md) {
+  const rows = releaseRows(md);
+  const fig = (build, m) => figure(rows.get(build)[m.column], `${build}, ${m.column}`);
+  const releases = RELEASES.filter((r) => rows.has(r.build)).map((r) => ({
+    ...r,
+    download: NOT_ON_GITHUB.has(r.build) ? null : `${REPO}/releases/tag/v${r.build}`,
+  }));
+  const step =
+    rows.has("1.0.0") && rows.has("1.1.0")
+      ? { cpu: [fig("1.0.0", CPU), fig("1.1.0", CPU)], start: [fig("1.0.0", START), fig("1.1.0", START)] }
+      : null;
+  const charted = rows.has(BASE) && rows.has(NEW) ? RELEASES.filter((r) => r.build === BASE || r.build === NEW) : [];
+  const metrics = charted.length
+    ? METRICS.map((m) => {
+        const [a, b] = charted.map((r) => fig(r.build, m));
+        const max = Math.max(a.value, b.value);
+        return {
+          ...m,
+          figures: [a, b].map((f) => ({ ...f, share: max ? f.value / max : 0 })),
+          multiple: multiple(b.value, a.value, m),
+        };
+      })
+    : [];
+  return { releases, step, charted, metrics };
+}
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const share = (n) => String(Math.round(n * 1000) / 1000);
 
-// What each release is built on, for those that have a row.
-function builtOn(c) {
-  const has = (b) => c.releases.some((r) => r.build === b);
-  const parts = [];
-  if (has("1.0.0") && has("1.1.0")) parts.push("1.0 and 1.1 run on WPF, 1.1 tuned for idle");
-  if (has("2.0.0")) parts.push("2.0 is rewritten in Rust");
-  return parts.length ? `${parts.join("; ")}.` : "";
+// The words on 1.0 to 1.1: what the release was for, and what it bought and cost.
+function stepWords(c) {
+  if (!c.step) return "";
+  const [cpu0, cpu1] = c.step.cpu, [s0, s1] = c.step.start;
+  const d = s1.value - s0.value;
+  const start = Math.abs(d) < 0.005 ? "" : `, for a start ${Math.abs(d).toFixed(2)} s ${d > 0 ? "slower" : "faster"}`;
+  return (
+    "1.1 tuned 1.0's WPF shell for idle: it asks the taskbar mainly when something changes, and" +
+    ` compiles its code once. Processor time per idle hour fell from ${cpu0.text} to ${cpu1.text},` +
+    ` ${multiple(cpu1.value, cpu0.value, CPU)}${start}.`
+  );
 }
-const rustMissing = (c) => c.missing.some((r) => r.build === "2.0.0");
+const rustWords = (c) =>
+  c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 below." : "2.0, rewritten in Rust, is set against 1.1 here once it is released.";
+const MEASURED = "Measured the same way on one PC, after 10 minutes left alone.";
+const KEY = '<i class="k1"></i>1.1, the outer ring <i class="k2"></i>2.0, the inner ring.';
+// A multiple cut for the card: the number large, its word after it.
+const cut = (t) => (t === "about the same" ? ["≈", "about the same"] : t.split(" "));
+const offset = (f) => String(Math.round((1 - f.share) * 1000) / 10);
 
 export function pageSection(c) {
-  const newest = c.releases.length - 1;
-  const charts = c.metrics
-    .map((m) => {
-      const rows = m.figures
-        .map(
-          (f, k) =>
-            `<li data-r="${esc(c.releases[k].name)}"${k === newest ? ' class="new"' : ""}><b>${esc(c.releases[k].name)}</b><span><i style="--w:${share(f.share)}"></i>${esc(f.text)}${multiples(c, m, k)
-              .map(([b, t]) => `<em data-vs="${esc(b)}"${b === c.base ? "" : " hidden"}>${esc(t)}</em>`)
-              .join("")}</span></li>`,
-        )
-        .join("");
-      return `      <figure class="m"><figcaption>${esc(m.title)}</figcaption><ol>${rows}</ol></figure>`;
-    })
-    .join("\n");
+  const charts = c.metrics.map((m) => {
+    const [a, b] = m.figures;
+    const [x, word] = cut(m.multiple);
+    return [
+      `      <figure class="m"><div class="ring">`,
+      `<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="tk" cx="26" cy="26" r="23.5"/><circle class="tk" cx="26" cy="26" r="18.5"/>`,
+      `<circle class="was" cx="26" cy="26" r="23.5" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="${offset(a)}"/>`,
+      `<circle class="now" cx="26" cy="26" r="18.5" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="${offset(b)}" style="--from:${offset(a)}"/></svg>`,
+      `<p class="big"><b>${esc(x)}</b> <span>${esc(word)}</span></p></div>`,
+      `<figcaption>${esc(m.title)}</figcaption>`,
+      `<p class="d">${esc(c.charted[0].name)} ${esc(a.text)} → ${esc(c.charted[1].name)} <b>${esc(b.text)}</b></p>`,
+      `</figure>`,
+    ].join("");
+  });
   const buttons = c.releases
     .filter((r) => r.download)
     .reverse()
     .map((r) => `<a class="mn" href="${esc(r.download)}">Download ${esc(r.name)}</a>`)
     .join("");
-  // The switch for the release the multiples are against: shown by compare.js, as it needs script.
-  const bases = c.releases.slice(0, -1);
-  const vs =
-    bases.length > 1
-      ? `    <div class="vs" hidden><span>Compared with</span>${bases
-          .map((r) => `<button type="button" data-base="${esc(r.name)}" aria-pressed="${r.name === c.base}">${esc(r.name)}</button>`)
-          .join("")}</div>`
-      : null;
-  // Said in words for a reader without script; compare.js hides it once the switch shows.
-  const against = c.base ? `<span data-k="against"> Multiples are against <b>${esc(c.base)}</b>.</span>` : "";
   return [
     OPEN,
     `  <section class="cmp" aria-labelledby="cmp">`,
     `    <h2 id="cmp">How heavy each release is</h2>`,
-    `    <p class="lead">${esc(builtOn(c))}${rustMissing(c) ? " 2.0, rewritten in Rust, joins them when it is released." : ""} Measured the same way on one PC, after 10 minutes left alone. Shorter is lighter.${against}</p>`,
-    ...(vs ? [vs] : []),
-    `    <div class="charts">`,
-    charts,
-    `    </div>`,
+    ...(c.step ? [`    <p class="lead">${esc(stepWords(c))}</p>`] : []),
+    `    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`,
+    ...(charts.length ? [`    <p class="key2">${KEY}</p>`, `    <div class="charts">`, ...charts, `    </div>`] : []),
     `    <div class="gets">${buttons}<a class="how" href="${REPO}/blob/main/docs/baseline.md">How it is measured</a></div>`,
     `  </section>`,
     `  ${CLOSE}`,
@@ -167,64 +174,62 @@ export function pageSection(c) {
 }
 
 export function docsBlock(c) {
-  const head = `| | ${c.releases.map((r) => r.build).join(" | ")} |`;
-  const rule = `|---|${c.releases.map(() => "---").join("|")}|`;
-  const newest = c.releases.length - 1;
-  const cell = (m, f, k) => {
-    const vs = k === newest && multiples(c, m, k).find(([b]) => b === c.base);
-    return vs ? `${f.text}, ${vs[1]}` : f.text;
-  };
-  const body = c.metrics.map((m) => `| ${m.title} | ${m.figures.map((f, k) => cell(m, f, k)).join(" | ")} |`);
+  const table = c.metrics.length
+    ? [
+        `![${c.metrics.map((m) => `${m.title}: ${m.figures.map((f, k) => `${c.charted[k].name} ${f.text}`).join(", ")}`).join(". ")}.](images/comparison.svg)`,
+        "",
+        `| | ${c.charted.map((r) => r.build).join(" | ")} |`,
+        "|---|---|---|",
+        ...c.metrics.map((m) => `| ${m.title} | ${m.figures[0].text} | ${m.figures[1].text}, ${m.multiple} |`),
+        "",
+      ]
+    : [];
   return [
     OPEN,
     "## The releases side by side",
     "",
-    `![${c.metrics.map((m) => `${m.title}: ${m.figures.map((f, k) => `${c.releases[k].name} ${f.text}`).join(", ")}`).join(". ")}.](images/comparison.svg)`,
+    [stepWords(c), c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 below." : "2.0.0, rewritten in Rust, is set against 1.1 here once its release row is in."]
+      .filter(Boolean)
+      .join(" "),
     "",
-    head,
-    rule,
-    ...body,
-    "",
-    `From the rows under [Releases](#releases). ${builtOn(c)}` +
-      (rustMissing(c) ? " 2.0.0, rewritten in Rust, joins them once its release row is in." : "") +
-      (c.base ? ` The newest release's multiples are against ${c.base}.` : "") +
-      ' "Start to the pill" is the later' +
-      " starts' median. The landing page shows the same figures. Both are written by" +
-      " `node scripts/comparison.mjs` and checked against the table by `npm run check`.",
+    ...table,
+    'From the rows under [Releases](#releases). "Start to the pill" is the later starts\' median.' +
+      " The landing page shows the same. Both are written by `node scripts/comparison.mjs` and" +
+      " checked against the table by `npm run check`.",
     CLOSE,
   ].join("\n");
 }
 
-// The docs' picture: one small bar chart per figure, two by two, in the page's colours.
+// The docs' picture: one small bar chart per figure, two by two, in the page's colours. None
+// until there are two releases to chart.
 export function svg(c) {
+  if (!c.metrics.length) return null;
   const W = 760, pad = 20, gap = 40, colW = (W - 2 * pad - gap) / 2, label = 36, valueW = 150;
-  const rowH = 26, titleH = 30, n = c.releases.length;
+  const rowH = 26, titleH = 30, n = c.charted.length;
   const panelH = titleH + n * rowH;
   const H = pad * 2 + panelH * 2 + 28 + 30;
-  const newest = n - 1;
   const parts = c.metrics.map((m, i) => {
     const x = pad + (i % 2) * (colW + gap), y = pad + Math.floor(i / 2) * (panelH + 28);
     const full = colW - label - valueW;
     const bars = m.figures.map((f, k) => {
+      const isNew = c.charted[k].build === NEW;
       const by = y + titleH + k * rowH;
       const w = Math.max(4, Math.round(full * f.share)), r = Math.min(4, w / 2);
       return [
-        `<text x="${x}" y="${by + 15}" class="r">${esc(c.releases[k].name)}</text>`,
-        `<path d="M${x + label} ${by + 5}h${w - r}a${r} ${r} 0 0 1 ${r} ${r}v${12 - 2 * r}a${r} ${r} 0 0 1-${r} ${r}h-${w - r}z" fill="${k === newest ? "#6f4df6" : "#b9adf5"}"/>`,
-        `<text x="${x + label + w + 8}" y="${by + 15}" class="v">${esc(f.text)}${
-          k === newest && c.base ? (([, t]) => `<tspan class="x" dx="8">${esc(t)}</tspan>`)(multiples(c, m, k).find(([b]) => b === c.base)) : ""
-        }</text>`,
+        `<text x="${x}" y="${by + 15}" class="r">${esc(c.charted[k].name)}</text>`,
+        `<path d="M${x + label} ${by + 5}h${w - r}a${r} ${r} 0 0 1 ${r} ${r}v${12 - 2 * r}a${r} ${r} 0 0 1-${r} ${r}h-${w - r}z" fill="${isNew ? "#6f4df6" : "#b9adf5"}"/>`,
+        `<text x="${x + label + w + 8}" y="${by + 15}" class="v">${esc(f.text)}${isNew ? `<tspan class="x" dx="8">${esc(m.multiple)}</tspan>` : ""}</text>`,
       ].join("");
     });
     return `<text x="${x}" y="${y + 14}" class="t">${esc(m.title)}</text>${bars.join("")}`;
   });
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">`,
-    `<title>How heavy each release is</title>`,
+    `<title>2.0 against 1.1</title>`,
     `<style>text{font-family:Inter,"Segoe UI",system-ui,sans-serif;fill:#1d1447;font-size:13px}.t{font-weight:600;font-size:14px}.r{font-weight:600}.v{font-variant-numeric:tabular-nums}.s{fill:#4d457c}.x{font-weight:600}</style>`,
     `<rect width="${W}" height="${H}" rx="8" fill="#f6f3ff"/>`,
     ...parts,
-    `<text x="${pad}" y="${H - pad}" class="s">Shorter is lighter.${c.base ? ` Multiples against ${esc(c.base)}.` : ""} From docs/baseline.md, Releases.</text>`,
+    `<text x="${pad}" y="${H - pad}" class="s">Shorter is lighter; each bar is a share of the larger. From docs/baseline.md, Releases.</text>`,
     `</svg>`,
     "",
   ].join("\n");
@@ -239,21 +244,21 @@ export function withBlock(text, block, name) {
   return (flat.slice(0, a) + block + flat.slice(b + CLOSE.length)).replace(/\n/g, eol);
 }
 
-// Each file as the table makes it: [path, wanted text, text on disk].
+// Each file as the table makes it: [path, wanted text, text on disk]. A file that should not
+// exist is wanted as null, and is null on disk when it is missing.
 export function outputs(read = (p) => readFileSync(join(root, p), "utf8")) {
   const md = read(FILES.docs);
   const c = comparison(md);
   const page = read(FILES.page);
-  let current;
+  let current = null;
   try {
     current = read(FILES.svg);
-  } catch {
-    current = "";
-  }
+  } catch {}
+  const picture = svg(c);
   return [
     [FILES.page, withBlock(page, pageSection(c), FILES.page), page],
     [FILES.docs, withBlock(md, docsBlock(c), FILES.docs), md],
-    [FILES.svg, svg(c).replace(/\n/g, current.includes("\r\n") ? "\r\n" : "\n"), current],
+    [FILES.svg, picture === null ? null : picture.replace(/\n/g, current?.includes("\r\n") ? "\r\n" : "\n"), current],
   ];
 }
 
@@ -264,6 +269,9 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     for (const [p] of stale) console.error(`${p} is not what docs/baseline.md gives: run node scripts/comparison.mjs`);
     process.exit(stale.length ? 1 : 0);
   }
-  for (const [p, want] of stale) writeFileSync(join(root, p), want);
+  for (const [p, want] of stale) {
+    if (want === null) unlinkSync(join(root, p));
+    else writeFileSync(join(root, p), want);
+  }
   console.log(stale.length ? `wrote ${stale.map(([p]) => p).join(", ")}` : "up to date");
 }

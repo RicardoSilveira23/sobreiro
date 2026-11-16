@@ -10,33 +10,20 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const md = readFileSync(join(root, "docs/baseline.md"), "utf8").replace(/\r/g, "");
 const page = readFileSync(join(root, "site/index.html"), "utf8").replace(/\r/g, "");
 
+// A stand-in 2.0.0 row: the spike's figures, used only to build the page as it will be.
 const ROW_20 = "| 2.0.0 | 2026-12-01 | 7 MB | 29 MB | 1.7 s | 0.06 s | 0.06 s | 9.3 MB | 2.2 MB | 9 ms |";
 const without20 = md.replace(/^\| 2\.0\.0 \|.*\n/m, "");
 const with20 = without20.replace(/^(\| 1\.1\.0 \| \d{4}-.*\n)/m, `$1${ROW_20}\n`);
 
-// The page's charts read back: [{ title, rows: [[release, figure]] }].
-const charts = (html) =>
-  [...html.matchAll(/<figure class="m"><figcaption>(.*?)<\/figcaption><ol>(.*?)<\/ol><\/figure>/g)].map(([, title, ol]) => ({
-    title,
-    rows: [...ol.matchAll(/<b>(.*?)<\/b><span><i [^>]*><\/i>([^<]*)/g)].map((m) => [m[1], m[2]]),
-  }));
+// The cards read back: [{ title, big, base, fig }].
+const cards = (html) =>
+  [...html.matchAll(/<p class="big"><b>(.*?)<\/b> <span>(.*?)<\/span><\/p><\/div><figcaption>(.*?)<\/figcaption><p class="d">1\.1 (.*?) → 2\.0 <b>(.*?)<\/b><\/p>/g)].map(
+    ([, x, word, title, base, fig]) => ({ title, big: `${x} ${word}`, base, fig }),
+  );
 
-test("the page, the docs and the picture are what docs/baseline.md gives", () => {
+test("the page and the docs are what docs/baseline.md gives", () => {
   for (const [path, want, have] of outputs()) {
     assert.equal(have, want, `${path} is stale: run node scripts/comparison.mjs`);
-  }
-});
-
-test("every figure on the page is the Releases table's own", () => {
-  const rows = releaseRows(md);
-  const shown = charts(page);
-  assert.equal(shown.length, METRICS.length);
-  for (const [i, m] of METRICS.entries()) {
-    assert.equal(shown[i].title, m.title);
-    assert.ok(shown[i].rows.length >= 2, `${m.title}: at least 1.0 and 1.1`);
-    for (const [name, fig] of shown[i].rows) {
-      assert.equal(fig, rows.get(`${name}.0`)[m.column], `${m.title}, ${name}`);
-    }
   }
 });
 
@@ -46,47 +33,56 @@ test("the section sits in main, after the notes and before the footer", () => {
   assert.deepEqual(at, [...at].sort((a, b) => a - b));
 });
 
-test("without a 2.0 row it builds: 1.0 and 1.1, 2.0 said to be coming, no 2.0 button", () => {
-  const c = comparison(without20);
-  assert.deepEqual(c.releases.map((r) => r.name), ["1.0", "1.1"]);
-  const html = pageSection(c);
-  assert.deepEqual(charts(html)[0].rows.map(([n]) => n), ["1.0", "1.1"]);
-  assert.match(html, /2\.0, rewritten in Rust, joins them when it is released\./);
-  assert.doesNotMatch(html, /Download 2\.0|v2\.0\.0/);
-  assert.match(docsBlock(c), /2\.0\.0, rewritten in Rust, joins them once its release row is in\./);
-  assert.doesNotMatch(docsBlock(c), /\| 2\.0\.0 \|/);
+test("the words on 1.0 to 1.1 carry the table's figures", () => {
+  const rows = releaseRows(md);
+  const cpu = (b) => rows.get(b)["CPU per idle hour"];
+  assert.ok(page.includes(`Processor time per idle hour fell from ${cpu("1.0.0")} to ${cpu("1.1.0")}`));
 });
 
-test("with a 2.0 row: 2.0 shown last and highlighted, and its download first", () => {
-  const c = comparison(with20);
+test("without a 2.0 row it builds: the words, no rings, no picture, no 2.0 button", () => {
+  const c = comparison(without20);
   const html = pageSection(c);
-  assert.deepEqual(charts(html)[0].rows, [["1.0", "97 MB"], ["1.1", "96 MB"], ["2.0", "7 MB"]]);
-  assert.equal((html.match(/<li data-r="2\.0" class="new"><b>2\.0<\/b>/g) || []).length, METRICS.length);
-  assert.match(html, /1\.1 tuned for idle; 2\.0 is rewritten in Rust\./);
-  assert.doesNotMatch(html, /joins them/);
+  assert.equal(cards(html).length, 0);
+  assert.doesNotMatch(html, /class="charts"|Download 2\.0|v2\.0\.0/);
+  assert.match(html, /2\.0, rewritten in Rust, is set against 1\.1 here once it is released\./);
+  assert.match(html, /fell from 14\.9 s to 2\.0 s, 7\.5× less, for a start 0\.07 s slower\./);
+  assert.equal(svg(c), null);
+  assert.match(docsBlock(c), /2\.0\.0, rewritten in Rust, is set against 1\.1 here once its release row is in\./);
+});
+
+test("with a 2.0 row: a card per figure, every figure the table's own, 2.0 against 1.1", () => {
+  const c = comparison(with20);
+  const rows = releaseRows(with20);
+  const shown = cards(pageSection(c));
+  assert.deepEqual(
+    shown.map((s) => s.title),
+    METRICS.map((m) => m.title),
+  );
+  for (const [i, m] of METRICS.entries()) {
+    assert.equal(shown[i].base, rows.get("1.1.0")[m.column], m.title);
+    assert.equal(shown[i].fig, rows.get("2.0.0")[m.column], m.title);
+  }
+  assert.deepEqual(
+    shown.map((s) => s.big),
+    ["14× less", "1.2× less", "7.8× faster", "18× smaller"],
+  );
+  assert.match(docsBlock(c), /^\| Private memory \| 96 MB \| 7 MB, 14× less \|$/m);
+  assert.match(svg(c), />7 MB<tspan class="x" dx="8">14× less</);
+});
+
+test("the rings: the larger figure fills its ring, and the inner drains from 1.1's level", () => {
+  const html = pageSection(comparison(with20));
+  // Memory: 1.1 is the larger, so the outer ring is full and the inner stands at 7/96.
+  assert.match(html, /class="was" [^>]*stroke-dashoffset="0"\/><circle class="now" [^>]*stroke-dashoffset="92\.7" style="--from:0"/);
+});
+
+test("downloads: 2.0 then 1.1, each its tag; 1.0 predates the repository and has none", () => {
+  const html = pageSection(comparison(with20));
   const buttons = [...html.matchAll(/<a class="mn" href="([^"]+)">([^<]+)<\/a>/g)].map((m) => [m[2], m[1]]);
   assert.deepEqual(buttons, [
     ["Download 2.0", "https://github.com/RicardoSilveira23/sobreiro/releases/tag/v2.0.0"],
     ["Download 1.1", "https://github.com/RicardoSilveira23/sobreiro/releases/tag/v1.1.0"],
   ]);
-  assert.match(docsBlock(c), /^\| Private memory \| 97 MB \| 96 MB \| 7 MB, 14× less \|$/m);
-  assert.match(svg(c), />7 MB</);
-});
-
-test("1.0 has no download: it was released before this repository was public", () => {
-  assert.doesNotMatch(pageSection(comparison(with20)), /Download 1\.0|v1\.0\.0/);
-});
-
-test("bars are shares of each figure's largest", () => {
-  for (const m of comparison(with20).metrics) {
-    assert.equal(Math.max(...m.figures.map((f) => f.share)), 1, m.title);
-  }
-  assert.match(pageSection(comparison(with20)), /<b>2\.0<\/b><span><i style="--w:0\.072"><\/i>7 MB/);
-});
-
-test("a cell that is not a figure stops the build", () => {
-  const bad = without20.replace(/^(\| 1\.1\.0 \| [^|]+\| )96 MB/m, "$1not measured");
-  assert.throws(() => comparison(bad), /1\.1\.0, Private memory: "not measured"/);
 });
 
 test("multiples read as the metric reads", () => {
@@ -97,19 +93,9 @@ test("multiples read as the metric reads", () => {
   assert.equal(multiple(96, 97, mem), "about the same");
 });
 
-test("with a 2.0 row the multiples are against 1.1, and the switch offers 1.0", () => {
-  const html = pageSection(comparison(with20));
-  assert.match(html, /<span data-k="against"> Multiples are against <b>1\.1<\/b>\.<\/span>/);
-  assert.match(html, /<li data-r="2\.0" class="new"><b>2\.0<\/b><span><i [^>]*><\/i>7 MB<em data-vs="1\.0" hidden>14× less<\/em><em data-vs="1\.1">14× less<\/em>/);
-  assert.match(html, /<div class="vs" hidden><span>Compared with<\/span><button type="button" data-base="1\.0" aria-pressed="false">1\.0<\/button><button type="button" data-base="1\.1" aria-pressed="true">1\.1<\/button><\/div>/);
-  // Each figure shows one multiple without script: the one against the base.
-  for (const li of html.match(/<li [^]*?<\/li>/g)) {
-    assert.ok((li.match(/<em data-vs="[^"]+">/g) || []).length <= 1, li);
-  }
-});
-
-test("without a 2.0 row 1.1 is set against 1.0 and there is no switch", () => {
-  const html = pageSection(comparison(without20));
-  assert.doesNotMatch(html, /class="vs"/);
-  assert.match(html, /<li data-r="1\.1" class="new"><b>1\.1<\/b><span><i [^>]*><\/i>2\.0 s<em data-vs="1\.0">7\.5× less<\/em>/);
+test("a cell that is not a figure stops the build", () => {
+  const bad = without20.replace(/^(\| 1\.1\.0 \| [^|]+\| )96 MB/m, "$1not measured");
+  assert.doesNotThrow(() => comparison(bad), "memory is not read before 2.0 exists");
+  const bad2 = with20.replace(/^(\| 2\.0\.0 \| [^|]+\| )7 MB/m, "$1not measured");
+  assert.throws(() => comparison(bad2), /2\.0\.0, Private memory: "not measured"/);
 });

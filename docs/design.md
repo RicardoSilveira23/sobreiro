@@ -93,38 +93,32 @@ The scale is hidden from screen readers. They get one line instead: "A ring is p
 
 ### How heavy each release is
 
-The releases measured in `docs/baseline.md`, compared, so the download is chosen on numbers.
-`scripts/comparison.mjs` writes the section from the Releases table, and a test fails when the
-page and the table differ: no figure is typed on the page.
+What the releases bought, so the download is chosen on numbers. `scripts/comparison.mjs` writes
+the section from the Releases table in `docs/baseline.md`, and a test fails when the page and
+the table differ: no figure is typed on the page.
 
 | Part | Holds |
 |---|---|
-| Lead | What each release is built on, how it was measured, "Shorter is lighter", and the release the multiples are against |
-| Switch | "Compared with" and a button per release but the newest, the base pressed. Shown only with script and three releases or more. |
-| Charts | Private memory, processor time per idle hour, start to the pill, `Sobreiro.exe`: one small bar chart each, one bar per release, oldest first, the figure at the bar's tip and its multiple after it ("14× less", "1.2× slower", "about the same" within 5%). Two by two from 700 px, one column below. |
+| 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
+| 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured |
+| Key | Two ring swatches: 1.1, the outer ring; 2.0, the inner ring |
+| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: two rings, the multiple inside them ("14×" over "less"), the name, then "1.1 96 MB → 2.0 7 MB". Two to a row, four from 1000 px. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, and "How it is measured" |
 
-- Each chart's bars are shares of its largest figure; there is no axis. The newest release's
-  bars are Violet and its label Ink; older bars are Line and their labels Soft.
-- The multiples are against the release before the newest, so the newest shows what it buys;
-  the switch sets them against another. The base's own row has no multiple. Without script
-  the lead names the base; with it, the switch does and that clause hides.
-- Pointing at a release's row lights that release in all four charts and fades the others to
-  35%. It changes at once, with nothing moving, and the figures are all readable without it.
-- A release appears once its row is in the Releases table. 2.0 has none until it ships: the
-  lead then says it joins when it is released, and no empty bar stands for it, since an empty
-  bar would read as the best figure.
-- A row is measured from the file attached to the release, so a row means a download. 1.0 is
-  the exception: it was released before this repository was public and has no button.
+- The rings echo the pill's: the larger of the two figures is a full ring, the other its share.
+  1.1's ring is Line, 2.0's Violet, on Box tracks, with round ends.
+- Until 2.0.0 has a row, only the two paragraphs and the 1.1 button show: one release has
+  nothing to be set against.
+- A row is measured from the file attached to the release, so a row means a download. 1.0 was
+  released before this repository was public and has no button.
+- Pointing at a card, or tapping it, drains the inner ring from 1.1's level to 2.0's in 0.9 s
+  on the page's easing. It is the one motion on hover, and none plays for reduced motion.
 
 | Thing | Size |
 |---|---|
-| Chart title | Inter 600, 15 px |
-| Release label | Sora 600, 14 px, in a 34 px column |
-| Bar | 10 px tall, square at the start, 4 px corners at the tip; rows 28 px |
-| Figure | 14.5 px, tabular figures, 8 px after the bar |
-| Multiple | 13 px, Soft; the newest release's Inter 600 in Ink. 176 px is kept after the bars for the figure and its multiple. |
-| Switch | Buttons 44 px tall, 8 px corners: pressed is a Violet fill with white text, not pressed a 1.5 px Violet border with Violet text |
+| Rings | 132 px; radii 23.5 and 18.5 in a 52-unit square, stroke 3.5 |
+| Multiple | Unbounded 700, 28 px, the word under it 12.5 px Soft |
+| Card name | Inter 600, 14.5 px; figures 13 px Soft, 2.0's Inter 600 Ink |
 
 ### The words
 
@@ -135,7 +129,7 @@ page and the table differ: no figure is typed on the page.
 | Meta line | Free, for Windows 11. Needs GitHub Copilot with AI credits, or Claude Code on Pro, Max or Ultra. |
 | Run it | 1 Download Sobreiro.exe, one file. 2 Open it. Then, beside the mark: The pill appears beside the clock. |
 | What it sends | Two requests, with a sign-in already on this PC. The numbers come back and go to the taskbar. Nothing else leaves: no telemetry, no update checks, no token stored, logged or renewed. |
-| How heavy each release is | 1.0 and 1.1 run on WPF, 1.1 tuned for idle; 2.0 is rewritten in Rust. Measured the same way on one PC, after 10 minutes left alone. Shorter is lighter. Buttons: Download 2.0, Download 1.1. |
+| How heavy each release is | Generated from `docs/baseline.md`: what 1.1 changed, then 2.0 against 1.1. Buttons: Download 2.0, Download 1.1. |
 | Before you install | Both addresses are undocumented and can change, and Anthropic's terms don't allow third-party apps to use Claude sign-ins. Windows may warn about an unknown publisher until the app is signed. |
 | Footer | Open an issue. By Ricardo Silveira. Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings. Not affiliated with or endorsed by Anthropic or GitHub. |
 
@@ -150,10 +144,10 @@ The page:
 | Ground | `#ebe6ff` | The page, a light lavender |
 | Ink | `#1d1447` | Text, the answer dot, the scale's marker |
 | Soft | `#4d457c` | Smaller text: meta line, notes, key, addresses, footer |
-| Violet | `#6f4df6` | The newest release's bars, Download's fill, Manual's border, the two rules, the step circles, the request dot, the pulse |
+| Violet | `#6f4df6` | 2.0's ring in the comparison, Download's fill, Manual's border, the two rules, the step circles, the request dot, the pulse |
 | Violet text | `#5a3dd1` | Manual's label, step numbers, footer links |
 | On violet | `#ffffff` | Download's label and GitHub's mark |
-| Line | `#b9adf5` | Wires, box borders, the line joining the steps, older releases' bars |
+| Line | `#b9adf5` | Wires, box borders, the line joining the steps, 1.1's ring in the comparison |
 | Box | `#f6f3ff` | The fill of the diagram's boxes |
 
 Violet is an accent. It never fills an area larger than the Download button.
@@ -207,7 +201,7 @@ All four faces are openly licensed, served from the site, Latin range only.
 
 The diagram plays one loop of 5 seconds. It stands for the app's real 5 minutes. Nothing else
 on the page moves: no entrances, nothing on scroll, nothing on hover. The comparison's
-highlight and switch change at once and move nothing.
+inner ring drains once when a card is pointed at or tapped.
 
 | Motion | Trigger | Length | Tells the reader |
 |---|---|---|---|
