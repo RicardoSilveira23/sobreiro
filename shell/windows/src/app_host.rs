@@ -24,6 +24,7 @@ use crate::pill_feed::{self, Feed, Run, Service, Snapshot, Surroundings};
 use crate::pill_host;
 use crate::providers::{self, Locations};
 use crate::tray_icons;
+use crate::usage_watch;
 use crate::win::local_zone::local_zone;
 use crate::win::taskbar::{self, Broadcast, MessageWindow};
 use crate::win::{locale, registry};
@@ -100,6 +101,7 @@ pub fn run() -> ExitCode {
     // are torn down.
     pill_host::stop();
     tray_icons::stop();
+    usage_watch::stop();
     let host = HOST
         .try_with(|cell| cell.try_borrow_mut().map(|mut host| host.take()))
         .ok()
@@ -183,6 +185,7 @@ struct Host {
 impl Host {
     /// Switches both providers on, and reads Copilot's cache file ahead of the first poll.
     fn start_polls(&mut self) {
+        usage_watch::start(self.places.app.data_directory(), self.diagnostics.clone());
         let runs = self.feed.start(clock::now());
         self.spawn(runs);
         let copilot = self.copilot.clone();
