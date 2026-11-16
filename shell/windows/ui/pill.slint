@@ -282,6 +282,25 @@ export component PillFace inherits Rectangle {
     }
 }
 
+// The pill on the taskbar: the face in a window of its own size, over nothing, with no frame. The
+// size is in units; the toolkit keeps it when the window's scale changes and resizes the window.
+export component Pill inherits Window {
+    in property <FaceData> data;
+    out property <length> pill-width: face.face-width;
+    out property <length> pill-height: face.face-height;
+    width: face.face-width;
+    height: face.face-height;
+    no-frame: true;
+    background: transparent;
+    title: "Sobreiro";
+
+    face := PillFace {
+        x: 0px;
+        y: 0px;
+        data: root.data;
+    }
+}
+
 // The face alone in a window of its own size, over nothing: what `--pill-pictures` draws.
 export component PillPicture inherits Window {
     in property <FaceData> data;

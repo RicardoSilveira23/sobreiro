@@ -31,11 +31,23 @@ slint = { version = "=1.18.1", default-features = false, features = [
 png = "=0.18.1"
 # Core: the pill model and the colours the face is drawn from.
 sobreiro-core = { path = "../../core" }
-# Windows' own calls, for the pill's window. Already in the build through the toolkit; only the
-# parts the shell calls are asked for.
+# Spans of time, as Core's schedule of taskbar questions takes them. The same crate and features
+# Core is built with; nothing new enters the build.
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+# Windows' own calls, for the pill's window and the taskbar it follows. Already in the build
+# through the toolkit; only the parts the shell calls are asked for. UI Automation's interfaces
+# need COM, OLE and VARIANT; monitors are in GDI; the notification state is the shell's.
 windows = { version = "0.62", features = [
     "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Ole",
     "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_Accessibility",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }
 
