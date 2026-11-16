@@ -7,6 +7,7 @@ pub mod local_zone;
 pub mod locale;
 pub mod menu;
 pub mod message_box;
+pub mod monitor;
 pub mod probe;
 pub mod registry;
 pub mod run_key;

@@ -17,6 +17,12 @@
 //! The hook is set by the first `show` and stays until the last taken window is destroyed and
 //! nothing is pending; it has to refuse the activation for
 //! as long as any of them lives.
+//!
+//! The flyout's window is the other kind, made with `show_focusable`: a tool window (no taskbar
+//! button, not in Alt+Tab, from its birth) that has no owner and is let activate. Its activations,
+//! clicks and shows go through, and `owned_windows` never lists it, so the pill's and the tooltip's
+//! lists never pick it up. Its loss of activation is reported to the handler set with
+//! `on_deactivated`.
 #![allow(unsafe_code)]
 
 use std::cell::{Cell, RefCell};
@@ -25,15 +31,27 @@ use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
     CBT_CREATEWNDW, CallNextHookEx, CallWindowProcW, DefWindowProcW, GW_OWNER, GWL_EXSTYLE,
-    GWLP_HWNDPARENT, GWLP_WNDPROC, GetWindow, HHOOK, IsWindow, STYLESTRUCT, SWP_NOACTIVATE,
-    SWP_SHOWWINDOW, SetWindowLongPtrW, SetWindowsHookExW, UnhookWindowsHookEx, WH_CBT, WINDOWPOS,
-    WM_MOUSEACTIVATE, WM_NCDESTROY, WM_SHOWWINDOW, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WNDPROC,
-    WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    GWLP_HWNDPARENT, GWLP_WNDPROC, GetWindow, GetWindowLongPtrW, HHOOK, IsWindow, STYLESTRUCT,
+    SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW, SetWindowsHookExW,
+    UnhookWindowsHookEx, WH_CBT, WINDOWPOS, WM_ACTIVATE, WM_MOUSEACTIVATE, WM_NCDESTROY,
+    WM_SHOWWINDOW, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WNDPROC, WS_EX_APPWINDOW,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
 };
 
 const HCBT_CREATEWND: i32 = 3;
 const HCBT_ACTIVATE: i32 = 5;
 const MA_NOACTIVATE: isize = 3;
+/// The low word of WM_ACTIVATE's `wparam` when the window is being deactivated.
+const WA_INACTIVE: usize = 0;
+
+/// What the next top-level window is to be made as.
+#[derive(Clone, Copy)]
+struct Pending {
+    /// The owner, 0 for none.
+    owner: isize,
+    /// A window that may be activated (the flyout's), not one that never is.
+    focusable: bool,
+}
 
 /// A window taken at its birth. Plain numbers, so it can be copied out of the list.
 #[derive(Clone, Copy)]
@@ -45,21 +63,25 @@ struct Taken {
     old_procedure: isize,
     /// The owner has been given.
     owned: bool,
+    /// A window that may be activated, with no owner.
+    focusable: bool,
 }
 
 thread_local! {
     /// The owner for the next top-level window, once `arm` has been called and until it is taken.
-    static PENDING: Cell<Option<isize>> = const { Cell::new(None) };
+    static PENDING: Cell<Option<Pending>> = const { Cell::new(None) };
     /// The hook's handle, 0 while there is none.
     static HOOK: Cell<isize> = const { Cell::new(0) };
     /// The windows taken, in the order they were taken.
     static TAKEN: RefCell<Vec<Taken>> = const { RefCell::new(Vec::new()) };
+    /// Told when a focusable window is deactivated.
+    static DEACTIVATED: Cell<Option<fn(isize)>> = const { Cell::new(None) };
 }
 
 // Windows calls the hook and the procedure at thread exit too, after the thread's values are
 // gone. Every read below uses `try_with`; when it fails the caller lets the call through.
 
-fn pending() -> Option<isize> {
+fn pending() -> Option<Pending> {
     PENDING.try_with(Cell::get).ok().flatten()
 }
 
@@ -83,11 +105,43 @@ fn edit(window: isize, change: impl FnOnce(&mut Taken)) {
 /// been given when `owned_windows` lists the window; that is at its first show, a turn of the
 /// event loop later.
 pub fn show(window: &slint::Window, owner: isize) -> Result<(), String> {
-    arm(owner)?;
+    arm(Pending {
+        owner,
+        focusable: false,
+    })?;
+    show_armed(window)
+}
+
+/// Shows `window`, which must already exist, born a tool window (no taskbar button, not in
+/// Alt+Tab) with no owner, and let activate. Same rules as `show`, but `owned_windows` never lists
+/// it: the caller takes its handle from the toolkit.
+pub fn show_focusable(window: &slint::Window) -> Result<(), String> {
+    arm(Pending {
+        owner: 0,
+        focusable: true,
+    })?;
+    show_armed(window)
+}
+
+fn show_armed(window: &slint::Window) -> Result<(), String> {
     window.show().map_err(|error| {
         disarm();
         error.to_string()
     })
+}
+
+/// Sets what is told when a focusable window loses the activation. The handler is called from the
+/// window's procedure, so it must only note the fact and leave the work to a later turn: hiding
+/// the window itself deactivates it, synchronously.
+pub fn on_deactivated(handler: fn(isize)) {
+    let _ = DEACTIVATED.try_with(|cell| cell.set(Some(handler)));
+}
+
+/// Brings `window` to the foreground and gives it the focus. Allowed when the process was the one
+/// the user just clicked; Windows may refuse otherwise.
+pub fn activate(window: isize) {
+    // SAFETY: asks Windows about a handle; any number is allowed.
+    let _ = unsafe { SetForegroundWindow(HWND(window as *mut c_void)) };
 }
 
 /// Whether `handle` is a window that exists.
@@ -98,7 +152,7 @@ pub fn is_window(handle: isize) -> bool {
 
 /// Sets the hook for the UI thread, if it is not set, and asks for the next top-level window this
 /// thread creates to be born owned by `owner`.
-fn arm(owner: isize) -> Result<(), String> {
+fn arm(request: Pending) -> Result<(), String> {
     if PENDING
         .try_with(Cell::get)
         .map_err(|e| e.to_string())?
@@ -115,7 +169,7 @@ fn arm(owner: isize) -> Result<(), String> {
                 .map_err(|error| error.to_string())?;
         let _ = HOOK.try_with(|cell| cell.set(hook.0 as isize));
     }
-    let _ = PENDING.try_with(|cell| cell.set(Some(owner)));
+    let _ = PENDING.try_with(|cell| cell.set(Some(request)));
     Ok(())
 }
 
@@ -153,6 +207,22 @@ pub fn owned_windows() -> Vec<isize> {
         .unwrap_or_default()
 }
 
+/// The handle of the focusable window `show_focusable` made, once the toolkit has made it, or
+/// None. Only one is made by the shell.
+pub fn focusable_window() -> Option<isize> {
+    TAKEN
+        .try_with(|taken| {
+            taken
+                .borrow()
+                .iter()
+                .rev()
+                .find(|t| t.focusable)
+                .map(|t| t.window)
+        })
+        .ok()
+        .flatten()
+}
+
 fn call_next(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     // SAFETY: passes on the values Windows gave the hook, unchanged; the hook handle is ignored
     // on current Windows.
@@ -172,7 +242,7 @@ unsafe extern "system" fn hook_procedure(code: i32, wparam: WPARAM, lparam: LPAR
                 subclass(HWND(wparam.0 as *mut c_void));
             }
         }
-        HCBT_ACTIVATE if find(wparam.0 as isize).is_some() => {
+        HCBT_ACTIVATE if find(wparam.0 as isize).is_some_and(|taken| !taken.focusable) => {
             // A non-zero answer stops the activation.
             return LRESULT(1);
         }
@@ -184,7 +254,7 @@ unsafe extern "system" fn hook_procedure(code: i32, wparam: WPARAM, lparam: LPAR
 /// Puts our procedure before the toolkit's on the window that was just created, and takes the
 /// pending owner for it.
 fn subclass(window: HWND) {
-    let Some(owner) = pending() else {
+    let Some(request) = pending() else {
         return;
     };
     // SAFETY: `window` is the window the hook was just told about, created by this thread, so
@@ -196,23 +266,38 @@ fn subclass(window: HWND) {
     let _ = TAKEN.try_with(|taken| {
         taken.borrow_mut().push(Taken {
             window: window.0 as isize,
-            owner,
+            owner: request.owner,
             old_procedure: old,
             owned: false,
+            focusable: request.focusable,
         });
     });
     let _ = PENDING.try_with(|cell| cell.set(None));
+    if request.focusable {
+        // A tool window before it is ever visible, so no button flashes in the taskbar.
+        // SAFETY: `window` is ours, just created by this thread.
+        unsafe {
+            let style = GetWindowLongPtrW(window, GWL_EXSTYLE) as u32;
+            SetWindowLongPtrW(window, GWL_EXSTYLE, keep_style(style, true) as isize);
+        }
+    }
 }
 
-/// The style bits the window keeps whatever the toolkit writes.
-fn keep_style(style: u32) -> u32 {
-    (style | WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0) & !WS_EX_APPWINDOW.0
+/// The style bits the window keeps whatever the toolkit writes: a tool window, and for one that
+/// never activates, no-activate.
+fn keep_style(style: u32, focusable: bool) -> u32 {
+    let style = (style | WS_EX_TOOLWINDOW.0) & !WS_EX_APPWINDOW.0;
+    if focusable {
+        style
+    } else {
+        style | WS_EX_NOACTIVATE.0
+    }
 }
 
 /// Gives the owner, until it holds. Windows may refuse one, so it is read back before the window
 /// counts as owned.
 fn give_owner(window: HWND, taken: Taken) {
-    if taken.owned {
+    if taken.owned || taken.focusable {
         return;
     }
     // SAFETY: `window` is ours and this runs on its thread. The owner is a handle that was given
@@ -261,7 +346,7 @@ unsafe extern "system" fn procedure(
             // SAFETY: for this message `lparam` points to a STYLESTRUCT that Windows lets the
             // procedure change.
             if let Some(styles) = unsafe { (lparam.0 as *mut STYLESTRUCT).as_mut() } {
-                styles.styleNew = keep_style(styles.styleNew);
+                styles.styleNew = keep_style(styles.styleNew, taken.focusable);
             }
         }
         WM_WINDOWPOSCHANGING => {
@@ -271,11 +356,18 @@ unsafe extern "system" fn procedure(
                 if position.flags.contains(SWP_SHOWWINDOW) {
                     give_owner(window, taken);
                 }
-                position.flags |= SWP_NOACTIVATE;
+                if !taken.focusable {
+                    position.flags |= SWP_NOACTIVATE;
+                }
             }
         }
         WM_SHOWWINDOW if wparam.0 != 0 => give_owner(window, taken),
-        WM_MOUSEACTIVATE => return LRESULT(MA_NOACTIVATE),
+        WM_MOUSEACTIVATE if !taken.focusable => return LRESULT(MA_NOACTIVATE),
+        WM_ACTIVATE if taken.focusable && (wparam.0 & 0xFFFF) == WA_INACTIVE => {
+            if let Some(handler) = DEACTIVATED.try_with(Cell::get).ok().flatten() {
+                handler(taken.window);
+            }
+        }
         _ => {}
     }
     let old: WNDPROC =

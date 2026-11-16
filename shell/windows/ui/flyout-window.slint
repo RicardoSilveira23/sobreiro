@@ -1,0 +1,40 @@
+// The flyout's window: the card alone, in a borderless, transparent window of its own size. The
+// card's size in units is read out so the shell can size the window in pixels at the monitor's
+// scale. It has the focus when shown, so Esc reaches it.
+import { FlyoutCard, FlyoutData } from "flyout.slint";
+
+export component FlyoutWindow inherits Window {
+    in property <FlyoutData> data;
+    out property <length> card-width: card.width;
+    out property <length> card-height: card.card-height;
+    callback escape();
+    width: card.width;
+    height: card.card-height;
+    no-frame: true;
+    always-on-top: true;
+    background: transparent;
+    title: "Sobreiro";
+
+    keys := FocusScope {
+        width: 100%;
+        height: 100%;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.escape();
+                return accept;
+            }
+            reject
+        }
+
+        card := FlyoutCard {
+            x: 0px;
+            y: 0px;
+            data: root.data;
+        }
+    }
+
+    // Gives the scope the focus; called each time the window is shown.
+    public function take-focus() {
+        keys.focus();
+    }
+}
