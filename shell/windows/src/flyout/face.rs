@@ -26,9 +26,45 @@ fn fraction(value: f64) -> f32 {
     }
 }
 
+/// The limit as one line for a screen reader, from the texts its row draws in the order drawn:
+/// label, figure with its unit ("used" in the Bars style and in spend and credits, "left" in the
+/// glyph styles, where `left` is true), the badge, the resets-in text, the detail. With no
+/// reading the card draws a dash and "No reading yet"; the line says so in the same words as the
+/// ticket. Copilot's note is an item of its own.
+pub fn spoken(limit: &LimitView, left: bool) -> String {
+    if !limit.has_data {
+        return format!("{}, no reading yet", limit.label);
+    }
+    let figure = if left {
+        format!("{} left", limit.left_figure)
+    } else {
+        format!("{} used", limit.used_figure)
+    };
+    let badge = limit.status.as_ref().map(|status| status.text.as_str());
+    let parts = [
+        Some(limit.label),
+        Some(figure.as_str()),
+        badge,
+        limit.resets_in.as_deref(),
+        limit.detail.as_deref(),
+    ];
+    parts
+        .into_iter()
+        .flatten()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
 /// One limit's row. `fill` is the colour of the bars below 70%: the level's own colour is
 /// Core's to pick, from the palette. The tick shows only where the pace ends before the reset.
-fn bar(limit: &LimitView, note: Option<&String>, palette: &NightPalette, fill: Rgb) -> BarData {
+fn bar(
+    limit: &LimitView,
+    note: Option<&String>,
+    palette: &NightPalette,
+    fill: Rgb,
+    left: bool,
+) -> BarData {
     let glyph = GlyphFill::from(limit);
     let mut data = BarData {
         has_data: limit.has_data,
@@ -45,6 +81,7 @@ fn bar(limit: &LimitView, note: Option<&String>, palette: &NightPalette, fill: R
         resets: text(limit.resets_in.as_ref()),
         detail: text(limit.detail.as_ref()),
         note: text(note),
+        spoken: SharedString::from(spoken(limit, left)),
         ..BarData::default()
     };
     if let Some(projected) = limit.projected_fraction
@@ -71,7 +108,8 @@ pub fn flyout_data(
     palette: &NightPalette,
     fill: Rgb,
 ) -> FlyoutData {
-    let row = |limit: &LimitView| bar(limit, None, palette, fill);
+    let left = style != FlyoutStyle::Bars;
+    let row = |limit: &LimitView, left: bool| bar(limit, None, palette, fill, left);
     let mut data = FlyoutData {
         style: match style {
             FlyoutStyle::Bars => 0,
@@ -83,8 +121,8 @@ pub fn flyout_data(
         show_copilot: model.copilot.is_some(),
         claude_title: SharedString::from(model.title),
         copilot_title: SharedString::from(COPILOT),
-        session: row(&model.session),
-        weekly: row(&model.weekly),
+        session: row(&model.session, left),
+        weekly: row(&model.weekly, left),
         footer: SharedString::from(model.footer.as_str()),
         colours: CardColours {
             ground: colour(palette.ground),
@@ -96,10 +134,10 @@ pub fn flyout_data(
         ..FlyoutData::default()
     };
     if let Some(spend) = &model.spend {
-        data.spend = row(spend);
+        data.spend = row(spend, false);
     }
     if let Some(CopilotSection { credits, note }) = &model.copilot {
-        data.credits = bar(credits, note.as_ref(), palette, fill);
+        data.credits = bar(credits, note.as_ref(), palette, fill, false);
     }
     data
 }
@@ -242,6 +280,82 @@ mod tests {
             ("–", 0, 0)
         );
         assert_eq!(none.left_percent, 0.0);
+    }
+
+    fn lines(state: &str, style: FlyoutStyle) -> [String; 4] {
+        let model = states()
+            .into_iter()
+            .find(|(name, _)| *name == state)
+            .unwrap()
+            .1;
+        let palette = NightPalette::for_dark(true);
+        let data = flyout_data(&model, style, &palette, palette.purple);
+        [data.session, data.weekly, data.spend, data.credits].map(|bar| bar.spoken.to_string())
+    }
+
+    #[test]
+    fn a_limit_is_read_as_one_line() {
+        let both = lines("copilot-only", FlyoutStyle::Bars);
+        assert_eq!(both[0], "Session, no reading yet");
+        assert_eq!(both[1], "Weekly, no reading yet");
+        assert_eq!(both[2], "");
+        assert_eq!(
+            both[3],
+            "AI credits, 17% used, On track, resets in 20d 10h, 2,550 of 15,000 credits"
+        );
+        let calm = lines("claude-only", FlyoutStyle::Bars);
+        assert_eq!(calm[0], "Session, 15% used, On track, resets in 2h 21m");
+        assert_eq!(calm[1], "Weekly, 45% used, On track, resets in 3d 2h");
+        assert_eq!(
+            lines("with-spend", FlyoutStyle::Bars)[2],
+            "Spend, 42% used, On track, resets in 12d, $21.00 of $50.00 this month"
+        );
+        assert_eq!(
+            lines("spend-no-reset", FlyoutStyle::Bars)[2],
+            "Spend, 42% used, $21.00 of $50.00 this month"
+        );
+        assert_eq!(
+            lines("badge-ends", FlyoutStyle::Bars)[0],
+            "Session, 70% used, Ends 9:15 PM, resets in 2h"
+        );
+        assert_eq!(
+            lines("badge-used-up", FlyoutStyle::Bars)[0],
+            "Session, 100% used, Used up, resets in 2h"
+        );
+        assert_eq!(
+            lines("far-ends", FlyoutStyle::Bars)[3],
+            "AI credits, 41% used, Ends Thu 3 Dec 12:00 PM, resets in 18d 10h, 6,150 of 15,000 credits"
+        );
+    }
+
+    #[test]
+    fn a_limit_with_no_reading_says_so_in_every_style() {
+        for style in [
+            FlyoutStyle::Bars,
+            FlyoutStyle::Battery,
+            FlyoutStyle::Thermometer,
+        ] {
+            let none = lines("no-reading", style);
+            assert_eq!(none[0], "Session, no reading yet");
+            assert_eq!(none[1], "Weekly, no reading yet");
+        }
+    }
+
+    #[test]
+    fn the_glyph_styles_read_what_is_left_and_spend_and_credits_stay_as_they_are() {
+        for style in [FlyoutStyle::Battery, FlyoutStyle::Thermometer] {
+            let calm = lines("claude-only", style);
+            assert_eq!(calm[0], "Session, 85% left, On track, resets in 2h 21m");
+            assert_eq!(calm[1], "Weekly, 55% left, On track, resets in 3d 2h");
+            assert_eq!(
+                lines("with-spend", style)[2],
+                "Spend, 42% used, On track, resets in 12d, $21.00 of $50.00 this month"
+            );
+            assert_eq!(
+                lines("empty-and-full", style)[1],
+                "Weekly, 0% left, Used up, resets in 3d 2h"
+            );
+        }
     }
 
     #[test]

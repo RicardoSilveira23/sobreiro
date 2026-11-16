@@ -1,21 +1,28 @@
 //! The data step: Claude's and Copilot's pollers, and from what they hold, the settings and the
 //! clock, one snapshot per redraw. The pill's model is a part of it, none when the user keeps the
-//! pill off.
+//! pill off. The flyout's view is made from the snapshot on demand (`Snapshot::flyout`), so a
+//! closed flyout costs nothing.
 //!
 //! Nothing here starts a thread, touches a window or reads the registry, so a test drives it
 //! with Core's providers and a made-up clock. The shell runs the polls this hands out on
 //! threads of its own and hands the answers back (see `app_host`).
+use crate::theme::Theme;
 use chrono::{DateTime, Utc};
-use sobreiro_core::colours::TaskbarColours;
+use sobreiro_core::colours::bar_colour::pick;
+use sobreiro_core::colours::{Rgb, TaskbarColours};
 use sobreiro_core::config::{AppConfig, ShowOption};
 use sobreiro_core::connect::ConnectionState;
+use sobreiro_core::copilot::CopilotReading;
+use sobreiro_core::copilot::copilot_state_text;
 use sobreiro_core::display::ClockFormat;
+use sobreiro_core::display::FlyoutStyle;
+use sobreiro_core::display::flyout_model::{FlyoutModel, FlyoutOptions};
 use sobreiro_core::display::pill_model::PillModel;
 use sobreiro_core::display::tooltip_text;
 use sobreiro_core::display::zone::Zone;
 use sobreiro_core::limits::{Limit, LimitKind, limit_list};
-use sobreiro_core::polling::Provider;
 use sobreiro_core::polling::provider_poller::{Finished, PollRun, ProviderPoller};
+use sobreiro_core::polling::{Provider, ProviderState};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -44,12 +51,15 @@ pub struct Handled {
 /// What a snapshot is made from besides the providers, taken by value so the snapshot owns it.
 pub struct Surroundings {
     pub config: AppConfig,
-    pub colours: TaskbarColours,
+    /// Windows' look; the pill's colours and the flyout's palette are made from it.
+    pub theme: Theme,
     pub zone: Zone,
     /// How the user writes a time of day, for the tooltip.
     pub clock: ClockFormat,
     /// Claude Code's sign-in file is on this PC.
     pub credentials_file_exists: bool,
+    /// The Copilot reading shown (the provider's `shown`), for the flyout's note.
+    pub copilot_reading: Option<CopilotReading>,
 }
 
 /// What the pill shows: the model it draws and the text of its tooltip.
@@ -59,14 +69,18 @@ pub struct Shown {
 }
 
 /// What one redraw draws from: the figures, what is shown of them, and the settings and
-/// surroundings they were read with. Each part of the app (the pill, later the tray icons, the
-/// flyout and the toasts) takes its own view of it.
-// The tray icons, the flyout and the toasts read the fields the pill does not.
-#[allow(dead_code)]
+/// surroundings they were read with. Each part of the app (the pill, the tray icons, the flyout and
+/// later the toasts) takes its own view of it.
 pub struct Snapshot {
     pub now: DateTime<Utc>,
     pub claude: Vec<Limit>,
     pub copilot: Vec<Limit>,
+    /// Where each poller stands, for the flyout's sentences.
+    pub claude_state: ProviderState,
+    pub copilot_state: ProviderState,
+    /// The Copilot reading shown, if any.
+    pub copilot_reading: Option<CopilotReading>,
+    pub theme: Theme,
     /// Whether Claude is shown next to, or instead of, Copilot (Core's `limit_list`).
     pub show_claude: bool,
     pub config: AppConfig,
@@ -75,6 +89,54 @@ pub struct Snapshot {
     pub clock: ClockFormat,
     /// The pill's model and tooltip; none while the settings keep the pill off.
     pub pill: Option<Shown>,
+}
+
+/// What the flyout's card is drawn from.
+pub struct FlyoutView {
+    pub model: FlyoutModel,
+    pub style: FlyoutStyle,
+    /// The palette is the dark one.
+    pub dark: bool,
+    /// The bar colour, picked for the theme.
+    pub fill: Rgb,
+}
+
+impl Snapshot {
+    /// The flyout's view, as 1.1's `UpdateFlyout` makes it: Claude's limits when Claude is shown,
+    /// then Copilot's; Claude's state; Copilot's note only when a reading is shown.
+    pub fn flyout(&self) -> FlyoutView {
+        let limits: Vec<Limit> = if self.show_claude {
+            self.claude
+                .iter()
+                .chain(self.copilot.iter())
+                .cloned()
+                .collect()
+        } else {
+            self.copilot.clone()
+        };
+        let copilot_note = self.copilot_reading.as_ref().and_then(|reading| {
+            copilot_state_text::line(
+                self.copilot_state,
+                reading,
+                self.now,
+                &self.zone,
+                &self.clock,
+            )
+        });
+        let options = FlyoutOptions {
+            live: self.claude_state,
+            copilot_note,
+            show_claude: self.show_claude,
+            days: self.config.pace_days,
+        };
+        let dark = !self.theme.light;
+        FlyoutView {
+            model: FlyoutModel::from(&limits, self.now, &self.zone, &self.clock, &options),
+            style: self.config.style,
+            dark,
+            fill: pick(self.config.bar_colour, self.theme.accent.as_ref(), dark).colour,
+        }
+    }
 }
 
 /// The two pollers and the last line told for each.
@@ -97,6 +159,13 @@ impl Feed {
     pub fn start(&mut self, now: DateTime<Utc>) -> Vec<Run> {
         let claude = self.claude.start(now);
         let copilot = self.copilot.start(now);
+        runs(claude, copilot)
+    }
+
+    /// The flyout was opened at `now`: the polls of a reading over a minute old, or that are due.
+    pub fn flyout_opened(&mut self, now: DateTime<Utc>) -> Vec<Run> {
+        let claude = self.claude.flyout_opened(now);
+        let copilot = self.copilot.flyout_opened(now);
         runs(claude, copilot)
     }
 
@@ -170,9 +239,13 @@ impl Feed {
             now,
             claude,
             copilot,
+            claude_state: self.claude.state(),
+            copilot_state: self.copilot.state(),
+            copilot_reading: around.copilot_reading,
             show_claude,
+            colours: around.theme.colours(around.config.bar_colour),
+            theme: around.theme,
             config: around.config,
-            colours: around.colours,
             zone: around.zone,
             clock: around.clock,
             pill,
