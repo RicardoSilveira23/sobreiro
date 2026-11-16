@@ -938,15 +938,15 @@ impl Host {
     }
 
     /// Runs the connect flow on its own thread, as it has boxes to wait on. When it is done the
-    /// UI thread is asked for a redraw, so the new state shows at once. A flow already open means
-    /// this choice does nothing.
+    /// UI thread is asked for a redraw, so the new state shows at once. A flow already open, or a
+    /// thread that cannot start, means this choice does nothing.
     fn connect(&self, connect: bool) {
         let started = connect_flow::start(connect, || {
             let _ = slint::invoke_from_event_loop(app_host::redraw);
         });
         if started.is_none() {
             self.diagnostics
-                .say("the connect flow was not started: one is already open");
+                .say("the connect flow was not started: one is open, or its thread did not start");
         }
     }
 
