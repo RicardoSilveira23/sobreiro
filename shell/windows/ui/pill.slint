@@ -55,12 +55,13 @@ global Metrics {
     out property <length> pad-x: 8px;
     out property <length> pad-y: 4px;
     // How much larger than its real size a text is measured at: see `Measure`.
-    out property <float> measure-scale: 100;
+    out property <float> measure-scale: 1000;
 }
 
 // Measures a text at `measure-scale` times its size; never drawn. The toolkit rounds a text's
-// preferred width up to a whole unit, which at 100 times costs a hundredth of one: divide the
-// width by `Metrics.measure-scale` for the natural width.
+// preferred width up to a whole unit, which at 1000 times costs a thousandth of a DIP per text,
+// so a line's sum stays within half a pixel's rounding of its natural width: divide the width
+// by `Metrics.measure-scale` for the natural width.
 component Measure inherits Text {
     in property <length> unit-size;
     font-size: root.unit-size * Metrics.measure-scale;
