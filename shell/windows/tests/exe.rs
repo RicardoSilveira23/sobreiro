@@ -2,7 +2,7 @@
 //! runs from a folder that holds nothing else. It has 1.1's icon and version details.
 // A test fails by panicking, in the helpers below as in the tests themselves; the version details
 // and the icon are read with Windows' own calls.
-#![allow(unsafe_code, clippy::unwrap_used)]
+#![allow(unsafe_code, clippy::unwrap_used, clippy::panic)]
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -10,14 +10,17 @@ use std::process::{Child, Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
 use sobreiro_core::connect::bridge_command::{command_for, status_line_json};
-use windows::Win32::Foundation::CloseHandle;
+use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, WPARAM};
 use windows::Win32::Storage::FileSystem::{
     GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW,
 };
 use windows::Win32::System::Threading::{OpenMutexW, SYNCHRONIZATION_SYNCHRONIZE};
 use windows::Win32::UI::Shell::ExtractIconExW;
-use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, HICON};
-use windows::core::{HSTRING, PCWSTR};
+use windows::Win32::UI::WindowsAndMessaging::{
+    DestroyIcon, ENDSESSION_LOGOFF, FindWindowExW, GetWindowThreadProcessId, HICON,
+    SMTO_ABORTIFHUNG, SendMessageTimeoutW, WM_QUERYENDSESSION,
+};
+use windows::core::{HSTRING, PCWSTR, w};
 
 const EXE: &str = env!("CARGO_BIN_EXE_Sobreiro");
 const FONTS: [&str; 3] = [
@@ -544,4 +547,98 @@ fn one_copy_runs_per_data_folder() {
             .collect();
         assert_eq!(left, ["Sobreiro.exe"]);
     }
+}
+
+/// The hidden window of the copy with this process id: the top-level one of the class that hears
+/// the session's end.
+fn find_message_window(pid: u32) -> HWND {
+    let end = Instant::now() + Duration::from_secs(15);
+    loop {
+        let mut after = HWND::default();
+        // SAFETY: walks the top-level windows with the class name of a constant; the handles that
+        // come back are only asked about their process.
+        while let Ok(found) = unsafe {
+            FindWindowExW(
+                None,
+                Some(after),
+                w!("SobreiroPillMessages"),
+                PCWSTR::null(),
+            )
+        } {
+            let mut owner = 0u32;
+            // SAFETY: `owner` outlives the call.
+            unsafe { GetWindowThreadProcessId(found, Some(&mut owner)) };
+            if owner == pid {
+                return found;
+            }
+            after = found;
+        }
+        assert!(
+            Instant::now() < end,
+            "the copy never made its message window"
+        );
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+/// Starts a copy, sends its message window the ask to end the session with `lparam`, and checks
+/// that it quits with 0, that its log tells the run in order and that the mutex is released.
+fn ends_with_the_session(name: &str, lparam: isize, reason: &str) {
+    let layout = Layout::new(name);
+    let mut running = layout.spawn();
+    layout.wait_for_mutex();
+    let window = find_message_window(running.0.id());
+    let mut answer = 0usize;
+    // SAFETY: a window of the copy; the answer outlives the call.
+    let sent = unsafe {
+        SendMessageTimeoutW(
+            window,
+            WM_QUERYENDSESSION,
+            WPARAM(0),
+            LPARAM(lparam),
+            SMTO_ABORTIFHUNG,
+            10_000,
+            Some(&mut answer),
+        )
+    };
+    assert_ne!(sent.0, 0, "the window did not answer");
+    assert_eq!(answer, 1, "the copy did not let the end go on");
+
+    let end = Instant::now() + Duration::from_secs(15);
+    let status = loop {
+        if let Some(status) = running.0.try_wait().unwrap() {
+            break status;
+        }
+        assert!(Instant::now() < end, "the copy did not quit");
+        std::thread::sleep(Duration::from_millis(50));
+    };
+    assert_eq!(status.code(), Some(0));
+
+    let log = std::fs::read_to_string(layout.data().join("log.txt")).unwrap();
+    let start = format!("start version={} instance=", env!("CARGO_PKG_VERSION"));
+    let ending = format!("session-ending reason={reason}");
+    let at = |text: &str| {
+        log.find(text)
+            .unwrap_or_else(|| panic!("no {text:?} in\n{log}"))
+    };
+    assert!(at(&start) < at(&ending), "{log}");
+    assert!(at(&ending) < at("exit code=0"), "{log}");
+
+    let name = HSTRING::from(layout.mutex_name());
+    // SAFETY: the name outlives the call; a handle that comes back is closed at once.
+    let held = unsafe { OpenMutexW(SYNCHRONIZATION_SYNCHRONIZE, false, &name) };
+    if let Ok(handle) = held {
+        let _ = unsafe { CloseHandle(handle) };
+        panic!("the mutex is still there");
+    }
+}
+
+#[test]
+fn a_sign_out_ends_the_copy_and_the_log_says_so() {
+    ends_with_the_session("session-logoff", ENDSESSION_LOGOFF as isize, "Logoff");
+}
+
+#[test]
+fn a_shutdown_ends_the_copy_and_the_log_says_so() {
+    ends_with_the_session("session-shutdown", 0, "Shutdown");
 }
