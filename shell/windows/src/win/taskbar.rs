@@ -26,7 +26,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, RegisterClassW,
     RegisterWindowMessageW, SW_HIDE, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_NOZORDER,
     SWP_SHOWWINDOW, SetWindowPos, ShowWindow, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
-    WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WNDCLASSW, WS_EX_TOOLWINDOW,
+    WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WM_SETTINGCHANGE, WNDCLASSW, WS_EX_TOOLWINDOW,
 };
 use windows::core::{PCWSTR, w};
 
@@ -46,6 +46,8 @@ pub enum Broadcast {
     TaskbarCreated,
     /// A display was added or removed, or its resolution changed.
     DisplayChanged,
+    /// A system setting changed: the theme and the accent are among them.
+    SettingChanged,
 }
 
 pub type WinEventHandler = fn(WinEvent);
@@ -240,7 +242,7 @@ unsafe extern "system" fn win_event(
     handler(event);
 }
 
-/// A hidden top-level window that hears "TaskbarCreated" and display changes. Top-level, not
+/// A hidden top-level window that hears "TaskbarCreated", display changes and setting changes. Top-level, not
 /// message-only: broadcasts skip message-only windows. Destroyed when dropped.
 /// Not Send: only the thread that made a window may destroy it.
 pub struct MessageWindow(isize, PhantomData<*const ()>);
@@ -305,6 +307,8 @@ unsafe extern "system" fn message_procedure(
     let created = TASKBAR_CREATED.try_with(Cell::get).unwrap_or(0);
     let broadcast = if message == WM_DISPLAYCHANGE {
         Some(Broadcast::DisplayChanged)
+    } else if message == WM_SETTINGCHANGE {
+        Some(Broadcast::SettingChanged)
     } else if created != 0 && message == created {
         Some(Broadcast::TaskbarCreated)
     } else {

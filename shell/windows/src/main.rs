@@ -1,13 +1,18 @@
-//! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar, with a fixed sample
-//! model for now; the arguments say its version, draw the specimen of its fonts and the pill's
+//! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar with live figures;
+//! the arguments say its version, draw the specimen of its fonts and the pill's
 //! pictures, and run the born test. The flyout and the tray icons come next.
 #![windows_subsystem = "windows"]
 
 mod born_test;
+mod clock;
+mod diagnostics;
 mod pictures;
 mod pill_face;
+mod pill_feed;
 mod pill_host;
+mod providers;
 mod specimen;
+mod theme;
 mod win;
 
 use std::process::ExitCode;
