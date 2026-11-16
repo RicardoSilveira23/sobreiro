@@ -13,19 +13,22 @@
 //! and pixel size with what it saw after the last placement, and places it again when they
 //! changed (the scale changed, or the window landed on a monitor at another scale).
 //!
+//! The card draws the latest snapshot's `flyout()` view (`pill_feed`): kept on every redraw, drawn
+//! only while the flyout is open, and again on each open. Every open also asks both pollers
+//! (`app_host::flyout_opened`), whose answers redraw it.
+//!
 //! The state lives in a value of the UI thread. A call that comes while it is busy runs a turn of
 //! the event loop later.
 use super::face::flyout_data;
-use super::states::states;
 use super::toggle::{Click, Toggle};
+use crate::pill_feed::Snapshot;
 use crate::ui::{FlyoutData, FlyoutWindow};
-use crate::win::{born, monitor, registry, taskbar};
+use crate::win::{born, monitor, taskbar};
 use slint::{ComponentHandle, PhysicalPosition, PhysicalSize, Timer, TimerMode};
-use sobreiro_core::colours::bar_colour::pick;
-use sobreiro_core::colours::{BarColourOption, NightPalette};
-use sobreiro_core::display::FlyoutStyle;
+use sobreiro_core::colours::NightPalette;
 use sobreiro_core::display::flyout_placement::place;
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 /// Where the window is made, off every screen.
@@ -76,6 +79,8 @@ struct Flyout {
     rescaling: bool,
     /// The monitor's DPI it was last hidden and shown again for, so it is done once per change.
     rescaled_for: Option<u32>,
+    /// The latest snapshot, kept while closed too so an open starts with the figures.
+    latest: Option<Rc<Snapshot>>,
 }
 
 /// Runs `step` on the flyout now, or a turn of the event loop later if it is busy.
@@ -103,34 +108,30 @@ fn margin_at(dpi: u32) -> i32 {
     (MARGIN_UNITS * f64::from(dpi) / 96.0).round_ties_even() as i32
 }
 
-/// The model the card shows until #38 makes it live: a fixed state with Claude and Copilot, drawn
-/// as bars in Windows' theme (dark unless the system theme is light) and the purple bar colour.
-fn sample() -> FlyoutData {
-    let all = states();
-    let model = all
-        .iter()
-        .find(|(name, _)| *name == "both")
-        .or_else(|| all.first())
-        .map(|(_, model)| model);
-    let dark = !registry::theme().light;
-    let fill = pick(BarColourOption::Purple, None, dark).colour;
-    match model {
-        Some(model) => flyout_data(
-            model,
-            FlyoutStyle::Bars,
-            &NightPalette::for_dark(dark),
-            fill,
-        ),
-        None => FlyoutData::default(),
-    }
-}
-
 impl Flyout {
-    /// The flyout is to be open at the point; makes the window if it is not made.
+    /// The card's data from the latest snapshot; the default until the first one.
+    fn data(&self) -> FlyoutData {
+        match &self.latest {
+            Some(snapshot) => {
+                let view = snapshot.flyout();
+                flyout_data(
+                    &view.model,
+                    view.style,
+                    &NightPalette::for_dark(view.dark),
+                    view.fill,
+                )
+            }
+            None => FlyoutData::default(),
+        }
+    }
+
+    /// The flyout is to be open at the point; makes the window if it is not made. Every open asks
+    /// both pollers, so a reading over a minute old is fetched at once.
     fn open(&mut self, x: i32, y: i32) {
         self.point = (x, y);
         self.rescaled_for = None;
         self.toggle.opened();
+        crate::app_host::flyout_opened();
         self.start(BORN_TRIES);
     }
 
@@ -161,7 +162,7 @@ impl Flyout {
 
     fn create(&mut self) -> Result<(), String> {
         let component = FlyoutWindow::new().map_err(|error| error.to_string())?;
-        component.set_data(sample());
+        component.set_data(self.data());
         component.on_escape(close);
         component
             .window()
@@ -205,10 +206,11 @@ impl Flyout {
             self.close();
             return;
         };
+        let data = self.data();
         let Some(component) = &self.component else {
             return;
         };
-        component.set_data(sample());
+        component.set_data(data);
         if !component.window().is_visible() {
             if scale_tries > 0 && taskbar::dpi_of(window) != target.dpi {
                 taskbar::move_hidden(window, target.left, target.top);
@@ -395,6 +397,21 @@ fn deactivated(window: isize) {
                 flyout.hide();
             }
         });
+    });
+}
+
+/// A redraw: keeps the snapshot, and draws it when the flyout is open and its card exists. A
+/// closed flyout is not drawn. The watch timer places the window again if the card's height moved.
+pub fn show(snapshot: Rc<Snapshot>) {
+    with_flyout(move |flyout| {
+        flyout.latest = Some(snapshot);
+        if flyout.toggle.is_open() && flyout.component.is_some() {
+            let data = flyout.data();
+            if let Some(component) = &flyout.component {
+                component.set_data(data);
+                component.window().request_redraw();
+            }
+        }
     });
 }
 

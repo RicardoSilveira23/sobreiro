@@ -167,10 +167,11 @@ fn around(show: ShowOption, credentials: bool) -> Surroundings {
             show,
             ..AppConfig::default()
         },
-        colours: TaskbarColours::for_taskbar(false, false, BarColourOption::Purple, None),
+        theme: Theme::default(),
         zone: Zone::utc(),
         clock: CLOCK.clone(),
         credentials_file_exists: credentials,
+        copilot_reading: None,
     }
 }
 
@@ -359,8 +360,11 @@ fn the_snapshot_carries_what_it_was_given() {
     );
     let mut given = around(ShowOption::TrayOnly, true);
     given.config.bar_colour = BarColourOption::Accent;
-    given.colours = TaskbarColours::for_taskbar(true, false, BarColourOption::Accent, None);
-    let colours = given.colours;
+    given.theme = Theme {
+        light: true,
+        ..Theme::default()
+    };
+    let colours = TaskbarColours::for_taskbar(true, false, BarColourOption::Accent, None);
     let config = given.config.clone();
     let snapshot = feed.snapshot(now(), given, || ConnectionState::NotConnected);
     assert_eq!(snapshot.now, now());
@@ -558,4 +562,269 @@ fn cores_providers_feed_the_pill() {
     let copilot = pill.copilot.unwrap();
     assert_eq!(copilot.credits.figure, "17%");
     assert_eq!(copilot.reset_date, "1 Dec");
+}
+
+// ---- the flyout's view ----
+
+use pill_feed::FlyoutView;
+use sobreiro_core::colours::{AccentPalette, NightPalette, Rgb, WINDOWS_BLUE};
+use sobreiro_core::display::{FlyoutStyle, PaceDays};
+
+fn in_state(fake: Fake, state: ProviderState) -> Fake {
+    Fake { state, ..fake }
+}
+
+/// A provider whose polls succeed, so its schedule knows the last success was at `now`.
+struct Succeeding(Fake);
+
+impl Provider for Succeeding {
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+
+    fn poll(
+        &self,
+        schedule: &LiveSchedule,
+        now: DateTime<Utc>,
+        cancelled: &AtomicBool,
+    ) -> Result<ProviderPoll, Cancelled> {
+        let mut poll = self.0.poll(schedule, now, cancelled)?;
+        poll.schedule.last_success = Some(now);
+        poll.schedule.next_due = now + TimeDelta::minutes(5);
+        Ok(poll)
+    }
+
+    fn limits(&self, now: DateTime<Utc>) -> Vec<Limit> {
+        self.0.limits(now)
+    }
+}
+
+fn reading(source: CopilotSource, age: TimeDelta) -> CopilotReading {
+    CopilotReading {
+        budget: 100.0,
+        used: 17.0,
+        resets_at: Some(now() + TimeDelta::days(15)),
+        observed_at: now() - age,
+        source,
+    }
+}
+
+fn view_with(feed: &Feed, tweak: impl FnOnce(&mut Surroundings)) -> FlyoutView {
+    let mut given = around(ShowOption::TrayAndPill, true);
+    tweak(&mut given);
+    feed.snapshot(now(), given, || ConnectionState::NotConnected)
+        .flyout()
+}
+
+fn fresh_feed(claude: ProviderState, copilot: ProviderState) -> Feed {
+    let claude_limits = claude_limits(15.0, TimeDelta::seconds(10));
+    let copilot_limits = copilot_limits(TimeDelta::seconds(10));
+    settled(
+        in_state(Fake::new(providers::CLAUDE, claude_limits), claude),
+        in_state(Fake::new(providers::COPILOT, copilot_limits), copilot),
+    )
+}
+
+#[test]
+fn each_claude_state_gives_its_footer() {
+    let cases = [
+        (ProviderState::Ok, "Updated just now"),
+        (
+            ProviderState::Expired,
+            "Updated just now. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.",
+        ),
+        (
+            ProviderState::NoSignIn,
+            "Updated just now. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.",
+        ),
+        (
+            ProviderState::Refused,
+            "Updated just now. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.",
+        ),
+        (
+            ProviderState::RateLimited,
+            "Updated just now. Anthropic asked Sobreiro to wait. Nothing to do: it asks again by itself.",
+        ),
+        (
+            ProviderState::Offline,
+            "Updated just now. Sobreiro can't reach Anthropic. Check the connection; it tries again every 2 minutes.",
+        ),
+        (
+            ProviderState::BadAnswer,
+            "Updated just now. Anthropic's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.",
+        ),
+    ];
+    for (state, footer) in cases {
+        let feed = fresh_feed(state, ProviderState::Ok);
+        let view = view_with(&feed, |_| {});
+        assert_eq!(view.model.footer, footer, "{state:?}");
+    }
+}
+
+#[test]
+fn each_copilot_state_gives_its_note() {
+    let live = reading(CopilotSource::Live, TimeDelta::seconds(10));
+    let cases = [
+        (
+            ProviderState::NoSignIn,
+            "No GitHub sign-in Sobreiro can use. Sign in with the Copilot CLI or gh.",
+        ),
+        (
+            ProviderState::Refused,
+            "GitHub didn't accept the sign-in. Sign in again with the Copilot CLI or gh.",
+        ),
+        (
+            ProviderState::RateLimited,
+            "GitHub asked Sobreiro to wait. Nothing to do: it asks again by itself.",
+        ),
+        (
+            ProviderState::Offline,
+            "Sobreiro can't reach GitHub. Check the connection; it tries again every 2 minutes.",
+        ),
+        (
+            ProviderState::BadAnswer,
+            "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.",
+        ),
+    ];
+    for (state, note) in cases {
+        let feed = fresh_feed(ProviderState::Ok, state);
+        let view = view_with(&feed, |around| around.copilot_reading = Some(live.clone()));
+        let section = view.model.copilot.unwrap();
+        assert_eq!(section.note.as_deref(), Some(note), "{state:?}");
+    }
+}
+
+#[test]
+fn a_cache_reading_and_a_stale_live_reading_say_where_they_are_from() {
+    let feed = fresh_feed(ProviderState::Ok, ProviderState::Ok);
+    let cache = reading(CopilotSource::Cache, TimeDelta::hours(2));
+    let view = view_with(&feed, |around| around.copilot_reading = Some(cache));
+    assert_eq!(
+        view.model.copilot.unwrap().note.as_deref(),
+        Some("From the Copilot CLI, as of 10:00 AM.")
+    );
+    let stale = reading(CopilotSource::Live, TimeDelta::minutes(16));
+    let view = view_with(&feed, |around| around.copilot_reading = Some(stale));
+    assert_eq!(
+        view.model.copilot.unwrap().note.as_deref(),
+        Some("As of 11:44 AM.")
+    );
+}
+
+#[test]
+fn a_fresh_live_reading_and_no_reading_give_no_copilot_note() {
+    let feed = fresh_feed(ProviderState::Ok, ProviderState::Ok);
+    let fresh = reading(CopilotSource::Live, TimeDelta::minutes(14));
+    let view = view_with(&feed, |around| around.copilot_reading = Some(fresh));
+    assert_eq!(view.model.copilot.unwrap().note, None);
+    // No reading shown: no note, even in a state that has a sentence.
+    let feed = fresh_feed(ProviderState::Ok, ProviderState::Offline);
+    let view = view_with(&feed, |_| {});
+    assert_eq!(view.model.copilot.unwrap().note, None);
+}
+
+#[test]
+fn claude_code_hidden_hides_claude_s_part() {
+    // Claude has no limits and no sign-in file: only Copilot shows.
+    let feed = settled(
+        Fake::new(providers::CLAUDE, Vec::new()),
+        Fake::new(providers::COPILOT, copilot_limits(TimeDelta::seconds(10))),
+    );
+    let hidden = feed
+        .snapshot(now(), around(ShowOption::TrayAndPill, false), || {
+            ConnectionState::NotConnected
+        })
+        .flyout();
+    assert!(!hidden.model.show_claude);
+    assert!(hidden.model.copilot.is_some());
+    // With the sign-in file on the PC Claude shows again.
+    let shown = view_with(&feed, |_| {});
+    assert!(shown.model.show_claude);
+}
+
+#[test]
+fn each_style_passes_through() {
+    let feed = fresh_feed(ProviderState::Ok, ProviderState::Ok);
+    for style in [
+        FlyoutStyle::Bars,
+        FlyoutStyle::Battery,
+        FlyoutStyle::Thermometer,
+    ] {
+        let view = view_with(&feed, |around| around.config.style = style);
+        assert_eq!(view.style, style);
+    }
+}
+
+#[test]
+fn the_pace_setting_changes_the_projection() {
+    // Monday 16 Nov; the weekly window resets on Friday, so the weekend is left in the window
+    // under every day and does not count under weekdays.
+    let seen = now() - TimeDelta::seconds(10);
+    let mut weekly = Limit::new(
+        providers::CLAUDE,
+        LimitKind::Weekly,
+        "Weekly",
+        20.0,
+        Some(now() + TimeDelta::days(4)),
+        seen,
+        false,
+    );
+    weekly.window = Some(TimeDelta::days(7));
+    let weekly = vec![weekly];
+    let feed = settled(
+        Fake::new(providers::CLAUDE, weekly),
+        Fake::new(providers::COPILOT, Vec::new()),
+    );
+    let every = view_with(&feed, |around| around.config.pace_days = PaceDays::EveryDay);
+    let weekdays = view_with(&feed, |around| around.config.pace_days = PaceDays::Weekdays);
+    assert_ne!(
+        every.model.weekly.projected_fraction,
+        weekdays.model.weekly.projected_fraction
+    );
+}
+
+#[test]
+fn the_theme_and_bar_colour_choose_the_fill() {
+    let feed = fresh_feed(ProviderState::Ok, ProviderState::Ok);
+    let dark = view_with(&feed, |_| {});
+    assert!(dark.dark);
+    assert_eq!(dark.fill, NightPalette::for_dark(true).purple);
+    let light = view_with(&feed, |around| {
+        around.theme = Theme {
+            light: true,
+            ..Theme::default()
+        };
+    });
+    assert!(!light.dark);
+    assert_eq!(light.fill, NightPalette::for_dark(false).purple);
+    // The accent, where the user chose it and Windows has one.
+    let accent: AccentPalette = WINDOWS_BLUE;
+    let picked = view_with(&feed, |around| {
+        around.config.bar_colour = BarColourOption::Accent;
+        around.theme = Theme {
+            accent: Some(accent),
+            ..Theme::default()
+        };
+    });
+    // Windows blue on a dark ground: the light shades do not reach 3 to 1, so its base colour.
+    assert_eq!(picked.fill, Rgb::new(0x00, 0x78, 0xD4));
+    assert_ne!(picked.fill, dark.fill);
+}
+
+#[test]
+fn opening_the_flyout_asks_for_an_old_reading_and_not_a_fresh_one() {
+    let mut feed = Feed::new(
+        Arc::new(Succeeding(Fake::new(providers::CLAUDE, Vec::new()))),
+        Arc::new(Succeeding(Fake::new(providers::COPILOT, Vec::new()))),
+    );
+    let runs = feed.start(now());
+    answer(&mut feed, runs);
+    // Right after a poll: nothing to fetch.
+    assert!(feed.flyout_opened(now()).is_empty());
+    // Over a minute later, both services are asked.
+    let runs = feed.flyout_opened(now() + TimeDelta::minutes(2));
+    let services: Vec<Service> = runs.iter().map(|run| run.service).collect();
+    assert_eq!(services, [Service::Claude, Service::Copilot]);
+    // A poll under way is not started again.
+    assert!(feed.flyout_opened(now() + TimeDelta::minutes(2)).is_empty());
 }
