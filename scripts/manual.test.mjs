@@ -117,3 +117,11 @@ test("with no script the switches stay hidden", () => {
 test("the switches sit under the panel", () => {
   assert.ok(html.indexOf('class="panel"') < html.indexOf('class="styles"'));
 });
+
+test("Install says how to upgrade from 1.x", () => {
+  const items = [...section("install").matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => text(m[1]));
+  const upgrade = items.filter((i) => i.startsWith("Upgrading from 1.x:"));
+  assert.equal(upgrade.length, 1);
+  assert.match(upgrade[0], /quit it .*save the new Sobreiro\.exe over the old one, and start it\./);
+  assert.match(upgrade[0], /Start with Windows names the exe's path/);
+});
