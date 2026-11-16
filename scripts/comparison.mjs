@@ -126,9 +126,8 @@ function stepWords(c) {
   if (!c.step) return "";
   const [cpu0, cpu1] = c.step.cpu;
   return (
-    "1.1 tuned 1.0's WPF shell for idle: it asks the taskbar mainly when something changes, and" +
-    ` compiles its code once. Processor time per idle hour fell from ${cpu0.text} to ${cpu1.text},` +
-    ` ${multiple(cpu1.value, cpu0.value, CPU)}.`
+    `1.1 cut idle CPU from ${cpu0.text} to ${cpu1.text} an hour, ${multiple(cpu1.value, cpu0.value, CPU)},` +
+    " but most of its memory still went to WPF, the toolkit it is drawn with."
   );
 }
 // The mark, inline so its tile and trunk can move: from the site's own file, its colours swapped
@@ -141,21 +140,22 @@ export function rustMark(svgText) {
     .replace(/(fill|stroke)="#fff(?:fff)?"/gi, '$1="currentColor"');
   const tile = inner.match(/^<rect class="tile"[^>]*\/>/);
   if (!tile) throw new Error("the mark has no tile to colour");
-  return `<svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">${tile[0]}<g class="trunk">${inner.slice(tile[0].length)}</g></svg>`;
+  const shape = tile[0].replace(' class="tile"', "");
+  return (
+    `<svg class="rmark" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="rtile">${shape}</clipPath></defs>` +
+    `${tile[0]}<rect class="fill" clip-path="url(#rtile)" width="64" height="64"/>` +
+    `<g class="trunk">${inner.slice(tile[0].length)}</g></svg>`
+  );
 }
 
 // Why 2.0 is in Rust, from docs/roadmap.md, "The decision". No figures: the cards carry them.
 const whyTitle = (c) => (c.charted.length ? "Why 2.0 moved to Rust" : "Why 2.0 moves to Rust");
-const STILL = "Most of its memory still went to WPF, the toolkit it is drawn with.";
 const WHY =
-  "Three other shells were built and measured the same way. The one in Rust rested lowest and" +
-  " ships as one small file, so 2.0 rewrites the shell and its logic in Rust.";
-const AGAINST = "The cards set it against 1.1, on one PC after 10 minutes left alone.";
-const COMING = "Its figures join here when it is released.";
-// The section's words: what 1.1 left, then why Rust.
-const whyWords = (c) => [c.step ? `${stepWords(c)} ${STILL}` : null, `${WHY} ${c.charted.length ? AGAINST : COMING}`].filter(Boolean);
+  "Of three other shells built and measured the same way, the Rust one rested lowest and ships as" +
+  " one small file.";
+const whyWords = (c) => [stepWords(c), WHY].filter(Boolean);
 
-const KEY = "Each bar starts at zero; shorter is lighter.";
+const KEY = "Bars start at zero; shorter is better.";
 // A multiple cut for the card: the number large, its word after it.
 const cut = (t) => (t === "about the same" ? ["≈", "about the same"] : t.split(" "));
 
@@ -166,7 +166,7 @@ export function pageSection(c, mark = readFileSync(join(root, "site/assets/img/s
     const bar = (r, f, cls) =>
       `<p${cls}><span>${esc(r.name)}</span><i style="--w:${share(f.share)}${cls ? `;--from:${share(a.share)}` : ""}"></i><em>${esc(f.text)}</em></p>`;
     return [
-      `      <figure class="m" data-a="${a.value}" data-b="${b.value}" data-u="${b.unit}" data-dp="${(b.text.split(" ")[0].split(".")[1] ?? "").length}">`,
+      `      <figure class="m">`,
       `<figcaption>${esc(m.title)}</figcaption>`,
       `<p class="big"><b>${esc(x)}</b> ${esc(word)}</p>`,
       `<div class="pair">${bar(c.charted[0], a, "")}${bar(c.charted[1], b, ' class="new"')}</div>`,
@@ -180,14 +180,14 @@ export function pageSection(c, mark = readFileSync(join(root, "site/assets/img/s
     .join("");
   return [
     OPEN,
-    `  <section class="cmp" aria-labelledby="cmp">`,
+    `  <section class="cmp${charts.length ? "" : " solo"}" aria-labelledby="cmp">`,
     `    <div class="tell">`,
     `    <h2 id="cmp" class="r20">${rustMark(mark)}${esc(whyTitle(c))}</h2>`,
     ...whyWords(c).map((w) => `    <p class="lead">${esc(w)}</p>`),
-    ...(charts.length ? [`    <p class="key2">${KEY}</p>`] : []),
     `    </div>`,
     ...(charts.length ? [`    <div class="charts">`, ...charts, `    </div>`] : []),
-    `    <div class="gets">${buttons}<a class="how" href="${REPO}/blob/main/docs/baseline.md">How it is measured</a></div>`,
+    `    <p class="note">${charts.length ? `<span>${KEY}</span>` : ""}<a class="how" href="${REPO}/blob/main/docs/baseline.md">How it is measured</a></p>`,
+    `    <div class="gets">${buttons}</div>`,
     `  </section>`,
     `  ${CLOSE}`,
   ].join("\n");

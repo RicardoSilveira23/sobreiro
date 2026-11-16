@@ -54,7 +54,7 @@ One page, light only. Content is at most 1152 px wide with 16 px at each side.
 | 3 | Diagram | The pill with its key and colour scale, Sobreiro.exe, the two addresses |
 | 4 | What it sends | Three lines, each with its dot |
 | 5 | Before you install | One short paragraph |
-| 6 | Why 2.0 moved to Rust | The mark and the heading, two short paragraphs, a card per figure, a download per release |
+| 6 | Why 2.0 moved to Rust | The mark and the heading, two sentences, a row per figure, a download per release |
 | 7 | Footer | Two links, the name line and the disclaimer |
 
 24 px between parts.
@@ -93,38 +93,36 @@ The scale is hidden from screen readers. They get one line instead: "A ring is p
 
 ### Why 2.0 moved to Rust
 
-What the releases bought, so the download is chosen on numbers. `scripts/comparison.mjs` writes
-the section from the Releases table in `docs/baseline.md`, and a test fails when the page and
-the table differ: no figure is typed on the page.
+Why the new release exists, and what it buys, so the download is chosen on numbers.
+`scripts/comparison.mjs` writes the section from the Releases table in `docs/baseline.md`, and a
+test fails when the page and the table differ: no figure is typed on the page.
 
 | Part | Holds |
 |---|---|
-| Heading | The section's one heading, led by the mark (36 px) in Rust: "Why 2.0 moved to Rust", or "moves" until 2.0.0 has a row |
-| 1.0 to 1.1 | What 1.1 changed (idle), with the CPU figures, and that most of its memory still went to WPF |
-| Why Rust | Three other shells were measured; the Rust one rested lowest and ships as one small file. No figures in it. |
-| Caption | "Each bar starts at zero; shorter is lighter." |
-| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the cards top-aligned with the heading. |
-| Downloads | A Manual-shaped button per release with a GitHub Release, newest first, sharing the row's width equally; "How it is measured" on its own line under them |
+| Heading | The section's one heading, led by the mark (32 px): "Why 2.0 moved to Rust", or "moves" until 2.0.0 has a row |
+| Words | Two sentences: what 1.1 cut (idle CPU, its figures from the table) and that most of its memory still went to WPF; then that of three other shells measured, the Rust one rested lowest and ships as one small file |
+| Rows | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name and the multiple with its word on the left (128 px), 1.1's and 2.0's bars on the right with their figures at the tips. 1 px Line rules between rows. |
+| Caption | "Bars start at zero; shorter is better." and "How it is measured", under the rows |
+| Downloads | A Manual-shaped button per release with a GitHub Release, newest first, each at its own width, under the words |
 
 - The multiple is the headline and the bars are its proof: linear, from zero, each a share of
-  the larger figure, so a 14× gap shows as a sliver beside a full bar. 1.1's bar is Line,
-  2.0's Violet. Each card is a diagram box: Box fill, 1.5 px Line border, 8 px corners.
-- Until 2.0.0 has a row, only the two paragraphs and the 1.1 button show: one release has
-  nothing to be set against.
+  the larger figure, so a 14× gap shows as a sliver beside a full bar. 1.1's bar is Soft, 2.0's
+  Violet. The figures and multiples never move: they always say what is true.
+- From 1000 px the words and downloads take the left column and the rows the page's 490 px
+  right column, 56 px apart, under one rule. Narrower, one column: words, rows, caption,
+  downloads.
+- Until 2.0.0 has a row there are no rows or caption: the heading, the words, the link and the
+  1.1 button sit in the left column, as the notes do.
 - A row is measured from the file attached to the release, so a row means a download. 1.0 was
   released before this repository was public and has no button.
-- 2.0's bars play the diagram's 5-second loop: each appears at 1.1's length, shrinks to its own
-  in 0.9 s on the page's easing, holds, and fades out before the loop starts again, so it is
-  never seen growing. The figure at its tip counts down with it and the multiple counts up
-  (script). The word sits under the multiple, so nothing beside it moves. With no
-  script the bars still play and the figures stand; with reduced motion nothing moves.
 
 | Thing | Size |
 |---|---|
-| Card | 14 px padding above, 16 px at the sides and below; 12 px between cards |
-| Multiple | Unbounded 700, 32 px, Ink; its word under it, 15 px Soft |
-| Bars | 10 px tall, square at zero, 4 px corners at the tip; release label Sora 600 13 px |
+| Multiple | Sora 600, 2.2% of the window's width from 22 px to 28 px, always under the headline; its word 14.5 px Soft |
+| Row name | Inter 600, 14.5 px |
+| Bars | 8 px tall, square at zero, 2 px corners at the tip; release label Sora 600 13 px |
 | Figures | 13 px, tabular, 8 px after the bar; 2.0's Inter 600 Ink, 1.1's Soft |
+| Caption | 13 px Soft |
 
 ### The words
 
@@ -135,7 +133,7 @@ the table differ: no figure is typed on the page.
 | Meta line | Free, for Windows 11. Needs GitHub Copilot with AI credits, or Claude Code on Pro, Max or Ultra. |
 | Run it | 1 Download Sobreiro.exe, one file. 2 Open it. Then, beside the mark: The pill appears beside the clock. |
 | What it sends | Two requests, with a sign-in already on this PC. The numbers come back and go to the taskbar. Nothing else leaves: no telemetry, no update checks, no token stored, logged or renewed. |
-| Why 2.0 moved to Rust | Generated from `docs/baseline.md`: what 1.1 left, why Rust, then 2.0 against 1.1. Buttons: Download 2.0, Download 1.1. |
+| Why 2.0 moved to Rust | Generated from `docs/baseline.md`: what 1.1 cut and what it left, why Rust, then 2.0 against 1.1. Buttons: Download 2.0, Download 1.1. |
 | Before you install | Both addresses are undocumented and can change, and Anthropic's terms don't allow third-party apps to use Claude sign-ins. Windows may warn about an unknown publisher until the app is signed. |
 | Footer | Open an issue. By Ricardo Silveira. Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings. Not affiliated with or endorsed by Anthropic or GitHub. |
 
@@ -149,13 +147,13 @@ The page:
 |---|---|---|
 | Ground | `#ebe6ff` | The page, a light lavender |
 | Ink | `#1d1447` | Text, the answer dot, the scale's marker |
-| Soft | `#4d457c` | Smaller text: meta line, notes, key, addresses, footer |
+| Soft | `#4d457c` | Smaller text: meta line, notes, key, addresses, footer; 1.1's bars in the comparison |
 | Violet | `#6f4df6` | 2.0's bars in the comparison, Download's fill, Manual's border, the two rules, the step circles, the request dot, the pulse |
 | Violet text | `#5a3dd1` | Manual's label, step numbers, footer links |
 | On violet | `#ffffff` | Download's label and GitHub's mark |
-| Line | `#b9adf5` | Wires, box borders, the line joining the steps, the comparison's card borders and 1.1's bars |
+| Line | `#b9adf5` | Wires, box borders, the line joining the steps, the comparison's row rules |
 | Box | `#f6f3ff` | The fill of the diagram's boxes |
-| Rust | `#b7410e` | The 2.0 mark's tile in the comparison, and nothing else |
+| Rust | `#b7410e` | The fill that rises in the comparison's mark, and nothing else |
 
 Violet is an accent. It never fills an area larger than the Download button.
 
@@ -180,7 +178,7 @@ All four faces are openly licensed, served from the site, Latin range only.
 
 | Face | Where |
 |---|---|
-| Sora | The name (700, 20 px), the headline (600), section headings (600, 16 px), key labels (600, 17 px), step numbers (600, 14 px), the scale's marker (600, 12 px) |
+| Sora | The name (700, 20 px), the headline (600), section headings (600, 16 px), key labels (600, 17 px), step numbers (600, 14 px), the scale's marker (600, 12 px), the comparison's multiples (600) and release labels (600, 13 px) |
 | Inter | Everything else: body text 16 px on a 1.45 line, button labels (600, 17 px), the pill's labels (400) |
 | Unbounded | The pill's figures only (700). It is the app's figure face. |
 | JetBrains Mono | `Sobreiro.exe` (600, 15 px) and the addresses (400, 11 px) |
@@ -208,7 +206,7 @@ All four faces are openly licensed, served from the site, Latin range only.
 
 The diagram plays one loop of 5 seconds. It stands for the app's real 5 minutes. Nothing else
 on the page moves: no entrances, nothing on scroll, nothing on hover. The comparison's
-2.0 bars loop beside it, on the same 5 seconds.
+2.0 bars and mark loop beside it, on the same 5 seconds; its figures stand still.
 
 | Motion | Trigger | Length | Tells the reader |
 |---|---|---|---|
@@ -219,8 +217,7 @@ on the page moves: no entrances, nothing on scroll, nothing on hover. The compar
 | Figures count | The answer dot lands | 0.8 s | The same reading, as a number |
 | Marker on the scale | The answer dot lands | 0.9 s | Where the session stands against 70% and 90%, so the colour change has a reason |
 | 2.0's bars | The loop starts | Fade in 0.4 s at 1.1's length, shrink 0.9 s from 0.4 s, fade out from 4.6 s | How much lighter 2.0 is than 1.1, figure by figure |
-| 2.0's mark | With the bars' shrink | 0.9 s, back to Violet in the fade | The trunk turns once as the tile goes from Violet to Rust: this release is the Rust one |
-| 2.0's figures and the multiples | With the bars' shrink | 0.9 s | The figure counts from 1.1's down to 2.0's, and the multiple up from 1.0×: always 1.1's figure over the one shown |
+| 2.0's mark | With the bars' shrink | Rust rises from the tile's foot in 0.9 s, and drops in the fade | This release is the Rust one; no colour between Violet and Rust is ever drawn |
 | Pulse | The answer dot lands | 0.6 s | A new reading has just arrived. A violet outline grows 12 px from the pill and fades from 55% to nothing. |
 
 The rings, bar and marker share one easing, `cubic-bezier(.3, .7, .2, 1)`. Dots move at a

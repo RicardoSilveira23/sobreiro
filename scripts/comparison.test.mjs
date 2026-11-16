@@ -28,7 +28,7 @@ test("the page and the docs are what docs/baseline.md gives", () => {
 });
 
 test("the section sits in main, after the notes and before the footer", () => {
-  const at = ['class="before"', 'class="cmp"', "</main>", 'class="foot"'].map((s) => page.indexOf(s));
+  const at = ['class="before"', '<section class="cmp', "</main>", 'class="foot"'].map((s) => page.indexOf(s));
   assert.ok(at.every((n) => n > 0));
   assert.deepEqual(at, [...at].sort((a, b) => a - b));
 });
@@ -36,7 +36,7 @@ test("the section sits in main, after the notes and before the footer", () => {
 test("the words on 1.0 to 1.1 carry the table's figures", () => {
   const rows = releaseRows(md);
   const cpu = (b) => rows.get(b)["CPU per idle hour"];
-  assert.ok(page.includes(`Processor time per idle hour fell from ${cpu("1.0.0")} to ${cpu("1.1.0")}`));
+  assert.ok(page.includes(`1.1 cut idle CPU from ${cpu("1.0.0")} to ${cpu("1.1.0")} an hour`));
 });
 
 test("without a 2.0 row it builds: the words, no rings, no picture, no 2.0 button", () => {
@@ -45,8 +45,9 @@ test("without a 2.0 row it builds: the words, no rings, no picture, no 2.0 butto
   assert.equal(cards(html).length, 0);
   assert.doesNotMatch(html, /class="charts"|Download 2\.0|v2\.0\.0/);
   assert.match(html, /<h2 id="cmp" class="r20"><svg class="rmark"[^]*?<\/svg>Why 2\.0 moves to Rust<\/h2>/);
-  assert.match(html, /Its figures join here when it is released\./);
-  assert.match(html, /fell from 14\.9 s to 2\.0 s, 7\.5× less\. Most of its memory/);
+  assert.match(html, /<section class="cmp solo"/);
+  assert.match(html, /1\.1 cut idle CPU from 14\.9 s to 2\.0 s an hour, 7\.5× less, but most of its memory still went to WPF/);
+  assert.doesNotMatch(html, /Bars start at zero/);
   assert.equal(svg(c), null);
   assert.match(docsBlock(c), /2\.0\.0, rewritten in Rust, is set against 1\.1 here once its release row is in\./);
 });
@@ -100,12 +101,6 @@ test("a cell that is not a figure stops the build", () => {
   assert.throws(() => comparison(bad2), /2\.0\.0, Private memory: "not measured"/);
 });
 
-test("each card carries its two figures for the count, as the table writes them", () => {
-  const html = pageSection(comparison(with20));
-  assert.match(html, /<figure class="m" data-a="96" data-b="7" data-u="MB" data-dp="0">/);
-  assert.match(html, /<figure class="m" data-a="0.47" data-b="0.06" data-u="s" data-dp="2">/);
-  assert.match(html, /<figure class="m" data-a="168.9" data-b="9.3" data-u="MB" data-dp="1">/);
-});
 
 test("the README says the same, and shows the picture and table once 2.0 has a row", () => {
   assert.doesNotMatch(readmeBlock(comparison(without20)), /comparison\.svg|\| 2\.0\.0/);
@@ -120,6 +115,6 @@ test("the heading carries the mark, inline, in classes only", () => {
   const html = pageSection(comparison(with20));
   const svg = html.match(/<h2 id="cmp" class="r20"><svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">(.*?)<\/svg>Why 2\.0 moved to Rust<\/h2>/)?.[1];
   assert.ok(svg, "the mark leads the Rust heading");
-  assert.match(svg, /^<rect class="tile" width="64" height="64" rx="14"\/><g class="trunk">/);
+  assert.match(svg, /^<defs><clipPath id="rtile"><rect width="64" height="64" rx="14"\/><\/clipPath><\/defs><rect class="tile" width="64" height="64" rx="14"\/><rect class="fill" clip-path="url\(#rtile\)" width="64" height="64"\/><g class="trunk">/);
   assert.doesNotMatch(svg, /#[0-9a-f]{3,8}\b/i, "no colour in the markup");
 });
