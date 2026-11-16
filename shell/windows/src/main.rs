@@ -28,6 +28,7 @@ mod theme;
 mod tooltip;
 mod tooltip_window;
 mod tray_icons;
+mod usage_watch;
 mod win;
 
 use std::process::ExitCode;
