@@ -1,11 +1,11 @@
-# Sobreiro 2.0: Core and the Windows shell in Rust. The C# under src/ and tests/ is 1.x, which ships
-# from the branch 1.x; it stays here as the reference for the port until the new shell matches it.
+# Sobreiro 2.0: Core, the bridge and the Windows shell in Rust. The C# under src/ and tests/ is 1.x,
+# which ships from the branch 1.x; the build still reads its fonts and icon until #105 removes it.
 [workspace]
 resolver = "3"
 members = ["core", "bridge", "shell/windows"]
 
 [workspace.package]
-version = "2.0.0-dev"
+version = "2.0.0"
 edition = "2024"
 rust-version = "1.100"
 license = "GPL-3.0-or-later"

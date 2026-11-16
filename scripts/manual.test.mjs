@@ -125,3 +125,14 @@ test("Install says how to upgrade from 1.x", () => {
   assert.match(upgrade[0], /quit it .*save the new Sobreiro\.exe over the old one, and start it\./);
   assert.match(upgrade[0], /Start with Windows names the exe's path/);
 });
+
+test("Install says what the app is written in and that it needs no runtime", () => {
+  const items = [...section("install").matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => text(m[1]));
+  const lang = items.filter((i) => /written in Rust/.test(i));
+  assert.equal(lang.length, 1);
+  assert.match(lang[0], /needs nothing else installed: no \.NET, no other runtime\./);
+});
+
+test("the manual names no part of the C# app", () => {
+  assert.doesNotMatch(text(html), /HttpClient|WPF|WinForms/);
+});

@@ -9,6 +9,11 @@ numbers. 1.1 came first, released on 2026-11-14: [today's shell, tuned](#11-toda
 
 ## Where it stands
 
+`main` is the Rust app, at parity with 1.1 and versioned 2.0.0 for its release
+([#10](https://github.com/RicardoSilveira23/sobreiro/issues/10)); 1.x is C# and ships from the
+branch `1.x`. 2.0's memory, CPU, start and file figures are its row in [baseline.md](baseline.md).
+The table below is 1.x's, the starting point for the comparison.
+
 Checked on 2026-11-13 against 1.0.0, which publishes the bridge with Native AOT and the tray
 without single-file compression. The memory, CPU, start and file rows are the newest row in
 [baseline.md](baseline.md), 1.1.0's, measured on 2026-11-14; it also says how each one is
@@ -295,13 +300,14 @@ In this order:
 Settled before Core is ported.
 
 - **Branches.** The WPF app ships from the branch `1.x`, cut at 1.1.0: its fixes and its
-  `v1.*` tags come from there. `main` takes the Rust work and releases nothing until 2.0. The
-  C# stays on `main` until the new shell matches it, as the reference for the port, and CI
-  goes on building and testing it.
+  `v1.*` tags come from there. `main` takes the Rust work and, from 2.0.0, releases the Rust exe.
+  The C# stayed on `main` as the reference for the port, and CI goes on building and testing
+  it until [#105](https://github.com/RicardoSilveira23/sobreiro/issues/105) moves out the fonts
+  and icon the build reads and removes it.
 - **Folders.** One Cargo workspace at the root, in the folders [Structure](#structure) draws:
   `core/` is the crate `sobreiro-core`, and `shell/windows/` is the crate `sobreiro`, which
   builds `Sobreiro.exe`. `bridge/` is the crate `sobreiro-bridge`, which builds
-  `sobreiro-bridge.exe`. The fonts are read from `src/Sobreiro/Fonts` until the C# leaves.
+  `sobreiro-bridge.exe`. The fonts are read from `src/Sobreiro/Fonts` until the C# leaves ([#105](https://github.com/RicardoSilveira23/sobreiro/issues/105)).
 - **The bridge is ported,** with the area of Core it stands on. Its name and what it writes do
   not change. Against today's 2.2 MB and 9 ms a run it is 0.4 MB and 9 ms, both bridges
   measured on the same PC on 2026-11-14. About half of that run is one question to Windows:

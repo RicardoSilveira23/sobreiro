@@ -7,14 +7,14 @@ page's design: [docs/design.md](docs/design.md); read it before styling anything
 ## Build rules
 
 - Before a push, `npm run check:exposure` passes.
-- 1.x is C# / .NET 10: projects under `src/`, tests under `tests/`, logic in `Sobreiro.Core`
-  with an xUnit test. It ships from the branch `1.x`, and its fixes go there. On `main` the C#
-  is the reference for the port and changes only with it.
-- 2.0 is Rust, one workspace at the root: logic goes in `core/` with its tests, the bridge's
-  exe in `bridge/`, the Windows shell in `shell/windows/`. Before a push: `cargo fmt --all`,
-  `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`. The
-  compiler, the libraries and the toolkit stay pinned:
+- The app is Rust (2.0 on), one workspace at the root: logic goes in `core/` with its tests,
+  the bridge's exe in `bridge/`, the Windows shell in `shell/windows/`. Before a push:
+  `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
+  `cargo test --workspace`. The compiler, the libraries and the toolkit stay pinned:
   [how it is built](docs/roadmap.md#where-it-lives-and-how-it-is-built).
+- 1.x is C# / .NET 10 and ships from the branch `1.x`; its fixes go there. The C# under `src/`
+  and `tests/` on `main` is 1.x's, kept for the fonts and icon the build reads until #105
+  removes it; change it only for that.
 - Data comes from the status line JSON via the bridge and from `GET
   https://api.anthropic.com/api/oauth/usage`, which the tray asks every 5 minutes with Claude
   Code's access token. Copilot's numbers come from `GET https://api.github.com/copilot_internal/user`,
