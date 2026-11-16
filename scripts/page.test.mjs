@@ -79,13 +79,13 @@ test("the meta line and the steps read as the design has them", () => {
 });
 
 test("the parts come in the phone's order", () => {
-  const at = ['class="say"', 'class="flow"', 'class="sends"', 'class="before"', 'class="foot"'].map((s) => {
+  const at = ['class="say"', 'class="flow"', 'class="sends"', 'class="before"', 'class="cmp"', 'class="foot"'].map((s) => {
     assert.equal(count(home, new RegExp(s, "g")), 1, s);
     return home.indexOf(s);
   });
   assert.deepEqual(at, [...at].sort((a, b) => a - b));
   const main = inner(home, '<main class="home"', "main");
-  for (const s of ['class="say"', 'class="flow"', 'class="sends"', 'class="before"']) assert.ok(main.includes(s), `${s} inside main`);
+  for (const s of ['class="say"', 'class="flow"', 'class="sends"', 'class="before"', 'class="cmp"']) assert.ok(main.includes(s), `${s} inside main`);
   assert.ok(!main.includes('class="foot"') && !main.includes('class="top"'));
 });
 

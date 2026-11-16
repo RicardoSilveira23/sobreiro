@@ -22,6 +22,10 @@ on:
       - 'scripts/check-site*.mjs'
       - 'scripts/*.test.mjs'
       - 'scripts/smoke.mjs'
+      # The comparison of the releases is generated from it: scripts/comparison.mjs.
+      - 'scripts/comparison.mjs'
+      - 'docs/baseline.md'
+      - 'docs/images/comparison.svg'
       - 'wrangler.jsonc'
       - 'package.json'
       - 'package-lock.json'
@@ -57,7 +61,7 @@ jobs:
       - run: npm ci
 
       - name: Tests
-        run: node --test scripts/check-site.test.mjs scripts/page.test.mjs scripts/manual.test.mjs
+        run: node --test scripts/check-site.test.mjs scripts/page.test.mjs scripts/manual.test.mjs scripts/comparison.test.mjs
 
       - name: Check the site
         run: node scripts/check-site.mjs

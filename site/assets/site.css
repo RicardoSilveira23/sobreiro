@@ -107,6 +107,31 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .key i.back { background: var(--ink); }
 .key i.none { background: none; border: 1.5px solid var(--soft); }
 
+/* How heavy each release is: one small bar chart per figure, generated from docs/baseline.md */
+.cmp { display: grid; gap: 16px; padding-top: 14px; border-top: 2px solid var(--v); }
+.cmp h2 { margin-bottom: 0; }
+.cmp .lead { font-size: 14.5px; color: var(--soft); max-width: 62ch; }
+.charts { display: grid; gap: 20px 56px; }
+.m figcaption { margin-bottom: 4px; font-weight: 600; font-size: 15px; }
+.m li { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; min-height: 28px; }
+.m li b { font: 600 14px Sora, system-ui, sans-serif; color: var(--soft); }
+.m li.new b { color: var(--ink); }
+.m li span { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.m em { font-style: normal; font-size: 13px; color: var(--soft); }
+.m li.new em { font-weight: 600; color: var(--ink); }
+.cmp.hl li:not(.on) { opacity: .35; }
+.vs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14.5px; color: var(--soft); }
+.vs[hidden] { display: none; }
+.vs span { margin-right: 4px; }
+.vs button { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--v); border-radius: 8px; background: none; color: var(--vt); font: 600 15px Inter, system-ui, sans-serif; cursor: pointer; }
+.vs button[aria-pressed="true"] { background: var(--v); color: var(--on); }
+.vs button[aria-pressed="true"]:focus-visible { outline-color: var(--ink); }
+.m i { flex: none; width: calc((100% - 176px) * var(--w)); min-width: 2px; height: 10px; border-radius: 0 4px 4px 0; background: var(--line); }
+.m li.new i { background: var(--v); }
+.gets { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
+.how { display: inline-grid; place-content: center; min-height: 44px; color: var(--vt); font-size: 14.5px; }
+@media (min-width: 700px) { .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* Footer */
 .foot { font-size: 13px; color: var(--soft); display: flex; flex-wrap: wrap; gap: 0 20px; align-items: center; }
 .foot a { display: inline-grid; place-content: center; min-height: 44px; color: var(--vt); font-size: 14.5px; }
@@ -115,12 +140,13 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 /* Desktop: words beside the diagram, the two notes on one line under them */
 @media (min-width: 1000px) {
   .page { row-gap: 32px; }
-  .home { grid-template-columns: minmax(0, 1fr) 490px; grid-template-areas: "say flow" "before sends"; column-gap: 56px; row-gap: 32px; }
+  .home { grid-template-columns: minmax(0, 1fr) 490px; grid-template-areas: "say flow" "before sends" "cmp cmp"; column-gap: 56px; row-gap: 32px; }
   .home .say { grid-area: say; padding-top: 12px; grid-template-rows: auto auto auto 1fr; }
   .home .run { align-self: end; }
   .home .flow { grid-area: flow; align-self: start; }
   .home .before { grid-area: before; }
   .home .sends { grid-area: sends; }
+  .home .cmp { grid-area: cmp; }
   .flow .w { height: 28px; }
   .pill { padding-block: 20px; }
 }
