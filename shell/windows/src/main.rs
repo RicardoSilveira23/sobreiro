@@ -4,6 +4,7 @@
 //! come next.
 #![windows_subsystem = "windows"]
 
+mod app_host;
 mod born_test;
 mod carried_bridge;
 mod clock;
@@ -35,7 +36,7 @@ fn main() -> ExitCode {
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {
         carried_bridge::start();
-        return pill_host::run();
+        return app_host::run();
     };
     match first.to_str() {
         Some("--version") => {

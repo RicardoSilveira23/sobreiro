@@ -1,10 +1,9 @@
 //! Keeps one pill over the taskbar, just left of the tray icons, as 1.1's tracker does: finds the
 //! taskbar, follows it through auto-hide, scale and display changes and Explorer restarts, and
-//! hides the pill while a full-screen app runs. It draws live figures: Claude's and Copilot's polls
-//! run on threads of their own and their answers come back through the event loop, and every 30
-//! seconds, when a poll ends and when Windows changes a setting the model and the theme are read
-//! again. Everything else runs on the UI thread, except the UI Automation question, which is asked
-//! when Core's schedule says a tick should ask.
+//! hides the pill while a full-screen app runs. It draws what the app host hands it: each redraw
+//! brings a snapshot (see `pill_feed`), and the pill's model, colours and tooltip text are taken
+//! from it. The polls, the refresh, the settings and the theme are the app host's (`app_host`).
+//! The UI Automation question is asked on a worker, when Core's schedule says a tick should ask.
 //!
 //! The pill answers the pointer as 1.1's does: a tooltip in a window of its own (`tooltip_window`)
 //! opens when the pointer has rested on it (`tooltip` says when and where), a left click calls the
@@ -13,40 +12,33 @@
 //! Windows calls back with no data of ours, so the tracker lives in a value of the UI thread.
 //! A callback that comes while the tracker is busy (Windows can call back inside a call the
 //! tracker makes) runs a turn of the event loop later. Each step that fails is let go.
-use crate::carried_bridge;
-use crate::clock;
+use crate::app_host;
 use crate::diagnostics::Diagnostics;
 use crate::pill_face::face_data;
-use crate::pill_feed::{self, Feed, Run, Service, Surroundings};
+use crate::pill_feed::{self, Snapshot};
 use crate::pill_menu::{self, Command};
-use crate::providers::{self, Locations};
 use crate::tooltip::{self, Hover, Step};
 use crate::tooltip_window::TooltipWindow;
 use crate::ui::Pill;
-use crate::win::local_zone::local_zone;
 use crate::win::probe::Prober;
-use crate::win::taskbar::{self, Broadcast, MessageWindow, WinEvent, WinEventHook};
-use crate::win::{born, locale, menu, registry};
+use crate::win::taskbar::{self, Broadcast, WinEvent, WinEventHook};
+use crate::win::{born, menu};
 use chrono::TimeDelta;
 use slint::{ComponentHandle, Timer, TimerMode};
 use sobreiro_core::colours::{BarColourOption, TaskbarColours};
-use sobreiro_core::connect::connection;
-use sobreiro_core::copilot::copilot_provider::CopilotProvider;
 use sobreiro_core::display::pill_model::PillModel;
-use sobreiro_core::polling::provider_poller::Finished;
 use sobreiro_core::taskbar::full_screen::is_full_screen;
 use sobreiro_core::taskbar::pill_placement;
 use sobreiro_core::taskbar::pill_show::{self, PillShowStep, ZOrder};
 use sobreiro_core::taskbar::taskbar_layout::TaskbarAnchors;
 use sobreiro_core::taskbar::taskbar_query_schedule::TaskbarQuerySchedule;
 use std::cell::RefCell;
-use std::process::ExitCode;
+use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 const TICK: Duration = Duration::from_secs(2);
-/// How often the model and the theme are read again, as 1.1 redraws.
-const REFRESH: Duration = Duration::from_secs(30);
 /// How often a new pill's window is looked for until the toolkit has made it.
 const FIND_POLL: Duration = Duration::from_millis(15);
 /// How long after a pill shown at another scale it is placed again, at its new size.
@@ -71,43 +63,37 @@ thread_local! {
     static HOST: RefCell<Option<Host>> = const { RefCell::new(None) };
 }
 
-/// Runs the pill with live figures until the process ends.
-pub fn run() -> ExitCode {
-    let Some(places) = Locations::find() else {
-        return ExitCode::FAILURE;
-    };
-    let diagnostics = Arc::new(Diagnostics::new(&places.app.log_file()));
-    let made = providers::make(&places, &diagnostics);
-    let copilot = made.copilot.clone();
-    let feed = Feed::new(made.claude, made.copilot);
-    taskbar::become_dpi_aware();
-    // Made before the first pill: while `born` has a window pending it takes the next top-level
-    // window this thread makes.
-    let messages = MessageWindow::create(on_broadcast);
-    if messages.is_none() {
-        diagnostics.say("the message window could not be made");
-    }
+/// What the app host gives the pill's host when it starts.
+pub struct Setup {
+    /// The app host's hidden window, which the pill's menu is owned by.
+    pub messages: Option<isize>,
+    pub diagnostics: Arc<Diagnostics>,
+    /// `config.json`, which the menu reads and the bar colour is saved to.
+    pub config_file: PathBuf,
+}
+
+/// Makes the pill's host and starts following the taskbar. The first pill comes with the first
+/// snapshot. False when the host could not be kept.
+pub fn start(setup: Setup) -> bool {
     let foreground = WinEventHook::foreground(on_win_event);
     if foreground.is_none() {
-        diagnostics.say("the foreground hook could not be set");
+        setup
+            .diagnostics
+            .say("the foreground hook could not be set");
     }
     let host = Host {
         started: Instant::now(),
         model: None,
         colours: initial_colours(),
-        feed,
-        places,
-        diagnostics,
-        copilot,
-        config_unreadable: false,
+        diagnostics: setup.diagnostics,
+        config_file: setup.config_file,
         component_failed: false,
         window_failed: false,
         tooltip_failed: false,
-        refresh_timer: Timer::default(),
         timer: Timer::default(),
         find_timer: Timer::default(),
         hover_timer: Timer::default(),
-        messages,
+        messages: setup.messages,
         _foreground_hook: foreground,
         location_hook: None,
         pill: None,
@@ -127,34 +113,35 @@ pub fn run() -> ExitCode {
         prober: Prober::default(),
     };
     if HOST.try_with(|cell| cell.replace(Some(host))).is_err() {
-        return ExitCode::FAILURE;
+        return false;
     }
     with_host(|host| {
-        // Drawn once with what is there, as 1.1 does.
-        host.redraw();
-        host.tick();
         host.timer
             .start(TimerMode::Repeated, TICK, || with_host(Host::tick));
-        host.refresh_timer
-            .start(TimerMode::Repeated, REFRESH, || with_host(Host::refresh));
     });
-    // The polls start from the loop's first turn: a poll that answers at once hands its answer
-    // back with `invoke_from_event_loop`, which fails until the toolkit has an event loop.
-    Timer::single_shot(Duration::ZERO, || with_host(Host::start_polls));
-    // Runs until asked to quit: the pill's window can be destroyed under it (Explorer restarts).
-    let ended = slint::run_event_loop_until_quit();
-    // The tracker, its pill and its hooks go here, on the UI thread, before the thread's values
-    // are torn down.
+    true
+}
+
+/// Lets the tracker, its pill and its hooks go. Called on the UI thread before the thread's
+/// values are torn down.
+pub fn stop() {
     let host = HOST
         .try_with(|cell| cell.try_borrow_mut().map(|mut host| host.take()))
         .ok()
         .and_then(Result::ok)
         .flatten();
     drop(host);
-    match ended {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(_) => ExitCode::FAILURE,
-    }
+}
+
+/// Draws the pill from a snapshot, now or a turn of the event loop later if the tracker is busy.
+/// A pill that fails to draw logs once and keeps its last face (see `Host::show`).
+pub fn show(snapshot: Rc<Snapshot>) {
+    with_host(move |host| host.show(snapshot));
+}
+
+/// Hands on a broadcast the taskbar work answers to.
+pub fn on_broadcast(broadcast: Broadcast) {
+    with_host(move |host| host.on_broadcast(broadcast));
 }
 
 /// A dark taskbar's colours with the purple bar, until the theme is read.
@@ -231,15 +218,6 @@ fn on_win_event(event: WinEvent) {
     with_host(move |host| host.on_win_event(event));
 }
 
-fn on_broadcast(broadcast: Broadcast) {
-    // A broadcast is sent to every top-level window, and its sender may wait on the answer. Work
-    // done inside it (hiding and dropping the old pill, making a new one) can block on the
-    // sender, so it runs a turn of the event loop later, once the message has been answered.
-    Timer::single_shot(Duration::ZERO, move || {
-        with_host(move |host| host.on_broadcast(broadcast));
-    });
-}
-
 /// The pill's size in pixels at `dpi`, from its size in units: rounded up, so no edge is cut.
 fn size_at(width_units: f32, height_units: f32, dpi: u32) -> (i32, i32) {
     let scale = f64::from(dpi) / 96.0;
@@ -284,24 +262,19 @@ struct Host {
     /// What the pill shows; none while the settings keep it off.
     model: Option<PillModel>,
     colours: TaskbarColours,
-    feed: Feed,
-    places: Locations,
     diagnostics: Arc<Diagnostics>,
-    /// Kept to read its cache ahead of the first poll.
-    copilot: Arc<CopilotProvider>,
-    /// `config.json` could not be read at the last redraw, so it is told once.
-    config_unreadable: bool,
+    /// `config.json`, which the menu reads and the bar colour is saved to.
+    config_file: PathBuf,
     /// The pill's component or window could not be made at the last try, so it is told once.
     component_failed: bool,
     window_failed: bool,
     tooltip_failed: bool,
-    refresh_timer: Timer,
     timer: Timer,
     find_timer: Timer,
     /// Wakes the tooltip's timing at the next moment it has something to do.
     hover_timer: Timer,
-    /// The hidden window of ours the pill's menu is owned by, and the broadcasts are heard on.
-    messages: Option<MessageWindow>,
+    /// The app host's hidden window, which the pill's menu is owned by.
+    messages: Option<isize>,
     _foreground_hook: Option<WinEventHook>,
     location_hook: Option<WinEventHook>,
     pill: Option<PillWindow>,
@@ -361,103 +334,22 @@ impl Host {
         self.place();
     }
 
-    /// Switches both providers on, and reads Copilot's cache file ahead of the first poll.
-    fn start_polls(&mut self) {
-        let runs = self.feed.start(clock::now());
-        self.spawn(runs);
-        let copilot = self.copilot.clone();
-        let read = std::thread::Builder::new()
-            .name("copilot-cache".to_string())
-            .spawn(move || {
-                if let Some(cache) = copilot.read_cache() {
-                    // As below: the loop exists, or has ended.
-                    let _ = slint::invoke_from_event_loop(move || {
-                        with_host(move |host| {
-                            host.copilot.take_early(cache);
-                            host.redraw();
-                        });
-                    });
-                }
-            });
-        if read.is_err() {
-            self.diagnostics
-                .say("a thread for the Copilot cache could not start");
-        }
-    }
-
-    /// Every 30 seconds: polls that are due start, and the pill is drawn again.
-    fn refresh(&mut self) {
-        let runs = self.feed.tick(clock::now());
-        self.spawn(runs);
-        self.redraw();
-    }
-
-    /// Each poll runs on a thread of its own, which may wait ten seconds for the network, and
-    /// its answer is handled on this thread again.
-    fn spawn(&self, runs: Vec<Run>) {
-        for Run { service, poll } in runs {
-            let started = std::thread::Builder::new()
-                .name("poll".to_string())
-                .spawn(move || {
-                    let finished = poll.run();
-                    // Runs from the loop's first turn (see `run`), so the toolkit has its event
-                    // loop and this fails only when the loop has ended: nothing is left to draw.
-                    let _ = slint::invoke_from_event_loop(move || {
-                        with_host(move |host| host.on_poll_done(service, finished));
-                    });
-                });
-            if started.is_err() {
-                self.diagnostics.say("a thread for a poll could not start");
-            }
-        }
-    }
-
-    fn on_poll_done(&mut self, service: Service, finished: Finished) {
-        let handled = self.feed.done(service, finished, clock::now());
-        // Copilot's provider writes its own line, with the cache word, through the trace.
-        if service == Service::Claude
-            && let Some(line) = handled.log
-        {
-            self.diagnostics.say(&line);
-        }
-        self.spawn(handled.runs);
-        self.redraw();
-    }
-
-    /// Reads `config.json` and the theme, makes the model and draws it. `config.json` is only
-    /// read, and a file that cannot be read draws as the default.
-    fn redraw(&mut self) {
-        let now = clock::now();
-        let (config, unreadable) = pill_feed::config_for_display(&self.places.app.config_file());
-        if unreadable != self.config_unreadable {
-            self.config_unreadable = unreadable;
-            if unreadable {
-                self.diagnostics
-                    .say("config.json could not be read, so the defaults draw");
-            }
-        }
-        self.colours = registry::theme().colours(config.bar_colour);
-        let zone = local_zone(now);
-        let clock = locale::clock_format();
-        let around = Surroundings {
-            show: config.show,
-            zone: &zone,
-            clock: &clock,
-            credentials_file_exists: self.places.claude.credentials_file().is_file(),
-        };
-        let settings = self.places.claude.settings_file();
-        let bridge = carried_bridge::own(&self.places.app);
-        let shown = self.feed.shown(now, &around, || {
-            let text = std::fs::read_to_string(settings).unwrap_or_default();
-            connection::state(&text, bridge.as_deref())
-        });
-        let (model, text) = match shown {
-            Some(shown) => (Some(shown.model), shown.tooltip),
+    /// Takes what a snapshot says of the pill: the model, the colours and the tooltip's text, and
+    /// draws them. A pill that is not there while there is a model is made at once, so a pill
+    /// switched back on does not wait for the next tick. The pill's steps log their own failures
+    /// and keep the last face, so nothing here stops the app host's other parts.
+    fn show(&mut self, snapshot: Rc<Snapshot>) {
+        let (model, text) = match &snapshot.pill {
+            Some(shown) => (Some(shown.model.clone()), shown.tooltip.clone()),
             None => (None, String::new()),
         };
+        self.colours = snapshot.colours;
         self.model = model;
         let text_changed = text != self.tooltip_text;
         self.tooltip_text = text;
+        if self.model.is_some() && self.pill.is_none() {
+            self.tick();
+        }
         self.show_model();
         if text_changed && self.hover.is_open() {
             // Open now: it takes the new words, and the size they want.
@@ -970,7 +862,7 @@ impl Host {
     /// What `open_menu` needs from the tracker: the window the menu is owned by and the entries,
     /// or that a window of `born`'s is still being made.
     fn menu_request(&self) -> MenuRequest {
-        let Some(owner) = self.messages.as_ref().map(MessageWindow::handle) else {
+        let Some(owner) = self.messages else {
             self.diagnostics
                 .say("the menu has no window of ours to open from");
             return MenuRequest::Never;
@@ -980,7 +872,7 @@ impl Host {
         if born::is_pending() {
             return MenuRequest::Wait;
         }
-        let (config, _) = pill_feed::config_for_display(&self.places.app.config_file());
+        let (config, _) = pill_feed::config_for_display(&self.config_file);
         MenuRequest::Ready(owner, pill_menu::entries(config.bar_colour))
     }
 
@@ -995,10 +887,10 @@ impl Host {
         }
     }
 
-    /// Saves the bar colour through Core and draws the pill in it at once.
+    /// Saves the bar colour through Core and asks the app host to draw it at once.
     fn set_bar_colour(&mut self, colour: BarColourOption) {
-        match pill_menu::change_bar_colour(&self.places.app.config_file(), colour) {
-            Ok(true) => self.redraw(),
+        match pill_menu::change_bar_colour(&self.config_file, colour) {
+            Ok(true) => app_host::redraw(),
             Ok(false) => {}
             Err(_) => self
                 .diagnostics
@@ -1037,7 +929,8 @@ impl Host {
                 self.ask();
                 self.place();
             }
-            Broadcast::SettingChanged => self.redraw(),
+            // The figures and the theme are the app host's; it redraws on these.
+            Broadcast::SettingChanged | Broadcast::TimeChanged => {}
         }
     }
 }
