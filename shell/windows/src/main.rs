@@ -6,6 +6,7 @@
 mod born_test;
 mod clock;
 mod diagnostics;
+mod flyout;
 mod pictures;
 mod pill_face;
 mod pill_feed;
@@ -39,6 +40,7 @@ fn main() -> ExitCode {
         // Hidden: what the born test launches.
         Some("--born") => born_test::run(args.next().as_deref().and_then(|arg| arg.to_str())),
         Some("--pill-pictures") => pictures::run(args.next()),
+        Some("--flyout-pictures") => flyout::pictures::run(args.next()),
         _ => ExitCode::from(2),
     }
 }

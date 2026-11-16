@@ -1,0 +1,309 @@
+// The flyout's card in the Bars style: what Core's FlyoutModel looks like, in DIPs, drawn as 1.1's
+// WPF card draws it. The Rust side (src/flyout/face.rs) fills `FlyoutData` from the model and the
+// palette; this file only draws.
+// The fonts are the 1.x app's, read from where they are until the C# leaves this branch.
+import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
+import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
+import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+
+// One limit: the label and figure, the meter, the badge and the words under it. An empty string
+// leaves a line out.
+export struct BarData {
+    label: string,
+    // "45%", or a dash with no reading.
+    figure: string,
+    // 0 to 1, how much of the meter the level's colour fills.
+    fraction: float,
+    // 0 to 1, where the pace ends by the reset; negative when there is no tick to draw.
+    tick: float,
+    fill: color,
+    badge: string,
+    badge-fill: color,
+    badge-ink: color,
+    resets: string,
+    detail: string,
+    // The sentence under a Copilot row's figures.
+    note: string,
+}
+
+// The Night palette of the theme.
+export struct CardColours {
+    ground: color,
+    line: color,
+    ink: color,
+    soft: color,
+    track: color,
+}
+
+export struct FlyoutData {
+    show-claude: bool,
+    show-spend: bool,
+    show-copilot: bool,
+    claude-title: string,
+    copilot-title: string,
+    session: BarData,
+    weekly: BarData,
+    spend: BarData,
+    credits: BarData,
+    footer: string,
+    colours: CardColours,
+}
+
+// DIPs, as 1.1's FlyoutView: a 330 wide card, a 1 border and 18 of padding, so 292 for a row.
+global M {
+    out property <length> card-width: 330px;
+    out property <length> inner: 292px;
+    out property <length> edge: 19px;
+    out property <length> heading: 35px;
+    out property <length> line: 20px;
+    out property <length> badge-pad: 10px;
+    out property <length> badge-gap: 8px;
+}
+
+// A text whose baseline lies `baseline` below the top of its parent. The toolkit lays a line out
+// at the font's natural height, ascent plus descent (Inter's hhea ascent is 1984 of 2048 units,
+// Unbounded's 995 of 1000), with the baseline at the ascent, so the top is the baseline less it.
+component Placed inherits Text {
+    in property <length> baseline;
+    x: 0px;
+    y: self.baseline - self.font-metrics.ascent;
+}
+
+// A heading in Inter 15 over a hairline: the line is 34 under the top, so the block is 35 tall.
+component Heading inherits Rectangle {
+    in property <string> text;
+    in property <CardColours> colours;
+    height: M.heading;
+    width: M.inner;
+
+    Placed {
+        text: root.text;
+        font-family: "Inter";
+        font-size: 15px;
+        color: root.colours.soft;
+        baseline: 17px;
+    }
+
+    Rectangle {
+        y: 34px;
+        height: 1px;
+        background: root.colours.ink;
+    }
+}
+
+// A bar row. From the top: 14 of space, the label and the figure on one baseline (32 down), the
+// 6 high meter at 42 with its tick, the badge and the resets-in text on one baseline (74 down),
+// then the detail and the note, each 4 under the line before, and 14 of space and a hairline.
+component BarRow inherits Rectangle {
+    in property <BarData> bar;
+    in property <CardColours> colours;
+    out property <length> row-height: root.note-bottom + 15px;
+    width: M.inner;
+    height: root.row-height;
+
+    private property <bool> has-badge: root.bar.badge != "";
+    private property <bool> has-resets: root.bar.resets != "";
+    private property <length> badge-width: badge-text.preferred-width + 2 * M.badge-pad;
+    // The two are wider than the row: the resets-in text goes under the badge.
+    private property <bool> wrapped: root.has-badge && root.has-resets && root.badge-width + M.badge-gap + resets-text.preferred-width > M.inner;
+    private property <length> lines-bottom: !root.has-badge && !root.has-resets ? 58px : (root.wrapped ? 102px : (root.has-badge ? 79px : 78px));
+    private property <length> detail-top: root.lines-bottom + 4px;
+    private property <length> detail-bottom: root.bar.detail != "" ? root.detail-top + M.line : root.lines-bottom;
+    private property <length> note-top: root.detail-bottom + 4px;
+    private property <length> note-bottom: root.bar.note != "" ? root.note-top + M.line : root.detail-bottom;
+
+    Placed {
+        text: root.bar.label;
+        font-family: "Inter";
+        font-size: 15px;
+        color: root.colours.ink;
+        baseline: 32px;
+    }
+
+    unit := Placed {
+        text: "used";
+        font-family: "Inter";
+        font-size: 14px;
+        color: root.colours.soft;
+        baseline: 32px;
+        x: M.inner - self.width;
+    }
+
+    Placed {
+        text: root.bar.figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: 22px;
+        color: root.colours.ink;
+        baseline: 32px;
+        x: unit.x - 4px - self.width;
+    }
+
+    Rectangle {
+        y: 42px;
+        height: 6px;
+        background: root.colours.track;
+
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: M.inner * max(0, min(1, root.bar.fraction));
+            background: root.bar.fill;
+        }
+    }
+
+    if root.bar.tick >= 0: Rectangle {
+        x: M.inner * min(1, root.bar.tick) - 1px;
+        y: 39px;
+        width: 2px;
+        height: 12px;
+        background: root.colours.ink;
+    }
+
+    // Always laid out so its width is known, drawn when there is a badge.
+    Rectangle {
+        visible: root.has-badge;
+        x: 0px;
+        y: root.wrapped ? 58px : 59px;
+        width: root.badge-width;
+        height: 20px;
+        border-radius: 10px;
+        background: root.bar.badge-fill;
+
+        badge-text := Placed {
+            text: root.bar.badge;
+            font-family: "Inter";
+            font-weight: 500;
+            font-size: 13px;
+            color: root.bar.badge-ink;
+            x: M.badge-pad;
+            baseline: 15px;
+        }
+    }
+
+    resets-text := Placed {
+        text: root.bar.resets;
+        font-family: "Inter";
+        font-size: 14px;
+        color: root.colours.soft;
+        x: root.wrapped ? 0px : (root.has-badge ? root.badge-width + M.badge-gap : 0px);
+        baseline: root.wrapped ? 98px : 74px;
+    }
+
+    Placed {
+        text: root.bar.detail;
+        font-family: "Inter";
+        font-size: 14px;
+        color: root.colours.soft;
+        baseline: root.detail-top + 15px;
+    }
+
+    Placed {
+        text: root.bar.note;
+        font-family: "Inter";
+        font-size: 14px;
+        color: root.colours.soft;
+        baseline: root.note-top + 15px;
+    }
+
+    Rectangle {
+        y: root.row-height - 1px;
+        height: 1px;
+        background: root.colours.line;
+    }
+}
+
+// The card: a border, the Claude Code block, the GitHub Copilot block and the footer, each as the
+// model says. Heights follow what the rows hold.
+export component FlyoutCard inherits Rectangle {
+    in property <FlyoutData> data;
+    out property <length> card-height: root.footer-top + 35px;
+    width: M.card-width;
+    height: root.card-height;
+    background: root.data.colours.ground;
+    border-width: 1px;
+    border-color: root.data.colours.line;
+    border-radius: 10px;
+
+    private property <length> session-top: M.edge + M.heading;
+    private property <length> weekly-top: root.session-top + session-row.row-height;
+    private property <length> spend-top: root.weekly-top + weekly-row.row-height;
+    private property <length> claude-end: root.spend-top + (root.data.show-spend ? spend-row.row-height : 0px);
+    // Copilot's heading is 10 under the rows above it when Claude shows.
+    private property <length> copilot-top: root.data.show-claude ? root.claude-end + 10px : M.edge;
+    private property <length> credits-top: root.copilot-top + M.heading;
+    private property <length> copilot-end: root.credits-top + credits-row.row-height;
+    private property <length> content-end: root.data.show-copilot ? root.copilot-end : (root.data.show-claude ? root.claude-end : M.edge);
+    private property <length> footer-top: root.content-end + 12px;
+
+    Heading {
+        visible: root.data.show-claude;
+        x: M.edge;
+        y: M.edge;
+        text: root.data.claude-title;
+        colours: root.data.colours;
+    }
+
+    session-row := BarRow {
+        visible: root.data.show-claude;
+        x: M.edge;
+        y: root.session-top;
+        bar: root.data.session;
+        colours: root.data.colours;
+    }
+
+    weekly-row := BarRow {
+        visible: root.data.show-claude;
+        x: M.edge;
+        y: root.weekly-top;
+        bar: root.data.weekly;
+        colours: root.data.colours;
+    }
+
+    spend-row := BarRow {
+        visible: root.data.show-claude && root.data.show-spend;
+        x: M.edge;
+        y: root.spend-top;
+        bar: root.data.spend;
+        colours: root.data.colours;
+    }
+
+    Heading {
+        visible: root.data.show-copilot;
+        x: M.edge;
+        y: root.copilot-top;
+        text: root.data.copilot-title;
+        colours: root.data.colours;
+    }
+
+    credits-row := BarRow {
+        visible: root.data.show-copilot;
+        x: M.edge;
+        y: root.credits-top;
+        bar: root.data.credits;
+        colours: root.data.colours;
+    }
+
+    Placed {
+        text: root.data.footer;
+        x: M.edge;
+        baseline: root.footer-top + 16px;
+        font-family: "Inter";
+        font-size: 14px;
+        color: root.data.colours.soft;
+    }
+}
+
+// The card alone in a window of its own size, over nothing: what `--flyout-pictures` draws.
+export component FlyoutPicture inherits Window {
+    in property <FlyoutData> data;
+    out property <length> card-width: card.width;
+    out property <length> card-height: card.card-height;
+    background: transparent;
+
+    card := FlyoutCard {
+        x: 0px;
+        y: 0px;
+        data: root.data;
+    }
+}
