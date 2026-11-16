@@ -30,6 +30,8 @@ export struct BarData {
     detail: string,
     // The sentence under a Copilot row's figures.
     note: string,
+    // The limit as one line for a screen reader, made in Rust from the words the row draws.
+    spoken: string,
     // What the Battery and Thermometer styles draw: whether there is a reading, the figure that is
     // left, the cells left and of those the ones the pace will use, and the same in percent.
     has-data: bool,
@@ -86,6 +88,8 @@ component Placed inherits Text {
     in property <length> baseline;
     x: 0px;
     y: self.baseline - self.font-metrics.ascent;
+    // What a row or a heading says is said by the item that holds it.
+    accessible-role: none;
 }
 
 // Text in Inter 14 that wraps at the row's width, its lines 1.45 of the size apart as 1.1's are.
@@ -101,6 +105,7 @@ component Block inherits Text {
     x: 0px;
     width: self.wrap-width;
     wrap: word-wrap;
+    accessible-role: none;
     font-family: "Inter";
     font-size: 14px;
     line-height-factor: 1.45 / 1.2100586;
@@ -113,6 +118,8 @@ component Heading inherits Rectangle {
     in property <CardColours> colours;
     height: M.heading;
     width: M.inner;
+    accessible-role: AccessibleRole.text;
+    accessible-label: root.text;
 
     Placed {
         text: root.text;
@@ -135,6 +142,7 @@ component Heading inherits Rectangle {
 component BarRow inherits Rectangle {
     in property <BarData> bar;
     in property <CardColours> colours;
+    in property <bool> announced: true;
     out property <length> row-height: root.note-bottom + 15px;
     width: M.inner;
     height: root.row-height;
@@ -150,6 +158,21 @@ component BarRow inherits Rectangle {
     private property <length> detail-bottom: root.bar.detail != "" ? root.detail-top + detail-text.block-height : root.lines-bottom;
     private property <length> note-top: root.detail-bottom + 4px;
     private property <length> note-bottom: root.bar.note != "" ? root.note-top + note-text.block-height : root.detail-bottom;
+
+    // The row is one item for a screen reader, read as the line Rust made; the note is another.
+    if root.announced: Rectangle {
+        width: 100%;
+        height: 100%;
+        accessible-role: text;
+        accessible-label: root.bar.spoken;
+    }
+
+    if root.announced && root.bar.note != "": Rectangle {
+        width: 100%;
+        height: 100%;
+        accessible-role: text;
+        accessible-label: root.bar.note;
+    }
 
     Placed {
         text: root.bar.label;
@@ -257,6 +280,7 @@ component GlyphColumn inherits Rectangle {
     in property <BarData> bar;
     in property <CardColours> colours;
     in property <bool> thermometer;
+    in property <bool> announced: true;
     out property <length> column-height: root.bar.detail != "" ? root.detail-top + detail-text.block-height : root.lines-bottom;
     width: M.column;
     height: root.column-height;
@@ -272,6 +296,14 @@ component GlyphColumn inherits Rectangle {
     private property <color> fill: root.bar.has-data ? root.bar.fill : root.colours.track;
     // The thermometer and its scale are centred together, the scale 10 right of the 30 wide glyph.
     private property <length> thermometer-x: (M.column - (40px + full.preferred-width)) / 2;
+
+    // The column is one item for a screen reader, read as the line Rust made.
+    if root.announced: Rectangle {
+        width: 100%;
+        height: 100%;
+        accessible-role: text;
+        accessible-label: root.bar.spoken;
+    }
 
     BatteryGlyph {
         visible: !root.thermometer;
@@ -412,8 +444,7 @@ export component FlyoutCard inherits Rectangle {
     private property <length> content-end: root.data.show-copilot ? root.copilot-end : (root.data.show-claude ? root.claude-end : M.edge);
     private property <length> footer-top: root.content-end + 12px;
 
-    Heading {
-        visible: root.data.show-claude;
+    if root.data.show-claude: Heading {
         x: M.edge;
         y: M.edge;
         text: root.data.claude-title;
@@ -422,6 +453,7 @@ export component FlyoutCard inherits Rectangle {
 
     session-row := BarRow {
         visible: root.data.show-claude && root.data.style == 0;
+        announced: root.data.show-claude && root.data.style == 0;
         x: M.edge;
         y: root.session-top;
         bar: root.data.session;
@@ -430,6 +462,7 @@ export component FlyoutCard inherits Rectangle {
 
     weekly-row := BarRow {
         visible: root.data.show-claude && root.data.style == 0;
+        announced: root.data.show-claude && root.data.style == 0;
         x: M.edge;
         y: root.weekly-top;
         bar: root.data.weekly;
@@ -438,6 +471,7 @@ export component FlyoutCard inherits Rectangle {
 
     session-column := GlyphColumn {
         visible: root.data.show-claude && root.data.style != 0;
+        announced: root.data.show-claude && root.data.style != 0;
         x: M.edge;
         y: root.session-top + 16px;
         bar: root.data.session;
@@ -447,6 +481,7 @@ export component FlyoutCard inherits Rectangle {
 
     weekly-column := GlyphColumn {
         visible: root.data.show-claude && root.data.style != 0;
+        announced: root.data.show-claude && root.data.style != 0;
         x: M.edge + M.column + M.column-gap;
         y: root.session-top + 16px;
         bar: root.data.weekly;
@@ -465,14 +500,14 @@ export component FlyoutCard inherits Rectangle {
 
     spend-row := BarRow {
         visible: root.data.show-claude && root.data.show-spend;
+        announced: root.data.show-claude && root.data.show-spend;
         x: M.edge;
         y: root.spend-top;
         bar: root.data.spend;
         colours: root.data.colours;
     }
 
-    Heading {
-        visible: root.data.show-copilot;
+    if root.data.show-copilot: Heading {
         x: M.edge;
         y: root.copilot-top;
         text: root.data.copilot-title;
@@ -481,6 +516,7 @@ export component FlyoutCard inherits Rectangle {
 
     credits-row := BarRow {
         visible: root.data.show-copilot;
+        announced: root.data.show-copilot;
         x: M.edge;
         y: root.credits-top;
         bar: root.data.credits;
@@ -492,6 +528,15 @@ export component FlyoutCard inherits Rectangle {
         x: M.edge;
         baseline: root.footer-top + 16px;
         color: root.data.colours.soft;
+    }
+
+    if root.data.footer != "": Rectangle {
+        x: M.edge;
+        y: root.footer-top;
+        width: M.inner;
+        height: footer-text.block-height;
+        accessible-role: text;
+        accessible-label: root.data.footer;
     }
 }
 
