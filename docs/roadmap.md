@@ -264,6 +264,11 @@ In this order:
    Its text is lighter ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)), and
    it is a pixel or two taller at 150% and 200%
    ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
+   Set beside it again once those were merged
+   ([note](shell-comparison.md#again-after-46-59-and-61)): every picture is now 1.1's size,
+   and shapes and colours match by eye. The text is still 4 to 14% lighter, which the toolkit
+   cannot change; drawing it at 1.1's weight from the shell is
+   [#93](https://github.com/RicardoSilveira23/sobreiro/issues/93).
 4. **The release:** its baseline row, and the comparison below.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
