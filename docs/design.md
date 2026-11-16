@@ -100,7 +100,7 @@ the table differ: no figure is typed on the page.
 | Part | Holds |
 |---|---|
 | Heading | The section's one heading, led by the mark (36 px) in Rust: "Why 2.0 moved to Rust", or "moves" until 2.0.0 has a row |
-| 1.0 to 1.1 | What 1.1 changed (idle), with the CPU figures and the start's cost, and that most of its memory still went to WPF |
+| 1.0 to 1.1 | What 1.1 changed (idle), with the CPU figures, and that most of its memory still went to WPF |
 | Why Rust | Three other shells were measured; the Rust one rested lowest and ships as one small file. No figures in it. |
 | Caption | "Each bar starts at zero; shorter is lighter." |
 | Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the cards top-aligned with the heading. |

@@ -37,7 +37,7 @@ export const METRICS = [
   { column: "First pill, later starts", title: "Start to the pill", less: "faster", more: "slower" },
   { column: "Sobreiro.exe", title: "Sobreiro.exe", less: "smaller", more: "larger" },
 ];
-const [, CPU, START] = METRICS;
+const [, CPU] = METRICS;
 
 export const FILES = {
   page: "site/index.html",
@@ -101,7 +101,7 @@ export function comparison(md) {
   }));
   const step =
     rows.has("1.0.0") && rows.has("1.1.0")
-      ? { cpu: [fig("1.0.0", CPU), fig("1.1.0", CPU)], start: [fig("1.0.0", START), fig("1.1.0", START)] }
+      ? { cpu: [fig("1.0.0", CPU), fig("1.1.0", CPU)] }
       : null;
   const charted = rows.has(BASE) && rows.has(NEW) ? RELEASES.filter((r) => r.build === BASE || r.build === NEW) : [];
   const metrics = charted.length
@@ -124,13 +124,11 @@ const share = (n) => String(Math.round(n * 1000) / 1000);
 // The words on 1.0 to 1.1: what the release was for, and what it bought and cost.
 function stepWords(c) {
   if (!c.step) return "";
-  const [cpu0, cpu1] = c.step.cpu, [s0, s1] = c.step.start;
-  const d = s1.value - s0.value;
-  const start = Math.abs(d) < 0.005 ? "" : `, for a start ${Math.abs(d).toFixed(2)} s ${d > 0 ? "slower" : "faster"}`;
+  const [cpu0, cpu1] = c.step.cpu;
   return (
     "1.1 tuned 1.0's WPF shell for idle: it asks the taskbar mainly when something changes, and" +
     ` compiles its code once. Processor time per idle hour fell from ${cpu0.text} to ${cpu1.text},` +
-    ` ${multiple(cpu1.value, cpu0.value, CPU)}${start}.`
+    ` ${multiple(cpu1.value, cpu0.value, CPU)}.`
   );
 }
 // The mark, inline so its tile and trunk can move: from the site's own file, its colours swapped

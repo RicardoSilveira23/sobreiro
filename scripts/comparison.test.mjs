@@ -46,7 +46,7 @@ test("without a 2.0 row it builds: the words, no rings, no picture, no 2.0 butto
   assert.doesNotMatch(html, /class="charts"|Download 2\.0|v2\.0\.0/);
   assert.match(html, /<h2 id="cmp" class="r20"><svg class="rmark"[^]*?<\/svg>Why 2\.0 moves to Rust<\/h2>/);
   assert.match(html, /Its figures join here when it is released\./);
-  assert.match(html, /fell from 14\.9 s to 2\.0 s, 7\.5× less, for a start 0\.07 s slower\./);
+  assert.match(html, /fell from 14\.9 s to 2\.0 s, 7\.5× less\. Most of its memory/);
   assert.equal(svg(c), null);
   assert.match(docsBlock(c), /2\.0\.0, rewritten in Rust, is set against 1\.1 here once its release row is in\./);
 });
