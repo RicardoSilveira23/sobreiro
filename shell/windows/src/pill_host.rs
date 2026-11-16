@@ -6,6 +6,10 @@
 //! again. Everything else runs on the UI thread, except the UI Automation question, which is asked
 //! when Core's schedule says a tick should ask.
 //!
+//! The pill answers the pointer as 1.1's does: a tooltip in a window of its own (`tooltip_window`)
+//! opens when the pointer has rested on it (`tooltip` says when and where), a left click calls the
+//! flyout's hook, and a right click opens Windows' own menu (`pill_menu`).
+//!
 //! Windows calls back with no data of ours, so the tracker lives in a value of the UI thread.
 //! A callback that comes while the tracker is busy (Windows can call back inside a call the
 //! tracker makes) runs a turn of the event loop later. Each step that fails is let go.
@@ -14,13 +18,15 @@ use crate::clock;
 use crate::diagnostics::Diagnostics;
 use crate::pill_face::face_data;
 use crate::pill_feed::{self, Feed, Run, Service, Surroundings};
+use crate::pill_menu::{self, Command};
 use crate::providers::{self, Locations};
+use crate::tooltip::{self, Hover, Step};
+use crate::tooltip_window::TooltipWindow;
 use crate::ui::Pill;
-use crate::win::born;
 use crate::win::local_zone::local_zone;
 use crate::win::probe::Prober;
-use crate::win::registry;
 use crate::win::taskbar::{self, Broadcast, MessageWindow, WinEvent, WinEventHook};
+use crate::win::{born, locale, menu, registry};
 use chrono::TimeDelta;
 use slint::{ComponentHandle, Timer, TimerMode};
 use sobreiro_core::colours::{BarColourOption, TaskbarColours};
@@ -51,6 +57,15 @@ const RESIZE_TRIES: u32 = 4;
 const OFF_SCREEN: i32 = -32000;
 /// The gap between the pill and the tray icons, in units.
 const GAP_UNITS: f64 = 4.0;
+/// How many times the tooltip waits for its window to take the taskbar's scale before it shows
+/// anyway, at one try every `FIND_POLL`.
+const SCALE_TRIES: u32 = 20;
+/// How many times a right click waits for `born` to finish a window, at one try every `FIND_POLL`.
+const MENU_TRIES: u32 = 100;
+/// How many times a menu that was refused is tried again.
+const MENU_REFUSALS: u32 = 3;
+/// A menu that closes sooner than this, with no choice, did not open.
+const MENU_REFUSED: Duration = Duration::from_millis(150);
 
 thread_local! {
     static HOST: RefCell<Option<Host>> = const { RefCell::new(None) };
@@ -87,13 +102,20 @@ pub fn run() -> ExitCode {
         config_unreadable: false,
         component_failed: false,
         window_failed: false,
+        tooltip_failed: false,
         refresh_timer: Timer::default(),
         timer: Timer::default(),
         find_timer: Timer::default(),
-        _messages: messages,
+        hover_timer: Timer::default(),
+        messages,
         _foreground_hook: foreground,
         location_hook: None,
         pill: None,
+        tooltip: None,
+        tooltip_text: String::new(),
+        hover: Hover::default(),
+        hovered: false,
+        band_top: 0,
         taskbar: 0,
         tray_notify: 0,
         anchors: None,
@@ -153,6 +175,55 @@ fn with_host(step: impl FnOnce(&mut Host) + 'static) {
     });
     if let Ok(Some(step)) = busy {
         Timer::single_shot(Duration::ZERO, move || with_host(step));
+    }
+}
+
+/// Runs `step` on the tracker now and gives back what it answers, or none when the tracker is
+/// busy or gone.
+fn host_value<T>(step: impl FnOnce(&mut Host) -> T) -> Option<T> {
+    HOST.try_with(|cell| {
+        let mut host = cell.try_borrow_mut().ok()?;
+        host.as_mut().map(step)
+    })
+    .ok()
+    .flatten()
+}
+
+/// What the tracker gives for opening the menu.
+enum MenuRequest {
+    Ready(isize, Vec<menu::Entry>),
+    Wait,
+    Never,
+}
+
+/// Opens the pill's menu at the pointer. The tracker is asked for what the menu needs and let go
+/// before the menu opens: `TrackPopupMenu` runs its own loop until the menu closes, and the
+/// tracker's other work (win events, timers) would pile up behind a borrow held that long. The
+/// choice is handed back to the tracker afterwards. The toolkit's own handler, which called us
+/// through a timer, still waits for the loop; nothing cheaper is known, as the menu has to be
+/// opened from a thread that pumps messages.
+fn open_menu(tries: u32, refusals: u32) {
+    let again = move |tries: u32, refusals: u32| {
+        if tries > 0 {
+            Timer::single_shot(FIND_POLL, move || open_menu(tries - 1, refusals));
+        }
+    };
+    match host_value(|host| host.menu_request()) {
+        // The tracker was busy: the click waits for it.
+        None => again(tries, refusals),
+        Some(MenuRequest::Never) => {}
+        Some(MenuRequest::Wait) => again(tries, refusals),
+        Some(MenuRequest::Ready(owner, entries)) => {
+            let opened = Instant::now();
+            let chosen = menu::track(owner, &entries);
+            // A menu that was gone before anyone could have read it never opened (Windows refused
+            // the foreground, say): it is tried again, a few times, so a right click opens one.
+            if chosen.is_none() && opened.elapsed() < MENU_REFUSED && refusals > 0 {
+                again(tries, refusals - 1);
+                return;
+            }
+            with_host(move |host| host.run_choice(chosen));
+        }
     }
 }
 
@@ -223,13 +294,26 @@ struct Host {
     /// The pill's component or window could not be made at the last try, so it is told once.
     component_failed: bool,
     window_failed: bool,
+    tooltip_failed: bool,
     refresh_timer: Timer,
     timer: Timer,
     find_timer: Timer,
-    _messages: Option<MessageWindow>,
+    /// Wakes the tooltip's timing at the next moment it has something to do.
+    hover_timer: Timer,
+    /// The hidden window of ours the pill's menu is owned by, and the broadcasts are heard on.
+    messages: Option<MessageWindow>,
     _foreground_hook: Option<WinEventHook>,
     location_hook: Option<WinEventHook>,
     pill: Option<PillWindow>,
+    /// Made once the pill's window is known, and kept hidden until the pointer has rested.
+    tooltip: Option<TooltipWindow>,
+    /// What the tooltip says, which is also the pill's name for a screen reader.
+    tooltip_text: String,
+    hover: Hover,
+    /// The pointer is on the pill.
+    hovered: bool,
+    /// The top of the taskbar's band as the pill was last placed, in pixels.
+    band_top: i32,
     taskbar: isize,
     tray_notify: isize,
     anchors: Option<TaskbarAnchors>,
@@ -269,6 +353,7 @@ impl Host {
         if self.pill.is_none() {
             self.create_window();
         }
+        self.keep_tooltip();
         // Conditional: asking UI Automation on every tick was most of 1.1's idle processor time.
         if self.schedule.due(self.now()) {
             self.ask();
@@ -353,31 +438,54 @@ impl Host {
         }
         self.colours = registry::theme().colours(config.bar_colour);
         let zone = local_zone(now);
+        let clock = locale::clock_format();
         let around = Surroundings {
             show: config.show,
             zone: &zone,
+            clock: &clock,
             credentials_file_exists: self.places.claude.credentials_file().is_file(),
         };
         let settings = self.places.claude.settings_file();
         let bridge = carried_bridge::own(&self.places.app);
-        self.model = self.feed.model(now, &around, || {
+        let shown = self.feed.shown(now, &around, || {
             let text = std::fs::read_to_string(settings).unwrap_or_default();
             connection::state(&text, bridge.as_deref())
         });
+        let (model, text) = match shown {
+            Some(shown) => (Some(shown.model), shown.tooltip),
+            None => (None, String::new()),
+        };
+        self.model = model;
+        let text_changed = text != self.tooltip_text;
+        self.tooltip_text = text;
         self.show_model();
+        if text_changed && self.hover.is_open() {
+            // Open now: it takes the new words, and the size they want.
+            self.open_tooltip(SCALE_TRIES);
+        }
     }
 
     /// Puts the model and the colours on the pill, or takes the pill away when there is no model.
     fn show_model(&mut self) {
-        let Some(model) = self.model.as_ref() else {
+        if self.model.is_none() {
             self.close_window();
             return;
-        };
-        if let Some(pill) = self.pill.as_ref() {
-            pill.component
-                .set_data(face_data(model, &self.colours, false));
+        }
+        if self.draw() {
             self.place();
         }
+    }
+
+    /// Draws the model, the pointer's ground and the name on the pill. True when there is a pill.
+    fn draw(&self) -> bool {
+        let (Some(model), Some(pill)) = (self.model.as_ref(), self.pill.as_ref()) else {
+            return false;
+        };
+        pill.component
+            .set_data(face_data(model, &self.colours, self.hovered));
+        pill.component
+            .set_name(slint::SharedString::from(self.tooltip_text.as_str()));
+        true
     }
 
     fn attach_to(&mut self, taskbar: isize) {
@@ -423,6 +531,11 @@ impl Host {
             return;
         };
         component.set_data(face_data(model, &self.colours, false));
+        component.set_name(slint::SharedString::from(self.tooltip_text.as_str()));
+        component.on_hover_changed(|over| with_host(move |host| host.on_hover(over)));
+        component.on_pressed(|| with_host(Host::on_pressed));
+        component.on_left_clicked(|| with_host(Host::on_left_click));
+        component.on_right_clicked(|| with_host(Host::on_right_click));
         // Born off the screen, as 1.1's is, so it never shows a frame at the toolkit's default
         // place before it is placed or hidden. The toolkit keeps a position set before its
         // window exists and makes the window there.
@@ -438,6 +551,7 @@ impl Host {
         if shown.is_err() {
             return;
         }
+        self.hovered = false;
         self.pill = Some(PillWindow {
             component,
             owner: self.taskbar,
@@ -461,7 +575,8 @@ impl Host {
         if !pill.can_go() {
             return;
         }
-        // Only the pill is made through `born`, so a window still pending is this one's.
+        // The tooltip is made only once the pill's window is known, so a window still pending
+        // while the pill has none is the pill's.
         if pill.window.is_none() && born::is_pending() {
             born::cancel_pending();
         }
@@ -469,6 +584,9 @@ impl Host {
         // hidden through the toolkit first; only then does dropping the component destroy it.
         let _ = pill.component.hide();
         self.pill = None;
+        self.hovered = false;
+        // The tooltip is owned by the taskbar the pill was, and goes with it.
+        self.drop_tooltip();
         self.find_timer.stop();
     }
 
@@ -490,9 +608,15 @@ impl Host {
 
     fn on_find_poll(&mut self) {
         if self.find_window() {
-            self.find_timer.stop();
             self.place();
-        } else if self.pill.as_ref().is_none_or(PillWindow::can_go) {
+        }
+        // Only one window is made at a time: the tooltip's is made once the pill's is there, and
+        // looked for until `born` lists it.
+        self.keep_tooltip();
+        let tooltip_waits = self.tooltip.as_ref().is_some_and(TooltipWindow::is_waiting);
+        let pill_waits = self.pill.as_ref().is_some_and(|pill| !pill.can_go());
+        let pill_comes = self.pill.as_ref().is_some_and(|pill| pill.window.is_none());
+        if !tooltip_waits && !(pill_comes && pill_waits) {
             self.find_timer.stop();
         }
     }
@@ -505,9 +629,23 @@ impl Host {
             .filter(|window| born::is_window(*window))
     }
 
-    fn hide(&self) {
+    fn hide(&mut self) {
         if let Some(window) = self.live_window() {
-            taskbar::hide(window);
+            self.hide_window(window);
+        }
+    }
+
+    /// Hides the pill's window, and with it an open tooltip: the pointer is no longer on it.
+    fn hide_window(&mut self, window: isize) {
+        taskbar::hide(window);
+        self.hover.reset();
+        self.hover_timer.stop();
+        if let Some(tooltip) = self.tooltip.as_ref() {
+            tooltip.hide();
+        }
+        if self.hovered {
+            self.hovered = false;
+            self.draw();
         }
     }
 
@@ -573,19 +711,19 @@ impl Host {
             taskbar::window_rect(self.taskbar),
             taskbar::monitor_rect(self.taskbar),
         ) else {
-            taskbar::hide(window);
+            self.hide_window(window);
             return;
         };
         let dpi = taskbar::dpi_of(self.taskbar);
         if full_screen || dpi == 0 {
-            taskbar::hide(window);
+            self.hide_window(window);
             return;
         }
         if self.anchors.is_some() && dpi != self.anchors_dpi {
             // The taskbar's scale changed (its location event can beat the display change): the
             // anchors are in the old scale, so drop them and ask again.
             self.drop_anchors();
-            taskbar::hide(window);
+            self.hide_window(window);
             self.ask();
             return;
         }
@@ -609,9 +747,10 @@ impl Host {
             gap_at(dpi),
         );
         if !place.is_shown() {
-            taskbar::hide(window);
+            self.hide_window(window);
             return;
         }
+        self.band_top = place.band_top;
         let old_size = window_size(window);
         let changed = self.show_at(window, place.x, place.y);
         if changed && other_scale {
@@ -651,6 +790,220 @@ impl Host {
             PillShowStep::None => return false,
         }
         true
+    }
+
+    /// Makes the tooltip's window once the pill's is known, looks for it until `born` lists it,
+    /// and lets it go when it is lost.
+    fn keep_tooltip(&mut self) {
+        let (found, lost, never_came) = match self.tooltip.as_mut() {
+            Some(tooltip) => {
+                let found = tooltip.find();
+                (found, tooltip.is_lost(), tooltip.window().is_none())
+            }
+            None => (false, false, false),
+        };
+        if lost {
+            if never_came {
+                // Said once until a window comes, so a window that never does is not written
+                // about every two seconds.
+                if !self.tooltip_failed {
+                    self.diagnostics
+                        .say("the tooltip's window did not come, so a new one is made");
+                }
+                self.tooltip_failed = true;
+            }
+            self.drop_tooltip();
+        }
+        if found {
+            self.tooltip_failed = false;
+            // The pointer rested while the window was on its way: it opens now.
+            if self.hover.is_open() {
+                self.open_tooltip(SCALE_TRIES);
+            }
+        }
+        if self.tooltip.is_some() || self.taskbar == 0 || born::is_pending() {
+            return;
+        }
+        if self.pill.as_ref().is_none_or(|pill| pill.window.is_none()) {
+            return;
+        }
+        match TooltipWindow::create(self.taskbar) {
+            Ok(tooltip) => {
+                self.tooltip_failed = false;
+                tooltip.set_text(&self.tooltip_text);
+                self.tooltip = Some(tooltip);
+                self.find_timer.start(TimerMode::Repeated, FIND_POLL, || {
+                    with_host(Host::on_find_poll)
+                });
+            }
+            Err(_) => {
+                if !self.tooltip_failed {
+                    self.diagnostics
+                        .say("the tooltip's window could not be made");
+                }
+                self.tooltip_failed = true;
+            }
+        }
+    }
+
+    /// Hides and drops the tooltip, and forgets any wait for it.
+    fn drop_tooltip(&mut self) {
+        self.hover.reset();
+        self.hover_timer.stop();
+        if let Some(tooltip) = self.tooltip.take() {
+            tooltip.close();
+        }
+    }
+
+    /// The pointer came onto the pill or left it.
+    fn on_hover(&mut self, over: bool) {
+        self.hovered = over;
+        self.draw();
+        let now = self.started.elapsed();
+        let step = if over {
+            self.hover.entered(now)
+        } else {
+            self.hover.left()
+        };
+        self.apply(step);
+        self.arm_hover();
+    }
+
+    /// A button went down on the pill: the tooltip closes.
+    fn on_pressed(&mut self) {
+        let step = self.hover.clicked();
+        self.apply(step);
+        self.arm_hover();
+    }
+
+    fn on_hover_due(&mut self) {
+        let step = self.hover.tick(self.started.elapsed());
+        self.apply(step);
+        self.arm_hover();
+    }
+
+    fn apply(&mut self, step: Step) {
+        match step {
+            Step::Open => self.open_tooltip(SCALE_TRIES),
+            Step::Close => self.close_tooltip(),
+            Step::Nothing => {}
+        }
+    }
+
+    /// Wakes `on_hover_due` at the next moment the tooltip's timing has something to do.
+    fn arm_hover(&mut self) {
+        match self.hover.next_due(self.started.elapsed()) {
+            Some(wait) => self.hover_timer.start(TimerMode::SingleShot, wait, || {
+                with_host(Host::on_hover_due)
+            }),
+            None => self.hover_timer.stop(),
+        }
+    }
+
+    fn close_tooltip(&self) {
+        if let Some(tooltip) = self.tooltip.as_ref() {
+            tooltip.hide();
+        }
+    }
+
+    /// Shows the tooltip above the pill: its bottom 8 units above the taskbar's band, its left
+    /// edge on the pill's, kept inside the monitor. The window is first moved to the taskbar's
+    /// monitor, hidden, until it has that monitor's scale (a window shown at another scale is
+    /// drawn once at the wrong size), and then raised above the taskbar without moving its owner.
+    fn open_tooltip(&self, tries: u32) {
+        if !self.hover.is_open() {
+            return;
+        }
+        let Some(tooltip) = self.tooltip.as_ref() else {
+            return;
+        };
+        let (Some(window), Some(pill)) = (tooltip.window(), self.live_window()) else {
+            return;
+        };
+        let dpi = taskbar::dpi_of(self.taskbar);
+        let (Some(pill_rect), Some(monitor)) = (
+            taskbar::window_rect(pill),
+            taskbar::monitor_rect(self.taskbar),
+        ) else {
+            return;
+        };
+        if dpi == 0 || !taskbar::is_visible(pill) {
+            return;
+        }
+        tooltip.set_text(&self.tooltip_text);
+        let (width, height) = tooltip.size_units();
+        let wanted = size_at(width, height, dpi);
+        let gap = tooltip::gap_at(dpi);
+        let at_scale = taskbar::dpi_of(window) == dpi;
+        if !at_scale && tries > 0 {
+            let (x, y) = tooltip::place(monitor, pill_rect.left, self.band_top, wanted, gap);
+            taskbar::move_hidden(window, x, y);
+            Timer::single_shot(FIND_POLL, move || {
+                with_host(move |host| host.open_tooltip(tries - 1));
+            });
+            return;
+        }
+        tooltip.fit();
+        let size = if at_scale {
+            window_size(window).unwrap_or(wanted)
+        } else {
+            wanted
+        };
+        let (x, y) = tooltip::place(monitor, pill_rect.left, self.band_top, size, gap);
+        tooltip.present(x, y);
+    }
+
+    /// A left click on the pill.
+    fn on_left_click(&mut self) {
+        self.flyout_hook();
+    }
+
+    fn flyout_hook(&mut self) {
+        // #7 opens the flyout here.
+    }
+
+    /// A right click on the pill opens the menu, once the pointer's own handler has returned.
+    fn on_right_click(&mut self) {
+        Timer::single_shot(Duration::ZERO, || open_menu(MENU_TRIES, MENU_REFUSALS));
+    }
+
+    /// What `open_menu` needs from the tracker: the window the menu is owned by and the entries,
+    /// or that a window of `born`'s is still being made.
+    fn menu_request(&self) -> MenuRequest {
+        let Some(owner) = self.messages.as_ref().map(MessageWindow::handle) else {
+            self.diagnostics
+                .say("the menu has no window of ours to open from");
+            return MenuRequest::Never;
+        };
+        // A menu is a window the thread makes, and `born` would take it for a window it waits for
+        // (the tooltip's, made when the pill came back): the click waits for it, and is not lost.
+        if born::is_pending() {
+            return MenuRequest::Wait;
+        }
+        let (config, _) = pill_feed::config_for_display(&self.places.app.config_file());
+        MenuRequest::Ready(owner, pill_menu::entries(config.bar_colour))
+    }
+
+    /// Does what the menu's choice says.
+    fn run_choice(&mut self, chosen: Option<u32>) {
+        match chosen.and_then(pill_menu::command) {
+            Some(Command::SetBarColour(colour)) => self.set_bar_colour(colour),
+            Some(Command::Quit) => {
+                let _ = slint::quit_event_loop();
+            }
+            None => {}
+        }
+    }
+
+    /// Saves the bar colour through Core and draws the pill in it at once.
+    fn set_bar_colour(&mut self, colour: BarColourOption) {
+        match pill_menu::change_bar_colour(&self.places.app.config_file(), colour) {
+            Ok(true) => self.redraw(),
+            Ok(false) => {}
+            Err(_) => self
+                .diagnostics
+                .say("config.json was not changed: it could not be read or saved"),
+        }
     }
 
     fn on_win_event(&mut self, event: WinEvent) {
