@@ -165,7 +165,8 @@ the words of the flow.
 | `BridgeLocatorTests.cs` | `core/tests/all/bridge_locator.rs` | 7 | 7 | 7 |
 | `ConnectMessageTests.cs` | `core/tests/all/connect_message.rs` | 8 | 8 | 8, and 1 new |
 | | `core/tests/all/csharp_files.rs` | | | 2 new |
-| | | 110 | 95 | 75, and 16 new |
+| | `core/tests/all/bridge_refresh.rs` | | | 9 new |
+| | | 110 | 95 | 75, and 25 new |
 
 `ClaudePathsTests.cs`, also of this folder, came with "Paths and config" above.
 
