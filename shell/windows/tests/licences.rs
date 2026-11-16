@@ -1,7 +1,13 @@
 //! Every library in the build is under a licence that fits GPL-3.0-or-later. A library whose
 //! licence is not on the list below fails this test until someone has read that licence and
 //! added it. These are readings, not legal advice.
+//!
+//! The other test makes `notices.txt` from the libraries' own licence files, and fails when the
+//! committed file differs. `SOBREIRO_WRITE_NOTICES=1` writes it instead.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// The licences read so far, by their SPDX names.
@@ -113,10 +119,8 @@ fn what_cannot_be_read_does_not_fit() {
     }
 }
 
-/// Asks cargo for every package the lock file gives a Windows build, the ones only tests and
-/// build scripts use among them, and checks the licence each one states.
-#[test]
-fn every_library_in_the_build_fits() {
+/// What `cargo metadata` says of the libraries the shell is built for on Windows.
+fn metadata() -> serde_json::Value {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let output = Command::new(cargo)
         .args(["metadata", "--format-version", "1", "--locked"])
@@ -129,25 +133,35 @@ fn every_library_in_the_build_fits() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let ids = |value: &serde_json::Value| value.as_str().unwrap().to_string();
+    serde_json::from_slice(&output.stdout).unwrap()
+}
+
+fn text(value: &serde_json::Value) -> String {
+    value.as_str().unwrap().to_string()
+}
+
+/// Asks cargo for every package the lock file gives a Windows build, the ones only tests and
+/// build scripts use among them, and checks the licence each one states.
+#[test]
+fn every_library_in_the_build_fits() {
+    let metadata = metadata();
     let ours: HashSet<String> = metadata["workspace_members"]
         .as_array()
         .unwrap()
         .iter()
-        .map(ids)
+        .map(text)
         .collect();
     let built: HashSet<String> = metadata["resolve"]["nodes"]
         .as_array()
         .unwrap()
         .iter()
-        .map(|node| ids(&node["id"]))
+        .map(|node| text(&node["id"]))
         .collect();
 
     let mut checked = 0;
     let mut wrong = Vec::new();
     for package in metadata["packages"].as_array().unwrap() {
-        let id = ids(&package["id"]);
+        let id = text(&package["id"]);
         if ours.contains(&id) || !built.contains(&id) {
             continue;
         }
@@ -156,8 +170,8 @@ fn every_library_in_the_build_fits() {
         if !fits(licence) {
             wrong.push(format!(
                 "{} {}: {licence:?}",
-                ids(&package["name"]),
-                ids(&package["version"])
+                text(&package["name"]),
+                text(&package["version"])
             ));
         }
     }
@@ -170,5 +184,342 @@ fn every_library_in_the_build_fits() {
         "{} of {checked} libraries have a licence not read yet:\n{}",
         wrong.len(),
         wrong.join("\n")
+    );
+}
+
+/// One library of the exe, with the licence and notice files in its folder.
+struct Library {
+    name: String,
+    version: String,
+    licence: String,
+    folder: PathBuf,
+    /// File name and normalised text, by file name.
+    files: Vec<(String, String)>,
+}
+
+/// The start of the name of a file that holds a licence or a notice, in lower case.
+const FILE_PREFIXES: [&str; 6] = [
+    "licen",
+    "copying",
+    "notice",
+    "copyright",
+    "unlicense",
+    "authors",
+];
+
+/// CRLF and a lone CR become LF, trailing whitespace goes off every line, and leading and
+/// trailing blank lines go off the text.
+fn normalise(text: &str) -> String {
+    let unified = text.replace("\r\n", "\n").replace('\r', "\n");
+    let lines: Vec<&str> = unified.lines().map(str::trim_end).collect();
+    let first = lines.iter().position(|line| !line.is_empty());
+    let last = lines.iter().rposition(|line| !line.is_empty());
+    match (first, last) {
+        (Some(first), Some(last)) => lines[first..=last].join("\n"),
+        _ => String::new(),
+    }
+}
+
+fn read_file(path: &Path) -> String {
+    let bytes = std::fs::read(path)
+        .expect("a licence file of a library cannot be read; are its sources downloaded?");
+    normalise(&String::from_utf8_lossy(&bytes))
+}
+
+/// What `cargo tree` says one workspace package is built from, as name and version. Features
+/// decide what is built, and the metadata's graph does not follow them.
+fn built_by(package: &str) -> Vec<(String, String)> {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let output = Command::new(cargo)
+        .args(["tree", "--locked", "-p", package])
+        .args(["--target", "x86_64-pc-windows-msvc"])
+        .args(["-e", "normal,build", "--prefix", "none", "--format", "{p}"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    parse_tree(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// Name and version from each line of `cargo tree --format "{p}"`: `name v1.2.3 (...)`.
+fn parse_tree(output: &str) -> Vec<(String, String)> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let mut words = line.split_whitespace();
+            let name = words.next()?;
+            let version = words.next()?.strip_prefix('v')?;
+            Some((name.to_string(), version.to_string()))
+        })
+        .collect()
+}
+
+/// The file a `license_file` field names, when it is a plain relative path that stays inside the
+/// library's folder.
+fn contained(folder: &Path, named: &str) -> Option<PathBuf> {
+    let relative = Path::new(named);
+    let plain = relative
+        .components()
+        .all(|part| matches!(part, std::path::Component::Normal(_)));
+    if named.is_empty() || !plain {
+        return None;
+    }
+    let path = folder.join(relative);
+    let inside = path
+        .canonicalize()
+        .ok()?
+        .starts_with(folder.canonicalize().ok()?);
+    inside.then_some(path)
+}
+
+/// The libraries the shell and the bridge it carries are built from, by name and then version.
+fn libraries(metadata: &serde_json::Value) -> Vec<Library> {
+    let packages = metadata["packages"].as_array().unwrap();
+    let ours: HashSet<String> = metadata["workspace_members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|id| {
+            let package = packages.iter().find(|package| package["id"] == *id);
+            text(&package.unwrap()["name"])
+        })
+        .collect();
+    let mut seen: HashSet<(String, String)> = HashSet::new();
+    for package in ["sobreiro", "sobreiro-bridge"] {
+        seen.extend(
+            built_by(package)
+                .into_iter()
+                .filter(|(name, _)| !ours.contains(name)),
+        );
+    }
+
+    let mut found: Vec<Library> = seen
+        .into_iter()
+        .map(|(name, version)| {
+            let package = packages
+                .iter()
+                .find(|package| {
+                    text(&package["name"]) == name && text(&package["version"]) == version
+                })
+                .expect("a built library is missing from the metadata");
+            let manifest = PathBuf::from(text(&package["manifest_path"]));
+            let folder = manifest.parent().unwrap().to_path_buf();
+            assert!(
+                folder.is_dir(),
+                "the folder of {name} {version} is missing; its sources are not downloaded"
+            );
+            let names: Vec<String> = std::fs::read_dir(&folder)
+                .unwrap()
+                .map(|entry| entry.unwrap())
+                .filter(|entry| entry.path().is_file())
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .filter(|file| {
+                    let lower = file.to_lowercase();
+                    FILE_PREFIXES.iter().any(|prefix| lower.starts_with(prefix))
+                })
+                .collect();
+            let mut files: Vec<(String, String)> = Vec::new();
+            for file in names {
+                let content = read_file(&folder.join(&file));
+                files.push((file, content));
+            }
+            if let Some(named) = package["license_file"].as_str() {
+                let checked = contained(&folder, named);
+                assert!(
+                    checked.is_some(),
+                    "the licence file of {name} {version} is not a file inside its folder"
+                );
+                let path = checked.unwrap();
+                let file = path.file_name().unwrap().to_string_lossy().into_owned();
+                if !files.iter().any(|(have, _)| *have == file) {
+                    files.push((file, read_file(&path)));
+                }
+            }
+            files.sort_by(|a, b| a.0.cmp(&b.0));
+            Library {
+                licence: package["license"]
+                    .as_str()
+                    .unwrap_or("see its licence file")
+                    .to_string(),
+                name,
+                version,
+                folder,
+                files,
+            }
+        })
+        .collect();
+    found.sort_by(|a, b| (&a.name, &a.version).cmp(&(&b.name, &b.version)));
+    found
+}
+
+/// Groups texts that have the same words: each once, as its first owner had it, with the names of
+/// all that ship it, in the order of first appearance. Empty texts are left out.
+fn group<'a>(shipped: impl Iterator<Item = (String, &'a str)>) -> Vec<(&'a str, Vec<String>)> {
+    let mut texts: Vec<(String, &str, Vec<String>)> = Vec::new();
+    for (label, content) in shipped.filter(|(_, content)| !content.is_empty()) {
+        let words = content.split_whitespace().collect::<Vec<_>>().join(" ");
+        match texts.iter_mut().find(|(key, _, _)| *key == words) {
+            Some((_, _, names)) => {
+                if !names.contains(&label) {
+                    names.push(label);
+                }
+            }
+            None => texts.push((words, content, vec![label])),
+        }
+    }
+    texts
+        .into_iter()
+        .map(|(_, content, names)| (content, names))
+        .collect()
+}
+
+/// The text of `notices.txt`.
+fn notices(libraries: &[Library]) -> String {
+    let mut out = String::from(
+        "These are the libraries Sobreiro.exe is built from, with the bridge it carries. Each is \
+         listed with its version and its licence. After the list come the licence and notice \
+         texts the libraries ship; a text shipped word for word by several libraries is given \
+         once, under the names of all of them. A library offered under several licences is taken \
+         under one that fits GPL-3.0-or-later; the UI toolkit's libraries (slint and i-slint-*) \
+         are taken under GPL-3.0-only, whose text is Sobreiro's own licence, carried with these \
+         notices.\n\n",
+    );
+    for library in libraries {
+        out.push_str(&format!(
+            "{} {}: {}",
+            library.name, library.version, library.licence
+        ));
+        if library.files.iter().all(|(_, content)| content.is_empty()) {
+            out.push_str("; no licence file, the licence's standard text applies");
+        }
+        out.push('\n');
+    }
+
+    let shipped = libraries.iter().flat_map(|library| {
+        let label = format!("{} {}", library.name, library.version);
+        library
+            .files
+            .iter()
+            .map(move |(_, content)| (label.clone(), content.as_str()))
+    });
+    for (content, names) in group(shipped) {
+        out.push_str(&format!("\n{}\n", "=".repeat(80)));
+        for name in names {
+            out.push_str(&name);
+            out.push('\n');
+        }
+        out.push_str(&format!("{}\n{content}\n", "-".repeat(80)));
+    }
+    out
+}
+
+#[test]
+fn a_licence_file_stays_inside_its_folder() {
+    let folder = Path::new(env!("CARGO_MANIFEST_DIR"));
+    assert!(contained(folder, "Cargo.toml").is_some());
+    assert!(contained(folder, "src/main.rs").is_some());
+    assert!(contained(folder, "../Cargo.toml").is_none());
+    assert!(contained(folder, "./Cargo.toml").is_none());
+    assert!(contained(folder, "").is_none());
+    assert!(contained(folder, "C:/Windows/win.ini").is_none());
+    assert!(contained(folder, "C:win.ini").is_none());
+    assert!(contained(folder, "/Cargo.toml").is_none());
+    assert!(contained(folder, "missing/LICENSE").is_none());
+}
+
+#[test]
+fn text_is_normalised() {
+    assert_eq!(normalise("\r\n\r\n  a  \r\nb\rc\t\n\n\n"), "  a\nb\nc");
+    assert_eq!(normalise("\n \n"), "");
+}
+
+#[test]
+fn texts_with_the_same_words_share_a_section() {
+    let shipped = vec![
+        ("a 1".to_string(), "Permission  is\ngranted"),
+        ("b 2".to_string(), "Permission is granted"),
+        ("c 3".to_string(), "Permission is denied"),
+        ("a 1".to_string(), "Permission is denied"),
+        ("d 4".to_string(), ""),
+    ];
+    let groups = group(shipped.into_iter());
+    assert_eq!(groups.len(), 2);
+    assert_eq!(groups[0].0, "Permission  is\ngranted");
+    assert_eq!(groups[0].1, ["a 1", "b 2"]);
+    assert_eq!(groups[1].1, ["c 3", "a 1"]);
+}
+
+#[test]
+fn the_tree_is_read_by_name_and_version() {
+    let tree = "sobreiro v2.0.0-dev (/x)\nserde v1.0.1\n\nbad\n";
+    assert_eq!(
+        parse_tree(tree),
+        [
+            ("sobreiro".to_string(), "2.0.0-dev".to_string()),
+            ("serde".to_string(), "1.0.1".to_string())
+        ]
+    );
+}
+
+/// Whether a text holds a drive path: a letter, a colon and a backslash.
+fn has_drive_path(text: &str) -> bool {
+    let chars: Vec<char> = text.chars().collect();
+    chars
+        .windows(3)
+        .any(|w| w[0].is_ascii_alphabetic() && w[1] == ':' && w[2] == '\\')
+}
+
+/// `notices.txt` is what the libraries' own files say, and the committed file is that. Run with
+/// `SOBREIRO_WRITE_NOTICES=1` to write it.
+#[test]
+fn the_notices_are_what_the_libraries_ship() {
+    let metadata = metadata();
+    let libraries = libraries(&metadata);
+    assert!(
+        libraries.len() > 100,
+        "only {} libraries were found: the question to cargo is wrong",
+        libraries.len()
+    );
+    let content = notices(&libraries);
+
+    for library in &libraries {
+        let folder = library.folder.to_string_lossy().to_string();
+        for spelling in [folder.replace('\\', "/"), folder] {
+            assert!(
+                !content.contains(&spelling),
+                "the notices hold the folder of {}",
+                library.name
+            );
+        }
+    }
+    for variable in ["CARGO_HOME", "USERPROFILE", "HOME"] {
+        if let Ok(value) = std::env::var(variable) {
+            let value = value.trim_end_matches(['\\', '/']).to_string();
+            for spelling in [value.replace('\\', "/"), value] {
+                assert!(
+                    spelling.len() < 4 || !content.contains(&spelling),
+                    "the notices hold the folder in {variable}"
+                );
+            }
+        }
+    }
+    assert!(!has_drive_path(&content), "the notices hold a drive path");
+
+    let file = Path::new(env!("CARGO_MANIFEST_DIR")).join("notices.txt");
+    if std::env::var("SOBREIRO_WRITE_NOTICES").as_deref() == Ok("1") {
+        std::fs::write(&file, &content).unwrap();
+        return;
+    }
+    let committed = std::fs::read_to_string(&file)
+        .unwrap_or_default()
+        .replace("\r\n", "\n");
+    assert!(
+        committed == content,
+        "shell/windows/notices.txt is not what the libraries ship; run this test with \
+         SOBREIRO_WRITE_NOTICES=1 to write it"
     );
 }
