@@ -267,14 +267,14 @@ component BarRow inherits Rectangle {
         text: root.bar.detail;
         font-family: "Inter Tabular";
         color: root.colours.soft;
-        baseline: root.detail-top + 15px;
+        baseline: root.detail-top + 16.5px;
     }
 
     note-text := Block {
         accessible-role: none;
         text: root.bar.note;
         color: root.colours.soft;
-        baseline: root.note-top + 15px;
+        baseline: root.note-top + 16.5px;
     }
 
     Rectangle {
@@ -307,7 +307,9 @@ component GlyphColumn inherits Rectangle {
     // The fill is the level's colour, or the track's with no reading.
     private property <color> fill: root.bar.has-data ? root.bar.fill : root.colours.track;
     // The thermometer and its scale are centred together, the scale 10 right of the 30 wide glyph.
-    private property <length> thermometer-x: (M.column - (40px + full.preferred-width)) / 2;
+    // 1.1 measures "100%" at 29.153 (Slint measures it at 30) and puts the glyph on the next whole
+    // DIP, 36 in from the column; the scale text, 40 right of the glyph, sits as 1.1 puts it.
+    private property <length> thermometer-x: Math.ceil((M.column - 40px - 29.153px) / 2 / 1px) * 1px;
 
     // The column is one item for a screen reader, read as the line Rust made.
     if root.announced: Rectangle {
@@ -434,7 +436,7 @@ component GlyphColumn inherits Rectangle {
         color: root.colours.soft;
         wrap-width: M.column;
         horizontal-alignment: center;
-        baseline: root.detail-top + 15px;
+        baseline: root.detail-top + 16.5px;
     }
 }
 
