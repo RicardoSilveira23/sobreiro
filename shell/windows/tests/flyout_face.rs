@@ -840,3 +840,40 @@ fn the_thermometer_has_the_fill_core_says() {
         }
     }
 }
+
+#[test]
+fn the_thermometer_tube_is_where_1_1_puts_it() {
+    // 1.1's tube starts 65 right of the card's edge (its glyph and scale are centred together,
+    // on the next whole DIP), 130 at 2x; measured in its pictures. Weekly column: 217 at 1x.
+    let ground = NightPalette::for_dark(true).ground;
+    for (scale, factor) in [("1", 1usize), ("2", 2)] {
+        let card = styled("both", "thermometer", "dark", "purple", scale);
+        let row = (GLYPHS_TOP + 60.0) as usize * factor;
+        let left = |from: usize, to: usize| {
+            (from * factor..to * factor)
+                .find(|&x| card.differs((x, x + 1), (row, row + 1), ground, 40))
+                .unwrap()
+        };
+        assert_eq!(left(20, 150), 65 * factor, "session tube at {scale}x");
+        assert_eq!(left(172, 300), 217 * factor, "weekly tube at {scale}x");
+    }
+}
+
+#[test]
+fn a_detail_line_is_where_1_1_puts_it() {
+    // 1.1's spend detail under the third row's badge line: ink on rows 329 to 342 at 1x and 658
+    // to 685 at 2x (the 2x top row depends on the dollar sign's overshoot, so only its bottom is
+    // held to the row).
+    let ground = NightPalette::for_dark(true).ground;
+    for (scale, factor, top, bottom) in [("1", 1.0, 329, 342), ("2", 2.0, 658, 685)] {
+        let card = styled("with-spend", "bars", "dark", "purple", scale);
+        let runs = card.runs(factor, (19.0, 311.0), (326.0, 346.0), ground);
+        assert_eq!(runs.len(), 1, "one line at {scale}x: {runs:?}");
+        let (first, last) = runs[0];
+        assert!(
+            first.abs_diff(top) <= if scale == "2" { 2 } else { 0 },
+            "top {first} of {top} at {scale}x"
+        );
+        assert_eq!(last, bottom, "bottom at {scale}x");
+    }
+}

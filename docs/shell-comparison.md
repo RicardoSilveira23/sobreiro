@@ -843,6 +843,49 @@ picture, shapes and colours match by eye, and the text is still lighter.
 
 Not compared, as before: the ground under the pointer, and 1.1 on a live display.
 
+### B, for 2.0: the flyout beside 1.1's
+
+Compared on 2026-11-16 for [#43](https://github.com/RicardoSilveira23/sobreiro/issues/43),
+picture against picture. 2.0's card comes from `Sobreiro.exe --flyout-pictures`; 1.1's from its
+own `FlyoutView`, rendered as its `--media` stills are, from the same limits at the same fixed
+clock in UTC, with Windows blue as the accent. 18 states (every badge, each service alone and
+both, a spend limit with and without a reset, no reading, the longest footer and note, a far
+`Ends`), the three styles, both themes and both bar colours, at 100%, 150% and 200%: 648 pairs.
+In short: the same size, words, shapes and colours; two placements were a DIP or so off and
+are fixed; the text is a little lighter, for the pill's reason.
+
+The same by eye:
+
+- Every pair is the same size in pixels.
+- The words, line for line: each of the 1,004 text lines at 200% lines up with 1.1's within a
+  few pixels' shift and leaves only anti-aliasing.
+- Bars, tracks, pace marks, battery cells, thermometer fills and badge fills lie on the same
+  pixels, their colours within two levels of 255.
+- Label and figure lines sit within a pixel of 1.1's at every scale.
+
+What differed:
+
+- **The thermometer and its scale stood 1 DIP left of 1.1's**, at every scale. The toolkit
+  measures `100%` at 30 DIPs where WPF measures 29.153, and 1.1 lands the glyph on the next
+  whole DIP. Fixed here: the glyph is placed from WPF's width, as 1.1 places it.
+- **A row's detail line and Copilot's note stood about 1.25 DIPs higher**, 1 pixel at 100% and
+  3 at 200%: 1.1's line has its baseline 16.25 under its top, 2.0's had 15. Fixed here with
+  16.5, which matches 1.1 at 100% and 200%; at 150% two of a long note's five lines stay a
+  pixel low.
+- **The text is lighter**: 2 to 7% less ink over the whole card, most at 150%. The cause is the
+  pill's ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59), closed as out of the
+  toolkit's reach): glyph coverage is used as alpha with no gamma step, and at 150% a glyph's
+  size is cut to a whole pixel, which also moves some lines up to 2 pixels there.
+
+The manual's lines on the flyout (Details, Badges, Style, Bar colour, Pace, Live usage,
+Connect) were checked against the code and Core's tests, and the drawn ones against these
+pictures. Two Pace lines had no test and now have one: a weekly limit reset at the weekend
+reads Too early until Monday, and Weekdays only leaves the session limit as it is. Not checked
+here, since they need the running app: opening from the pill and each tray icon, closing on
+Esc and focus loss, a theme, accent or menu change redrawing the open card, a fetch when the
+card opens on an old reading, the footer after Connect, keyboard and screen reader, and the
+toasts.
+
 ## Notes on each point
 
 ### Idle memory, exe size and start time

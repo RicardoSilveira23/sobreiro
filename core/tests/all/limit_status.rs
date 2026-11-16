@@ -264,6 +264,43 @@ fn a_stale_reading_past_its_weekday_run_out_is_likely_used_up() {
 }
 
 #[test]
+fn weekdays_read_too_early_after_a_weekend_reset_until_monday() {
+    // Reset Sat 14 Nov 10:00, so the next is Sat 21 Nov 10:00; 10% used.
+    let sunday = weekly(10.0, "2026-11-21T10:00:00Z", "2026-11-15T12:00:00Z");
+    let now = "2026-11-15T12:00:00Z";
+    assert_eq!(
+        at(&sunday, now, PaceDays::EveryDay).kind,
+        StatusKind::OnTrack
+    );
+    assert_eq!(at(&sunday, now, PaceDays::Weekdays).text, "Too early");
+    let monday = weekly(10.0, "2026-11-21T10:00:00Z", "2026-11-16T12:00:00Z");
+    let now = "2026-11-16T12:00:00Z";
+    assert_eq!(
+        at(&monday, now, PaceDays::Weekdays).kind,
+        StatusKind::OnTrack
+    );
+}
+
+#[test]
+fn weekdays_leave_the_session_limit_as_it_is() {
+    // A session read on a Saturday, 2 of its 5 hours gone at 70%: it runs out either way.
+    let mut session = Limit::new(
+        "Claude Code",
+        LimitKind::Session,
+        "Session",
+        70.0,
+        Some(time("2026-11-14T13:00:00Z")),
+        time("2026-11-14T10:00:00Z"),
+        false,
+    );
+    session.window = Some(five());
+    let now = "2026-11-14T10:00:00Z";
+    let every_day = at(&session, now, PaceDays::EveryDay);
+    assert_eq!(every_day.kind, StatusKind::Ends);
+    assert_eq!(at(&session, now, PaceDays::Weekdays), every_day);
+}
+
+#[test]
 fn badge_colour_values() {
     // Whether the theme is dark, the kind of status, and the fill and the text of its badge.
     let rows = [
