@@ -11,8 +11,8 @@ use std::ffi::c_void;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, HMENU, IsWindow, MF_CHECKED, MF_POPUP,
-    MF_STRING, MF_UNCHECKED, PostMessageW, SetForegroundWindow, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
-    TPM_NONOTIFY, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_NULL,
+    MF_SEPARATOR, MF_STRING, MF_UNCHECKED, PostMessageW, SetForegroundWindow, TPM_BOTTOMALIGN,
+    TPM_LEFTALIGN, TPM_NONOTIFY, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_NULL,
 };
 use windows::core::HSTRING;
 
@@ -33,6 +33,8 @@ pub enum Entry {
         text: String,
         items: Vec<Item>,
     },
+    /// A line between groups.
+    Separator,
 }
 
 /// Opens the menu at the pointer, bottom left corner on it, and waits until it closes. Gives the
@@ -80,6 +82,8 @@ fn build(entries: &[Entry]) -> Option<HMENU> {
     for entry in entries {
         let added = match entry {
             Entry::Item(item) => append(menu, item),
+            // SAFETY: `menu` is a menu of ours; a separator has no id or text.
+            Entry::Separator => unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, None) }.is_ok(),
             Entry::Submenu { text, items } => {
                 // SAFETY: makes an empty menu.
                 let Ok(sub) = (unsafe { CreatePopupMenu() }) else {

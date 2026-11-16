@@ -13,6 +13,7 @@
 //! A callback that comes while the tracker is busy (Windows can call back inside a call the
 //! tracker makes) runs a turn of the event loop later. Each step that fails is let go.
 use crate::app_host;
+use crate::auto_start;
 use crate::diagnostics::Diagnostics;
 use crate::pill_face::face_data;
 use crate::pill_feed::{self, Snapshot};
@@ -22,7 +23,7 @@ use crate::tooltip_window::TooltipWindow;
 use crate::ui::Pill;
 use crate::win::probe::Prober;
 use crate::win::taskbar::{self, Broadcast, WinEvent, WinEventHook};
-use crate::win::{born, menu};
+use crate::win::{born, menu, message_box};
 use chrono::TimeDelta;
 use slint::{ComponentHandle, Timer, TimerMode};
 use sobreiro_core::colours::{BarColourOption, TaskbarColours};
@@ -212,6 +213,27 @@ fn open_menu(tries: u32, refusals: u32) {
             with_host(move |host| host.run_choice(chosen));
         }
     }
+}
+
+/// Flips Start with Windows, reading the value afresh, and says so in a box when it cannot.
+fn toggle_auto_start() {
+    if let Err(reason) = auto_start::toggle() {
+        error_box(
+            format!("Couldn't change Start with Windows.\n\n{reason}"),
+            MENU_TRIES,
+        );
+    }
+}
+
+/// Shows an error box once `born` waits for no window: the box is a top-level window this
+/// thread makes, which `born` would take for the one it waits for. After the last try it shows
+/// anyway.
+fn error_box(text: String, tries: u32) {
+    if born::is_pending() && tries > 0 {
+        Timer::single_shot(FIND_POLL, move || error_box(text, tries - 1));
+        return;
+    }
+    message_box::error(&text);
 }
 
 fn on_win_event(event: WinEvent) {
@@ -874,13 +896,17 @@ impl Host {
             return MenuRequest::Wait;
         }
         let (config, _) = pill_feed::config_for_display(&self.config_file);
-        MenuRequest::Ready(owner, pill_menu::entries(config.bar_colour))
+        // Read afresh each time: another run may have changed the value.
+        let auto_start = auto_start::is_on_now();
+        MenuRequest::Ready(owner, pill_menu::entries(config.bar_colour, auto_start))
     }
 
     /// Does what the menu's choice says.
     fn run_choice(&mut self, chosen: Option<u32>) {
         match chosen.and_then(pill_menu::command) {
             Some(Command::SetBarColour(colour)) => self.set_bar_colour(colour),
+            // The error box is a modal loop, so it runs once this tracker is let go.
+            Some(Command::ToggleAutoStart) => Timer::single_shot(Duration::ZERO, toggle_auto_start),
             Some(Command::Quit) => {
                 let _ = slint::quit_event_loop();
             }

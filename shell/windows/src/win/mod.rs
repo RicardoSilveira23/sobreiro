@@ -9,5 +9,6 @@ pub mod menu;
 pub mod message_box;
 pub mod probe;
 pub mod registry;
+pub mod run_key;
 pub mod taskbar;
 pub mod tray_picture;
