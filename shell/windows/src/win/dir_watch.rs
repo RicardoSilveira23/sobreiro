@@ -134,15 +134,17 @@ impl DirWatch {
                 .unwrap_or(u32::MAX - 1)
                 .min(u32::MAX - 1)
         });
+        // The stop event first: the wait names the first of the two that is set, so a folder that
+        // never stops changing cannot keep the stop from being seen.
         // SAFETY: both handles are open for as long as `self` and `stop` live.
-        let waited = unsafe { WaitForMultipleObjects(&[self.io_event, stop.0], false, millis) };
+        let waited = unsafe { WaitForMultipleObjects(&[stop.0, self.io_event], false, millis) };
         if waited == WAIT_TIMEOUT {
             return Event::Timeout;
         }
-        if waited.0 == WAIT_OBJECT_0.0 + 1 {
+        if waited == WAIT_OBJECT_0 {
             return Event::Stopped;
         }
-        if waited != WAIT_OBJECT_0 {
+        if waited.0 != WAIT_OBJECT_0.0 + 1 {
             return Event::Failed;
         }
         self.pending = false;
@@ -241,10 +243,12 @@ fn matches(words: &[u32], bytes: usize, name: &str) -> bool {
         {
             return true;
         }
-        if next == 0 {
+        // 0 ends the list; less than a record's three header words would never move on.
+        let step = (next as usize) / 4;
+        if step < 3 {
             return false;
         }
-        at += (next as usize) / 4;
+        at += step;
         if at >= limit {
             return false;
         }
@@ -274,6 +278,42 @@ mod tests {
         let mut words = record(4, "usage.json.1f.tmp", false);
         words.extend(record(RENAMED_TO, "Usage.JSON", true));
         assert!(matches(&words, words.len() * 4, "usage.json"));
+    }
+
+    #[test]
+    fn a_write_to_the_file_is_seen_and_the_stop_ends_the_wait() {
+        let dir = std::env::temp_dir().join(format!("sobreiro-dir-watch-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let stop = StopEvent::new().unwrap();
+        let mut watch = DirWatch::open(&dir, "usage.json").unwrap();
+        // The first wait starts the read; nothing has changed yet.
+        let quiet = Some(Duration::from_millis(50));
+        assert_eq!(watch.wait(&stop, quiet), Event::Timeout);
+        std::fs::write(dir.join("log.txt"), "x").unwrap();
+        std::fs::write(dir.join("usage.json"), "{}").unwrap();
+        // The log's change may come in a batch of its own first.
+        let mut seen = Event::Other;
+        for _ in 0..10 {
+            seen = watch.wait(&stop, Some(Duration::from_secs(5)));
+            if seen == Event::Changed {
+                break;
+            }
+        }
+        assert_eq!(seen, Event::Changed);
+        // A read is pending again; the stop ends the wait at once and the drop cancels the read.
+        assert!(stop.set());
+        assert_eq!(watch.wait(&stop, None), Event::Stopped);
+        drop(watch);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn an_offset_shorter_than_a_record_ends_the_walk() {
+        let mut words = record(MODIFIED, "sobreiro.log", false);
+        words[0] = 2;
+        words.extend(record(MODIFIED, "usage.json", true));
+        assert!(!matches(&words, words.len() * 4, "usage.json"));
     }
 
     #[test]
