@@ -366,6 +366,143 @@ fn the_badge_text_and_the_resets_in_text_share_a_baseline() {
     }
 }
 
+/// The first and the last column (in pixels) of the rectangle (in pixels) with a pixel that is not
+/// `ground` by more than 40 on a channel.
+fn ink_columns(
+    card: &Picture,
+    x: (usize, usize),
+    y: (usize, usize),
+    ground: Rgb,
+) -> (usize, usize) {
+    let inked: Vec<usize> = (x.0..x.1.min(card.width))
+        .filter(|&column| card.differs((column, column + 1), y, ground, 40))
+        .collect();
+    (*inked.first().unwrap(), *inked.last().unwrap())
+}
+
+#[test]
+fn the_figures_and_the_resets_in_text_are_where_1_1_puts_them() {
+    // The tabular copies of the fonts put the digits' left edges within a pixel of 1.1's, where the
+    // proportional ones were up to four off. 1.1's still of the same state, dark, at 100%.
+    let still = decode(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../media/stills/details/both-bars-dark@1x.png"),
+    );
+    let card = picture("both", "dark", "purple", "1");
+    assert_eq!((card.width, card.height), (still.width, still.height));
+    let ground = NightPalette::for_dark(true).ground;
+    // The figures' lines, with the meter's tick below them left out, and the first row's
+    // resets-in line, right of its badge.
+    for (label, rows) in [
+        ("session", (64, 92)),
+        ("weekly", (158, 186)),
+        ("copilot", (298, 326)),
+    ] {
+        let ours = ink_columns(&card, (195, 276), rows, ground).0;
+        let theirs = ink_columns(&still, (195, 276), rows, ground).0;
+        assert!(
+            ours.abs_diff(theirs) <= 1,
+            "the {label} figure starts at {ours}, 1.1's at {theirs}"
+        );
+    }
+    let ours = ink_columns(&card, (100, 270), (114, 134), ground).1;
+    let theirs = ink_columns(&still, (100, 270), (114, 134), ground).1;
+    assert!(
+        ours.abs_diff(theirs) <= 1,
+        "the resets-in text ends at {ours}, 1.1's at {theirs}"
+    );
+}
+
+#[test]
+fn the_columns_figures_and_resets_in_texts_are_where_1_1_puts_them() {
+    let ground = NightPalette::for_dark(true).ground;
+    // Per style: 1.1's still, then the rows of the figures and of the resets-in texts.
+    for (style, still, figures, resets) in [
+        (
+            "battery",
+            "both-battery-dark@1x.png",
+            (112, 140),
+            (196, 216),
+        ),
+        (
+            "thermometer",
+            "both-thermometer-dark@1x.png",
+            (172, 200),
+            (260, 280),
+        ),
+    ] {
+        let still = decode(
+            &Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../media/stills/details")
+                .join(still),
+        );
+        let card = styled("both", style, "dark", "purple", "1");
+        assert_eq!((card.width, card.height), (still.width, still.height));
+        for (column, x) in [("left", (20, 165)), ("right", (170, 320))] {
+            let ours = ink_columns(&card, x, figures, ground).0;
+            let theirs = ink_columns(&still, x, figures, ground).0;
+            assert!(
+                ours.abs_diff(theirs) <= 1,
+                "{style} {column} figure starts at {ours}, 1.1's at {theirs}"
+            );
+            let ours = ink_columns(&card, x, resets, ground).1;
+            let theirs = ink_columns(&still, x, resets, ground).1;
+            assert!(
+                ours.abs_diff(theirs) <= 1,
+                "{style} {column} resets-in text ends at {ours}, 1.1's at {theirs}"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_colon_in_a_time_is_raised_off_the_baseline() {
+    // Inter's `calt` raises a colon between digits; a colon of the tabular copy that no rule
+    // matched would stand on the baseline.
+    for (theme, dark) in THEMES {
+        let palette = NightPalette::for_dark(dark);
+        let badge = palette.badge(sobreiro_core::display::limit_status::StatusKind::Ends);
+        let card = picture("badge-ends", theme, "purple", "2");
+        let (x, y) = ((60, 235), (228, 264));
+        let baseline = card.baseline(2.0, (30.0, 118.0), (114.0, 132.0), badge.fill, badge.text);
+        // The glyphs of the text as runs of columns with ink; the colon is the one that is the
+        // least tall.
+        let ink = |column: usize| card.differs((column, column + 1), y, badge.fill, 60);
+        let mut glyphs: Vec<(usize, usize)> = Vec::new();
+        for column in x.0..x.1 {
+            match glyphs.last_mut() {
+                Some(last) if ink(column) && last.1 + 1 == column => last.1 = column,
+                _ if ink(column) => glyphs.push((column, column)),
+                _ => {}
+            }
+        }
+        // The colon is the narrow glyph of two dots: two separate runs of rows with ink.
+        let colon = glyphs
+            .iter()
+            .filter(|glyph| glyph.1 - glyph.0 <= 6)
+            .filter_map(|glyph| {
+                let rows: Vec<usize> = (y.0..y.1)
+                    .filter(|&row| {
+                        card.differs((glyph.0, glyph.1 + 1), (row, row + 1), badge.fill, 60)
+                    })
+                    .collect();
+                let runs = rows
+                    .windows(2)
+                    .filter(|pair| pair[1] != pair[0] + 1)
+                    .count()
+                    + 1;
+                (runs == 2).then(|| (rows[0], *rows.last().unwrap()))
+            })
+            .next()
+            .expect("a colon in the time");
+        assert!(
+            colon.1 + 2 <= baseline,
+            "{theme}: the colon ends on row {}, the digits' baseline is row {baseline}",
+            colon.1
+        );
+    }
+}
+
 #[test]
 fn a_far_ends_badge_puts_the_resets_in_text_on_a_second_line() {
     for (theme, dark) in THEMES {

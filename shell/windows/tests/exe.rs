@@ -22,6 +22,11 @@ const FONTS: [&str; 3] = [
     "Inter-Medium.ttf",
     "Unbounded-Bold.ttf",
 ];
+const TABULAR_FONTS: [&str; 3] = [
+    "InterTabular-Regular.ttf",
+    "InterTabular-Medium.ttf",
+    "UnboundedTabular-Bold.ttf",
+];
 
 fn contains(haystack: &[u8], needle: &[u8]) -> bool {
     haystack
@@ -109,10 +114,16 @@ fn built_bridge() -> Option<Vec<u8>> {
 #[test]
 fn the_fonts_are_inside_the_exe() {
     let exe = std::fs::read(EXE).unwrap();
-    let fonts = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/Sobreiro/Fonts");
-    for name in FONTS {
-        let font = std::fs::read(fonts.join(name)).unwrap();
-        assert!(contains(&exe, &font), "{name} is not inside the exe");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let folders = [
+        root.join("src/Sobreiro/Fonts"),
+        root.join("shell/windows/fonts"),
+    ];
+    for (folder, names) in folders.iter().zip([FONTS, TABULAR_FONTS]) {
+        for name in names {
+            let font = std::fs::read(folder.join(name)).unwrap();
+            assert!(contains(&exe, &font), "{name} is not inside the exe");
+        }
     }
 }
 
