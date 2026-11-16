@@ -123,7 +123,12 @@ fn on_win_event(event: WinEvent) {
 }
 
 fn on_broadcast(broadcast: Broadcast) {
-    with_host(move |host| host.on_broadcast(broadcast));
+    // A broadcast is sent to every top-level window, and its sender may wait on the answer. Work
+    // done inside it (hiding and dropping the old pill, making a new one) can block on the
+    // sender, so it runs a turn of the event loop later, once the message has been answered.
+    Timer::single_shot(Duration::ZERO, move || {
+        with_host(move |host| host.on_broadcast(broadcast));
+    });
 }
 
 /// The pill's size in pixels at `dpi`, from its size in units: rounded up, so no edge is cut.
@@ -271,7 +276,8 @@ impl Host {
         });
     }
 
-    /// Drops the pill, which destroys its window, unless its window may still be on its way.
+    /// Hides and drops the pill, which destroys its window, unless its window may still be on its
+    /// way.
     /// A pill given up before its window came leaves `born` waiting for it, which would refuse
     /// every later pill and take the next window this thread makes, so that wait is cancelled.
     fn close_window(&mut self) {
@@ -285,6 +291,9 @@ impl Host {
         if pill.window.is_none() && born::is_pending() {
             born::cancel_pending();
         }
+        // The toolkit keeps a window it was told to show alive past its component, so it is
+        // hidden through the toolkit first; only then does dropping the component destroy it.
+        let _ = pill.component.hide();
         self.pill = None;
         self.find_timer.stop();
     }
