@@ -103,7 +103,7 @@ the table differ: no figure is typed on the page.
 | 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured |
 | Caption | "Each bar starts at zero; shorter is lighter." |
 | Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the downloads level with the cards' foot. |
-| Downloads | A Manual-shaped button per release with a GitHub Release, newest first, and "How it is measured" |
+| Downloads | A Manual-shaped button per release with a GitHub Release, newest first, sharing the row's width equally; "How it is measured" on its own line under them |
 
 - The multiple is the headline and the bars are its proof: linear, from zero, each a share of
   the larger figure, so a 14× gap shows as a sliver beside a full bar. 1.1's bar is Line,
