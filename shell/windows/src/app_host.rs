@@ -4,11 +4,11 @@
 //! and the broadcasts of the message window.
 //!
 //! Each redraw makes one snapshot (`pill_feed::Snapshot`) and hands it to each part in turn: for
-//! now the pill (`pill_host`, which keeps the taskbar work) and the tray icons (`tray_icons`); the
-//! flyout and the toasts come next. The snapshot is made whatever Show says, so a part that is
-//! not the pill has the figures also when the pill is off. A part takes the snapshot on its own
-//! and handles its own failures, keeping what it last drew, so one part's failure never stops the
-//! next, as 1.1's `Guard` does. (A panic is not caught: the release build aborts on one.)
+//! now the pill (`pill_host`, which keeps the taskbar work), the tray icons (`tray_icons`) and
+//! the toasts (`alerts`); the flyout comes next. The snapshot is made whatever Show says, so a
+//! part that is not the pill has the figures also when the pill is off. A part takes the snapshot
+//! on its own and handles its own failures, keeping what it last drew, so one part's failure never
+//! stops the next, as 1.1's `Guard` does. (A panic is not caught: the release build aborts on one.)
 //!
 //! Redraws come at the start, every 30 seconds, when a poll answers, when Copilot's cache is
 //! read early, after the menu changes the bar colour, and when Windows says a setting, a display
@@ -16,6 +16,7 @@
 //!
 //! Windows calls back with no data of ours, so the host lives in a value of the UI thread. A
 //! callback that comes while the host is busy runs a turn of the event loop later.
+use crate::alerts;
 use crate::carried_bridge;
 use crate::clock;
 use crate::diagnostics::Diagnostics;
@@ -63,6 +64,7 @@ pub fn run() -> ExitCode {
         messages.as_ref().map(MessageWindow::handle),
         diagnostics.clone(),
     );
+    alerts::start(places.app.alerts_file(), diagnostics.clone());
     let setup = pill_host::Setup {
         messages: messages.as_ref().map(MessageWindow::handle),
         diagnostics: diagnostics.clone(),
@@ -265,7 +267,7 @@ impl Host {
             connection::state(&text, bridge.as_deref())
         }));
         // Each part takes the snapshot on its own and answers for its own failures.
-        let parts: [fn(Rc<Snapshot>); 2] = [pill_host::show, tray_icons::show];
+        let parts: [fn(Rc<Snapshot>); 3] = [pill_host::show, tray_icons::show, alerts::show];
         for part in parts {
             part(snapshot.clone());
         }

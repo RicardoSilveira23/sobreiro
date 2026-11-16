@@ -6,6 +6,7 @@
 //! next.
 #![windows_subsystem = "windows"]
 
+mod alerts;
 mod app_host;
 mod auto_start;
 mod born_test;

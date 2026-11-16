@@ -250,8 +250,6 @@ pub fn stop() {
 /// Shows a balloon from the service's icon, as 1.1 does. An icon that is hidden or not there yet,
 /// or a balloon the shell refuses, is let go and told once. The icon's state is not touched, so the
 /// redraw goes on as before. Called on the UI thread; elsewhere it does nothing.
-// #42 calls this for the usage toasts; nothing does yet.
-#[allow(dead_code)]
 pub fn balloon(service: Service, title: &str, text: &str) {
     let (title, text) = (title.to_owned(), text.to_owned());
     with_tray(move |tray| {
