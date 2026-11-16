@@ -266,9 +266,11 @@ In this order:
    ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
    Set beside it again once those were merged
    ([note](shell-comparison.md#again-after-46-59-and-61)): every picture is now 1.1's size,
-   and shapes and colours match by eye. The text is still 4 to 14% lighter, which the toolkit
-   cannot change; drawing it at 1.1's weight from the shell is
-   [#93](https://github.com/RicardoSilveira23/sobreiro/issues/93).
+   and shapes and colours match by eye. The text was still 4 to 14% lighter, which the toolkit
+   cannot change; the shell now draws each text a second time at a partial alpha
+   ([#93](https://github.com/RicardoSilveira23/sobreiro/issues/93),
+   [note](shell-comparison.md#the-text-at-11s-weight-after-93)), and the text column carries
+   1.1's ink within 2% in every state at 100%, 150% and 200%.
    The flyout's card was set beside 1.1's on 2026-11-16, in every state, style, theme, bar
    colour and scale ([note](shell-comparison.md#b-for-20-the-flyout-beside-11s)). Size, words,
    shapes and colours match; the thermometer and the detail line were a DIP or so off and are
