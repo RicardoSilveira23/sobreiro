@@ -72,6 +72,10 @@ struct Flyout {
     point: (i32, i32),
     seen: Option<Seen>,
     watch: Timer,
+    /// Hidden to take a new scale and not focused again yet: a loss of focus then is its own doing.
+    rescaling: bool,
+    /// The monitor's DPI it was last hidden and shown again for, so it is done once per change.
+    rescaled_for: Option<u32>,
 }
 
 /// Runs `step` on the flyout now, or a turn of the event loop later if it is busy.
@@ -137,6 +141,7 @@ impl Flyout {
     /// The flyout is to be open at the point; makes the window if it is not made.
     fn open(&mut self, x: i32, y: i32) {
         self.point = (x, y);
+        self.rescaled_for = None;
         self.toggle.opened();
         self.start(BORN_TRIES);
     }
@@ -251,6 +256,7 @@ impl Flyout {
             component.invoke_take_focus();
         }
         if born::activate(window) {
+            self.rescaling = false;
             return;
         }
         if retries == 0 {
@@ -306,12 +312,24 @@ impl Flyout {
     }
 
     /// Places the window again when its DPI or pixel size is not what was seen after the last
-    /// placement.
+    /// placement. When its monitor's scale changed and the window was not told (Windows tells a
+    /// shown window of the shell only when it is shown again), it is hidden and shown afresh, once
+    /// per change.
     fn check(&mut self) {
         let Some(window) = self.window.filter(|_| self.toggle.is_open()) else {
             self.watch.stop();
             return;
         };
+        if let Some(target) = self.target()
+            && target.dpi != taskbar::dpi_of(window)
+            && self.rescaled_for != Some(target.dpi)
+        {
+            self.rescaled_for = Some(target.dpi);
+            self.rescaling = true;
+            self.hide();
+            self.present(SCALE_TRIES);
+            return;
+        }
         let Some(component) = &self.component else {
             return;
         };
@@ -330,6 +348,7 @@ impl Flyout {
 
     /// Closes it when it is open.
     fn close(&mut self) {
+        self.rescaling = false;
         if self.toggle.closed() {
             self.hide();
         }
@@ -375,11 +394,13 @@ fn observe(window: isize, component: &FlyoutWindow) -> Seen {
 /// Told by `born`, inside the window's procedure, that a focusable window lost the activation.
 /// Hiding the window deactivates it synchronously, so the work is left to a later turn. By then
 /// the flyout may have the focus again (hidden on its first open, then shown and focused in the
-/// same turn): a loss that no longer holds closes nothing.
+/// same turn): a loss that no longer holds closes nothing, nor does one while it is hidden to take
+/// a new scale.
 fn deactivated(window: isize) {
     Timer::single_shot(Duration::ZERO, move || {
         with_flyout(move |flyout| {
             if flyout.window == Some(window)
+                && !flyout.rescaling
                 && !born::is_foreground(window)
                 && flyout.toggle.focus_lost(Instant::now())
             {
