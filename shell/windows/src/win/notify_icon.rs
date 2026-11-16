@@ -8,9 +8,9 @@ use super::tray_picture::TrayIcon;
 use std::ffi::c_void;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::UI::Shell::{
-    NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETVERSION,
-    NIN_SELECT, NOTIFY_ICON_MESSAGE, NOTIFYICON_VERSION_4, NOTIFYICONDATAW, NOTIFYICONDATAW_0,
-    Shell_NotifyIconW,
+    NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIIF_NONE, NIM_ADD, NIM_DELETE,
+    NIM_MODIFY, NIM_SETVERSION, NIN_SELECT, NOTIFY_ICON_MESSAGE, NOTIFYICON_VERSION_4,
+    NOTIFYICONDATAW, NOTIFYICONDATAW_0, Shell_NotifyIconW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{WM_APP, WM_CONTEXTMENU};
 
@@ -29,8 +29,8 @@ pub const CONTEXT_MENU: u32 = WM_CONTEXTMENU;
 /// A left click on the icon.
 pub const SELECT: u32 = NIN_SELECT;
 
-/// How many UTF-16 units a tooltip holds, leaving room for the NUL.
-const TIP_UNITS: usize = 127;
+/// How long a balloon stays, in milliseconds, as 1.1 shows it.
+const BALLOON_MS: u32 = 10_000;
 
 /// What an icon's message says, as version 4 sends it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,11 +59,11 @@ pub fn decode(wparam: usize, lparam: isize) -> TrayEvent {
     }
 }
 
-/// The tooltip as `szTip` holds it: at most 127 UTF-16 units, a surrogate pair never split, and
-/// the rest NUL.
-pub fn tip_units(text: &str) -> [u16; 128] {
+/// The text as a field of `N` units holds it: at most `N - 1` UTF-16 units, a surrogate pair never
+/// split, and the rest NUL.
+pub fn units<const N: usize>(text: &str) -> [u16; N] {
     let units: Vec<u16> = text.encode_utf16().collect();
-    let mut end = units.len().min(TIP_UNITS);
+    let mut end = units.len().min(N.saturating_sub(1));
     // A cut that would leave a high surrogate last drops it with the half it lost.
     if end < units.len()
         && end > 0
@@ -72,11 +72,16 @@ pub fn tip_units(text: &str) -> [u16; 128] {
     {
         end -= 1;
     }
-    let mut tip = [0u16; 128];
-    for (slot, unit) in tip.iter_mut().zip(units.iter().take(end)) {
+    let mut field = [0u16; N];
+    for (slot, unit) in field.iter_mut().zip(units.iter().take(end)) {
         *slot = *unit;
     }
-    tip
+    field
+}
+
+/// The tooltip as `szTip` holds it: 127 units and a NUL.
+pub fn tip_units(text: &str) -> [u16; 128] {
+    units(text)
 }
 
 fn data(window: isize, id: u32, icon: &TrayIcon, tip: &str) -> NOTIFYICONDATAW {
@@ -88,6 +93,25 @@ fn data(window: isize, id: u32, icon: &TrayIcon, tip: &str) -> NOTIFYICONDATAW {
         uCallbackMessage: TRAY_MESSAGE,
         hIcon: icon.handle(),
         szTip: tip_units(tip),
+        ..Default::default()
+    }
+}
+
+/// What a balloon asks of the shell: the balloon, so the picture and tooltip text stay as they
+/// are, and the standard tooltip kept on, which a version 4 icon loses on a change without it.
+/// No icon in the balloon, and 1.1's ten seconds.
+fn balloon_data(window: isize, id: u32, title: &str, text: &str) -> NOTIFYICONDATAW {
+    NOTIFYICONDATAW {
+        cbSize: size_of::<NOTIFYICONDATAW>() as u32,
+        hWnd: HWND(window as *mut c_void),
+        uID: id,
+        uFlags: NIF_INFO | NIF_SHOWTIP,
+        szInfoTitle: units(title),
+        szInfo: units(text),
+        Anonymous: NOTIFYICONDATAW_0 {
+            uTimeout: BALLOON_MS,
+        },
+        dwInfoFlags: NIIF_NONE,
         ..Default::default()
     }
 }
@@ -122,6 +146,12 @@ pub fn add(window: isize, id: u32, icon: &TrayIcon, tip: &str) -> bool {
 /// Changes an added icon's picture and tooltip.
 pub fn modify(window: isize, id: u32, icon: &TrayIcon, tip: &str) -> bool {
     notify(NIM_MODIFY, &data(window, id, icon, tip))
+}
+
+/// Shows a balloon from an added icon. False when the shell refuses it. With Windows
+/// notifications off the call still succeeds and nothing shows.
+pub fn balloon(window: isize, id: u32, title: &str, text: &str) -> bool {
+    notify(NIM_MODIFY, &balloon_data(window, id, title, text))
 }
 
 /// Removes the icon; one that is not there is not an error.
@@ -179,6 +209,50 @@ mod tests {
             String::from_utf16_lossy(&text(&tip)).chars().last(),
             Some('\u{1F600}')
         );
+    }
+
+    fn field<const N: usize>(units: &[u16; N]) -> Vec<u16> {
+        units
+            .iter()
+            .copied()
+            .take_while(|unit| *unit != 0)
+            .collect()
+    }
+
+    #[test]
+    fn the_balloon_asks_for_the_balloon_and_keeps_the_tooltip() {
+        let data = balloon_data(0, 2, "Title", "Body");
+        assert_eq!(data.uFlags, NIF_INFO | NIF_SHOWTIP);
+        // SAFETY: the timeout is what the balloon data sets.
+        assert_eq!(unsafe { data.Anonymous.uTimeout }, 10_000);
+        assert_eq!(data.dwInfoFlags, NIIF_NONE);
+        assert_eq!(data.uID, 2);
+        assert_eq!(String::from_utf16_lossy(&field(&data.szInfoTitle)), "Title");
+        assert_eq!(String::from_utf16_lossy(&field(&data.szInfo)), "Body");
+    }
+
+    #[test]
+    fn a_title_is_cut_at_63_units() {
+        let title: [u16; 64] = units(&"a".repeat(100));
+        assert_eq!(field(&title).len(), 63);
+        assert_eq!(title[63], 0);
+        // 62 units, then a pair that would end at 64: it goes whole.
+        let cut: [u16; 64] = units(&format!("{}\u{1F600}", "a".repeat(62)));
+        assert_eq!(field(&cut).len(), 62);
+        // 61 units, then a pair that ends exactly at 63: kept.
+        let kept: [u16; 64] = units(&format!("{}\u{1F600}b", "a".repeat(61)));
+        assert_eq!(field(&kept).len(), 63);
+    }
+
+    #[test]
+    fn a_text_is_cut_at_255_units() {
+        let text: [u16; 256] = units(&"a".repeat(400));
+        assert_eq!(field(&text).len(), 255);
+        assert_eq!(text[255], 0);
+        let cut: [u16; 256] = units(&format!("{}\u{1F600}", "a".repeat(254)));
+        assert_eq!(field(&cut).len(), 254);
+        let kept: [u16; 256] = units(&format!("{}\u{1F600}b", "a".repeat(253)));
+        assert_eq!(field(&kept).len(), 255);
     }
 
     #[test]

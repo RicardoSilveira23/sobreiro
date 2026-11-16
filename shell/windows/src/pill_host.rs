@@ -12,8 +12,10 @@
 //! Windows calls back with no data of ours, so the tracker lives in a value of the UI thread.
 //! A callback that comes while the tracker is busy (Windows can call back inside a call the
 //! tracker makes) runs a turn of the event loop later. Each step that fails is let go.
+use crate::about;
 use crate::app_host;
 use crate::auto_start;
+use crate::connect_flow;
 use crate::diagnostics::Diagnostics;
 use crate::pill_face::face_data;
 use crate::pill_feed::{self, Snapshot};
@@ -918,19 +920,43 @@ impl Host {
         let (config, _) = pill_feed::config_for_display(&self.config_file);
         // Read afresh each time: another run may have changed the value.
         let auto_start = auto_start::is_on_now();
-        MenuRequest::Ready(owner, pill_menu::entries(&config, auto_start))
+        let state = connect_flow::current_state();
+        MenuRequest::Ready(owner, pill_menu::entries(&config, auto_start, state))
     }
 
     /// Does what the menu's choice says.
     fn run_choice(&mut self, chosen: Option<u32>) {
         match chosen.and_then(pill_menu::command) {
             Some(Command::Change(change)) => self.change_config(change),
+            Some(Command::Connect(connect)) => self.connect(connect),
             // The error box is a modal loop, so it runs once this tracker is let go.
             Some(Command::ToggleAutoStart) => Timer::single_shot(Duration::ZERO, toggle_auto_start),
+            Some(Command::OpenDataFolder) => self.open_data_folder(),
+            Some(Command::About) => about::show_about(),
             Some(Command::Quit) => {
                 let _ = slint::quit_event_loop();
             }
             None => {}
+        }
+    }
+
+    /// Opens the data folder in Explorer; a failure is logged as one fixed line.
+    fn open_data_folder(&self) {
+        if !about::open_data_folder() {
+            self.diagnostics.say("the data folder could not be opened");
+        }
+    }
+
+    /// Runs the connect flow on its own thread, as it has boxes to wait on. When it is done the
+    /// UI thread is asked for a redraw, so the new state shows at once. A flow already open, or a
+    /// thread that cannot start, means this choice does nothing.
+    fn connect(&self, connect: bool) {
+        let started = connect_flow::start(connect, || {
+            let _ = slint::invoke_from_event_loop(app_host::redraw);
+        });
+        if started.is_none() {
+            self.diagnostics
+                .say("the connect flow was not started: one is open, or its thread did not start");
         }
     }
 

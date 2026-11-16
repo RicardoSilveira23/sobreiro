@@ -3,10 +3,14 @@
 //! changes the one key and saves it through Core, as 1.1's menu does. The text of the box that
 //! says why a change was not saved is made here too.
 //!
-//! Connect, Open data folder and About come with later tickets.
+//! The first items connect Claude Code's status line to the bridge or disconnect it, by where it
+//! stands now; the connect flow (`connect_flow`) does the work. Open data folder and About
+//! Sobreiro follow Start with Windows; `about` does their work.
 use crate::win::menu::{Entry, Item};
 use sobreiro_core::colours::BarColourOption;
 use sobreiro_core::config::{AppConfig, ConfigError, ShowOption};
+use sobreiro_core::connect::connect_message::{self, RECONNECT_TITLE};
+use sobreiro_core::connect::connection::ConnectionState;
 use sobreiro_core::display::{FlyoutStyle, PaceDays};
 use std::path::Path;
 
@@ -21,6 +25,11 @@ const TRAY_ONLY: u32 = 8;
 const TRAY_AND_PILL: u32 = 9;
 const AUTO_START: u32 = 10;
 const QUIT: u32 = 11;
+const CONNECT: u32 = 12;
+const RECONNECT: u32 = 13;
+const DISCONNECT: u32 = 14;
+const OPEN_DATA_FOLDER: u32 = 15;
+const ABOUT: u32 = 16;
 
 /// The one key of `config.json` a choice in the menu changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,7 +44,11 @@ pub enum ConfigChange {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     Change(ConfigChange),
+    /// Runs the connect flow: true to connect (or reconnect), false to disconnect.
+    Connect(bool),
     ToggleAutoStart,
+    OpenDataFolder,
+    About,
     Quit,
 }
 
@@ -48,8 +61,9 @@ pub enum ChangeError {
     Save(ConfigError),
 }
 
-/// The menu, with the current choices checked and Start with Windows checked when it is on.
-pub fn entries(config: &AppConfig, auto_start: bool) -> Vec<Entry> {
+/// The menu, with the current choices checked and Start with Windows checked when it is on. The
+/// first items follow the connection: Connect, Disconnect, or Reconnect above Disconnect.
+pub fn entries(config: &AppConfig, auto_start: bool, state: ConnectionState) -> Vec<Entry> {
     let item = |id: u32, text: &str, checked: bool| Item {
         id,
         text: text.to_string(),
@@ -60,7 +74,16 @@ pub fn entries(config: &AppConfig, auto_start: bool) -> Vec<Entry> {
         |id: u32, text: &str, option: BarColourOption| item(id, text, config.bar_colour == option);
     let pace = |id: u32, text: &str, option: PaceDays| item(id, text, config.pace_days == option);
     let show = |id: u32, text: &str, option: ShowOption| item(id, text, config.show == option);
-    vec![
+    let connect = item(CONNECT, connect_message::title(true), false);
+    let reconnect = item(RECONNECT, RECONNECT_TITLE, false);
+    let disconnect = item(DISCONNECT, connect_message::title(false), false);
+    let connection = match state {
+        ConnectionState::NotConnected => vec![Entry::Item(connect)],
+        ConnectionState::Connected => vec![Entry::Item(disconnect)],
+        ConnectionState::Elsewhere => vec![Entry::Item(reconnect), Entry::Item(disconnect)],
+    };
+    let mut menu = connection;
+    menu.extend([
         Entry::Submenu {
             text: "Style".to_string(),
             items: vec![
@@ -96,9 +119,12 @@ pub fn entries(config: &AppConfig, auto_start: bool) -> Vec<Entry> {
         },
         Entry::Separator,
         Entry::Item(item(AUTO_START, "Start with Windows", auto_start)),
+        Entry::Item(item(OPEN_DATA_FOLDER, "Open data folder", false)),
+        Entry::Item(item(ABOUT, "About Sobreiro", false)),
         Entry::Separator,
         Entry::Item(item(QUIT, "Quit", false)),
-    ]
+    ]);
+    menu
 }
 
 /// The command an item's id stands for.
@@ -114,7 +140,11 @@ pub fn command(id: u32) -> Option<Command> {
         WEEKDAYS => change(ConfigChange::Pace(PaceDays::Weekdays)),
         TRAY_ONLY => change(ConfigChange::Show(ShowOption::TrayOnly)),
         TRAY_AND_PILL => change(ConfigChange::Show(ShowOption::TrayAndPill)),
+        CONNECT | RECONNECT => Some(Command::Connect(true)),
+        DISCONNECT => Some(Command::Connect(false)),
         AUTO_START => Some(Command::ToggleAutoStart),
+        OPEN_DATA_FOLDER => Some(Command::OpenDataFolder),
+        ABOUT => Some(Command::About),
         QUIT => Some(Command::Quit),
         _ => None,
     }
@@ -191,16 +221,99 @@ mod tests {
         }
     }
 
+    const STATES: [ConnectionState; 3] = [
+        ConnectionState::NotConnected,
+        ConnectionState::Connected,
+        ConnectionState::Elsewhere,
+    ];
+
+    /// The menu of a connected status line, whose one first item shifts the rest by one.
+    fn connected(config: &AppConfig, auto_start: bool) -> Vec<Entry> {
+        entries(config, auto_start, ConnectionState::Connected)
+    }
+
+    /// The first entries' texts up to Style.
+    fn first_texts(state: ConnectionState) -> Vec<String> {
+        let menu = entries(&AppConfig::default(), false, state);
+        let at = menu
+            .iter()
+            .position(|entry| matches!(entry, Entry::Submenu { .. }))
+            .unwrap_or(0);
+        menu[..at]
+            .iter()
+            .map(|entry| match entry {
+                Entry::Item(item) => item.text.clone(),
+                other => panic!("not an item: {other:?}"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_connection_items_follow_the_state_and_no_line_comes_after_them() {
+        assert_eq!(
+            first_texts(ConnectionState::NotConnected),
+            ["Connect to Claude Code"]
+        );
+        assert_eq!(
+            first_texts(ConnectionState::Connected),
+            ["Disconnect from Claude Code"]
+        );
+        assert_eq!(
+            first_texts(ConnectionState::Elsewhere),
+            ["Reconnect to Claude Code", "Disconnect from Claude Code"]
+        );
+        for state in STATES {
+            let menu = entries(&AppConfig::default(), false, state);
+            let first = first_texts(state).len();
+            assert_eq!(submenu(&menu, first).0, "Style");
+        }
+    }
+
+    #[test]
+    fn the_full_order_holds_in_each_state() {
+        for state in STATES {
+            let menu = entries(&AppConfig::default(), false, state);
+            let names: Vec<&str> = menu
+                .iter()
+                .map(|entry| match entry {
+                    Entry::Item(item) => item.text.as_str(),
+                    Entry::Submenu { text, .. } => text.as_str(),
+                    Entry::Separator => "-",
+                })
+                .collect();
+            let mut expected = match state {
+                ConnectionState::NotConnected => vec!["Connect to Claude Code"],
+                ConnectionState::Connected => vec!["Disconnect from Claude Code"],
+                ConnectionState::Elsewhere => {
+                    vec!["Reconnect to Claude Code", "Disconnect from Claude Code"]
+                }
+            };
+            expected.extend([
+                "Style",
+                "Bar colour",
+                "Pace",
+                "Show",
+                "-",
+                "Start with Windows",
+                "Open data folder",
+                "About Sobreiro",
+                "-",
+                "Quit",
+            ]);
+            assert_eq!(names, expected);
+        }
+    }
+
     #[test]
     fn the_menu_is_in_1_1s_order_with_its_texts() {
-        let menu = entries(&AppConfig::default(), false);
-        assert_eq!(menu.len(), 8);
-        assert_eq!(menu[4], Entry::Separator);
-        assert_eq!(menu[6], Entry::Separator);
-        let titles: Vec<_> = (0..4).map(|at| submenu(&menu, at).0).collect();
+        let menu = connected(&AppConfig::default(), false);
+        assert_eq!(menu.len(), 11);
+        assert_eq!(menu[5], Entry::Separator);
+        assert_eq!(menu[9], Entry::Separator);
+        let titles: Vec<_> = (1..5).map(|at| submenu(&menu, at).0).collect();
         assert_eq!(titles, ["Style", "Bar colour", "Pace", "Show"]);
-        let names = |at| {
-            submenu(&menu, at)
+        let names = |at: usize| {
+            submenu(&menu, at + 1)
                 .1
                 .into_iter()
                 .map(|(text, _)| text)
@@ -210,14 +323,17 @@ mod tests {
         assert_eq!(names(1), ["Sobreiro purple", "Windows accent"]);
         assert_eq!(names(2), ["Every day", "Weekdays only"]);
         assert_eq!(names(3), ["Tray icon only", "Tray icon and taskbar pill"]);
-        assert_eq!(item(&menu, 5).0, "Start with Windows");
-        assert_eq!(item(&menu, 7).0, "Quit");
+        assert_eq!(item(&menu, 0).0, "Disconnect from Claude Code");
+        assert_eq!(item(&menu, 6).0, "Start with Windows");
+        assert_eq!(item(&menu, 7).0, "Open data folder");
+        assert_eq!(item(&menu, 8).0, "About Sobreiro");
+        assert_eq!(item(&menu, 10).0, "Quit");
     }
 
     #[test]
     fn each_submenu_checks_the_current_value() {
         let checks = |config: &AppConfig, at: usize| -> Vec<bool> {
-            submenu(&entries(config, false), at)
+            submenu(&connected(config, false), at + 1)
                 .1
                 .into_iter()
                 .map(|(_, checked)| checked)
@@ -249,20 +365,24 @@ mod tests {
 
     #[test]
     fn every_id_in_the_menu_is_a_command_and_none_is_zero() {
+        // The Elsewhere menu holds every id there is.
         let mut ids = Vec::new();
-        for entry in entries(&AppConfig::default(), false) {
+        for entry in entries(&AppConfig::default(), false, ConnectionState::Elsewhere) {
             match entry {
                 Entry::Separator => {}
                 Entry::Item(item) => ids.push(item.id),
                 Entry::Submenu { items, .. } => ids.extend(items.iter().map(|item| item.id)),
             }
         }
-        assert_eq!(ids.len(), 11);
+        assert_eq!(ids.len(), 15);
         assert!(ids.iter().all(|id| *id != 0 && command(*id).is_some()));
         let mut unique = ids.clone();
         unique.sort_unstable();
         unique.dedup();
         assert_eq!(unique.len(), ids.len());
+        assert_eq!(command(CONNECT), Some(Command::Connect(true)));
+        assert_eq!(command(RECONNECT), Some(Command::Connect(true)));
+        assert_eq!(command(DISCONNECT), Some(Command::Connect(false)));
         assert_eq!(
             command(BATTERY),
             Some(Command::Change(ConfigChange::Style(FlyoutStyle::Battery)))
@@ -282,6 +402,8 @@ mod tests {
             Some(Command::Change(ConfigChange::Show(ShowOption::TrayOnly)))
         );
         assert_eq!(command(AUTO_START), Some(Command::ToggleAutoStart));
+        assert_eq!(command(OPEN_DATA_FOLDER), Some(Command::OpenDataFolder));
+        assert_eq!(command(ABOUT), Some(Command::About));
         assert_eq!(command(QUIT), Some(Command::Quit));
         assert_eq!(command(0), None);
         assert_eq!(command(99), None);
@@ -289,7 +411,7 @@ mod tests {
 
     #[test]
     fn the_start_with_windows_check_follows_the_flag() {
-        let checked = |on: bool| item(&entries(&AppConfig::default(), on), 5).1;
+        let checked = |on: bool| item(&connected(&AppConfig::default(), on), 6).1;
         assert!(checked(true));
         assert!(!checked(false));
     }

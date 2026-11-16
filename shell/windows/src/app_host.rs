@@ -4,8 +4,8 @@
 //! and the broadcasts of the message window.
 //!
 //! Each redraw makes one snapshot (`pill_feed::Snapshot`) and hands it to each part in turn: for
-//! now the pill (`pill_host`, which keeps the taskbar work), the tray icons (`tray_icons`) and the
-//! flyout (`flyout::window`, drawn only while open); the toasts come next. The snapshot is made
+//! now the pill (`pill_host`, which keeps the taskbar work), the tray icons (`tray_icons`), the
+//! flyout (`flyout::window`, drawn only while open) and the toasts (`alerts`). The snapshot is made
 //! whatever Show says, so a part that is not the pill has the figures also when the pill is off.
 //! A part takes the snapshot on its own and handles its own failures, keeping what it last drew,
 //! so one part's failure never stops the next, as 1.1's `Guard` does. (A panic is not caught:
@@ -17,6 +17,7 @@
 //!
 //! Windows calls back with no data of ours, so the host lives in a value of the UI thread. A
 //! callback that comes while the host is busy runs a turn of the event loop later.
+use crate::alerts;
 use crate::carried_bridge;
 use crate::clock;
 use crate::diagnostics::Diagnostics;
@@ -46,9 +47,9 @@ thread_local! {
 }
 
 /// Runs the app with live figures until the process ends.
-pub fn run() -> ExitCode {
+pub fn run() -> Result<ExitCode, &'static str> {
     let Some(places) = Locations::find() else {
-        return ExitCode::FAILURE;
+        return Err("PlacesNotFound");
     };
     let diagnostics = Arc::new(Diagnostics::new(&places.app.log_file()));
     let made = providers::make(&places, &diagnostics);
@@ -60,11 +61,14 @@ pub fn run() -> ExitCode {
     let messages = MessageWindow::create(on_broadcast, tray_icons::on_event);
     if messages.is_none() {
         diagnostics.say("the message window could not be made");
+        // Without it there are no tray icons, no menu and no session end: no way to quit.
+        return Err("MessageWindowNotMade");
     }
     tray_icons::start(
         messages.as_ref().map(MessageWindow::handle),
         diagnostics.clone(),
     );
+    alerts::start(places.app.alerts_file(), diagnostics.clone());
     let setup = pill_host::Setup {
         messages: messages.as_ref().map(MessageWindow::handle),
         diagnostics: diagnostics.clone(),
@@ -80,10 +84,11 @@ pub fn run() -> ExitCode {
         _messages: messages,
     };
     if HOST.try_with(|cell| cell.replace(Some(host))).is_err() {
-        return ExitCode::FAILURE;
+        return Err("HostNotKept");
     }
     if !pill_host::start(setup) {
-        return ExitCode::FAILURE;
+        tray_icons::stop();
+        return Err("PillNotStarted");
     }
     with_host(|host| {
         // Drawn once with what is there, as 1.1 does.
@@ -108,10 +113,10 @@ pub fn run() -> ExitCode {
         .and_then(Result::ok)
         .flatten();
     drop(host);
-    match ended {
+    Ok(match ended {
         Ok(()) => ExitCode::SUCCESS,
         Err(_) => ExitCode::FAILURE,
-    }
+    })
 }
 
 /// Asks for a redraw: the host makes a snapshot and hands it to each part, now or a turn of the
@@ -283,10 +288,11 @@ impl Host {
             connection::state(&text, bridge.as_deref())
         }));
         // Each part takes the snapshot on its own and answers for its own failures.
-        let parts: [fn(Rc<Snapshot>); 3] = [
+        let parts: [fn(Rc<Snapshot>); 4] = [
             pill_host::show,
             tray_icons::show,
             crate::flyout::window::show,
+            alerts::show,
         ];
         for part in parts {
             part(snapshot.clone());

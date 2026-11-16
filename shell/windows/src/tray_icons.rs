@@ -1,12 +1,13 @@
 //! The tray icons, one for Claude Code and one for Copilot: drawn from each redraw's snapshot,
 //! added and removed as Core's rule says, added again when Explorer restarts, and removed when the
-//! app quits. A click on one is handed on a turn of the event loop later.
+//! app quits. A click on one is handed on a turn of the event loop later. A balloon can be shown
+//! from either one.
 //!
 //! An icon that cannot be drawn, or whose change the shell refuses, keeps its last good picture
 //! and tooltip and is tried again at the next redraw. The state lives in a value of the UI thread
 //! and is used through the functions below.
 use crate::diagnostics::Diagnostics;
-use crate::pill_feed::Snapshot;
+use crate::pill_feed::{Service, Snapshot};
 use crate::pill_host;
 use crate::win::notify_icon::{self, CLAUDE_ID, COPILOT_ID, TrayEvent};
 use crate::win::taskbar;
@@ -60,6 +61,34 @@ struct Slot {
     told_draw: bool,
     /// The shell refused an add or a change, and has taken none since: told once.
     told_shell: bool,
+    /// Why the last balloon was let go; None once one is shown.
+    told_balloon: Option<LetGo>,
+}
+
+/// Why a balloon was let go.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LetGo {
+    /// The icon is hidden, or not added yet.
+    Hidden,
+    /// The shell refused the balloon.
+    Refused,
+}
+
+impl LetGo {
+    fn why(self) -> &'static str {
+        match self {
+            LetGo::Hidden => "is hidden or not there yet",
+            LetGo::Refused => "was refused by the shell",
+        }
+    }
+}
+
+/// What a balloon's outcome has to tell: the reason it was let go, unless the last balloon was
+/// let go for the same one. So each reason is told once until a balloon is shown.
+fn to_tell(told: &mut Option<LetGo>, outcome: Option<LetGo>) -> Option<LetGo> {
+    let tell = outcome.filter(|why| *told != Some(*why));
+    *told = outcome;
+    tell
 }
 
 impl Slot {
@@ -71,6 +100,7 @@ impl Slot {
             current: None,
             told_draw: false,
             told_shell: false,
+            told_balloon: None,
         }
     }
 
@@ -217,6 +247,34 @@ pub fn stop() {
     }
 }
 
+/// Shows a balloon from the service's icon, as 1.1 does. An icon that is hidden or not there yet,
+/// or a balloon the shell refuses, is let go and told once. The icon's state is not touched, so the
+/// redraw goes on as before. Called on the UI thread; elsewhere it does nothing.
+pub fn balloon(service: Service, title: &str, text: &str) {
+    let (title, text) = (title.to_owned(), text.to_owned());
+    with_tray(move |tray| {
+        let window = tray.window;
+        let slot = match service {
+            Service::Claude => &mut tray.claude,
+            Service::Copilot => &mut tray.copilot,
+        };
+        let outcome = if !slot.added {
+            Some(LetGo::Hidden)
+        } else if notify_icon::balloon(window, slot.id, &title, &text) {
+            None
+        } else {
+            Some(LetGo::Refused)
+        };
+        if let Some(why) = to_tell(&mut slot.told_balloon, outcome) {
+            tray.diagnostics.say(&format!(
+                "a balloon from the {} tray icon {}",
+                slot.name,
+                why.why()
+            ));
+        }
+    });
+}
+
 /// A click on an icon. Run a turn of the event loop later, not inside the window procedure.
 pub fn on_event(event: TrayEvent) {
     Timer::single_shot(Duration::ZERO, move || match event.event {
@@ -267,5 +325,37 @@ impl Tray {
             .apply(self.window, &self.diagnostics, shown.copilot, copilot);
         self.claude
             .apply(self.window, &self.diagnostics, shown.claude, claude);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_reason_is_told_once_until_a_balloon_is_shown() {
+        let mut told = None;
+        assert_eq!(to_tell(&mut told, Some(LetGo::Hidden)), Some(LetGo::Hidden));
+        assert_eq!(to_tell(&mut told, Some(LetGo::Hidden)), None);
+        assert_eq!(to_tell(&mut told, None), None);
+        assert_eq!(to_tell(&mut told, Some(LetGo::Hidden)), Some(LetGo::Hidden));
+    }
+
+    #[test]
+    fn a_new_reason_is_told() {
+        let mut told = None;
+        assert_eq!(to_tell(&mut told, Some(LetGo::Hidden)), Some(LetGo::Hidden));
+        assert_eq!(
+            to_tell(&mut told, Some(LetGo::Refused)),
+            Some(LetGo::Refused)
+        );
+        assert_eq!(to_tell(&mut told, Some(LetGo::Refused)), None);
+    }
+
+    #[test]
+    fn a_shown_balloon_tells_nothing() {
+        let mut told = None;
+        assert_eq!(to_tell(&mut told, None), None);
+        assert_eq!(told, None);
     }
 }

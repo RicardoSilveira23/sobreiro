@@ -4,6 +4,7 @@ pub mod credentials;
 pub mod dir_watch;
 pub mod job;
 pub mod known_folders;
+pub mod licence_window;
 pub mod local_zone;
 pub mod locale;
 pub mod menu;

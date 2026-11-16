@@ -44,6 +44,7 @@ pub fn start() -> Start {
         });
     };
     let diagnostics = Arc::new(Diagnostics::new(&places.app.log_file()));
+    crate::diagnostics::install(diagnostics.clone());
     let id = places.app.instance_id();
     // The event first, so it exists whenever a first copy does: a launch that comes while the first
     // is still starting leaves it set, and the first shows once it is ready.
@@ -65,18 +66,27 @@ pub fn start() -> Start {
         }
         Taken::Failed => {
             diagnostics.say("one-copy-failed");
+            diagnostics.say(&start_line(&id));
             Start::First(Guard {
                 _mutex: None,
                 event,
                 diagnostics: Some(diagnostics),
             })
         }
-        Taken::First(mutex) => Start::First(Guard {
-            _mutex: Some(mutex),
-            event,
-            diagnostics: Some(diagnostics),
-        }),
+        Taken::First(mutex) => {
+            diagnostics.say(&start_line(&id));
+            Start::First(Guard {
+                _mutex: Some(mutex),
+                event,
+                diagnostics: Some(diagnostics),
+            })
+        }
     }
+}
+
+/// The first entry of a run that goes on, the words of 1.1's.
+fn start_line(id: &str) -> String {
+    format!("start version={} instance={id}", env!("CARGO_PKG_VERSION"))
 }
 
 impl Guard {
@@ -122,6 +132,17 @@ fn show_by_tray() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_start_line_is_1x() {
+        assert_eq!(
+            start_line("Sobreiro"),
+            format!(
+                "start version={} instance=Sobreiro",
+                env!("CARGO_PKG_VERSION")
+            )
+        );
+    }
 
     #[test]
     fn the_names_are_1x() {
