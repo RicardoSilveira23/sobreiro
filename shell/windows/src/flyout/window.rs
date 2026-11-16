@@ -92,18 +92,6 @@ fn with_flyout(step: impl FnOnce(&mut Flyout) + 'static) {
     }
 }
 
-/// What the flyout answers now, or none when it is busy or not made.
-#[allow(dead_code)] // Used by the calls the tray icons (#49) make.
-fn flyout_value<T>(step: impl FnOnce(&Flyout) -> T) -> Option<T> {
-    FLYOUT
-        .try_with(|cell| {
-            let flyout = cell.try_borrow().ok()?;
-            Some(step(flyout.as_ref()?))
-        })
-        .ok()
-        .flatten()
-}
-
 /// The card's size in pixels at `dpi`, from its size in units: rounded up, so no edge is cut.
 fn pixels_at(units: f32, dpi: u32) -> i32 {
     // Less a hair: a whole number of pixels held as f32 units can come out just over.
@@ -444,17 +432,17 @@ pub fn close() {
     with_flyout(Flyout::close);
 }
 
-/// Whether the flyout is open. False when it is busy this instant.
-#[allow(dead_code)] // Called by the tray icons (#49).
-pub fn is_open() -> bool {
-    flyout_value(|flyout| flyout.toggle.is_open()).unwrap_or(false)
-}
-
-/// Whether the flyout closed because it lost the focus less than 300 ms ago, so a click that took
-/// the focus is to leave it closed.
-#[allow(dead_code)] // Called by the tray icons (#49).
-pub fn closed_just_now() -> bool {
-    flyout_value(|flyout| flyout.toggle.closed_just_now(Instant::now())).unwrap_or(false)
+/// A select on a tray icon, with its anchor point in physical pixels: closes the flyout when it is
+/// open, else opens it at the point, unless the click only closed it on focus loss or repeats the
+/// select that opened it (see `Toggle::tray_click`). Decided and done in one step.
+pub fn on_tray_click(x: i32, y: i32) {
+    with_flyout(
+        move |flyout| match flyout.toggle.tray_click(Instant::now()) {
+            Some(Click::Close) => flyout.close(),
+            Some(Click::Open) => flyout.open(x, y),
+            None => {}
+        },
+    );
 }
 
 #[cfg(test)]
