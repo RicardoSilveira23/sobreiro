@@ -257,6 +257,11 @@ In this order:
 2. **Core, one area at a time, with its tests.** The spike's rewrite is read, not taken over.
 3. **The shell to parity:** pill, flyout, tray icons and menu, Connect, alerts, start at
    sign-in, the migration.
+   The pill's face was set beside 1.1's on 2026-11-16, in every state, theme, bar colour and
+   scale ([note](shell-comparison.md#b-for-20-the-pill-beside-11s)). Shapes and colours match
+   by eye; it is wider by the figure box on purpose; its text is lighter
+   ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)); and it is a pixel or two
+   taller at 150% and 200% ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
 4. **The release:** its baseline row, and the comparison below.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
