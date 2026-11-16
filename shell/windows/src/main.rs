@@ -14,9 +14,12 @@ mod pictures;
 mod pill_face;
 mod pill_feed;
 mod pill_host;
+mod pill_menu;
 mod providers;
 mod specimen;
 mod theme;
+mod tooltip;
+mod tooltip_window;
 mod win;
 
 use std::process::ExitCode;
