@@ -52,19 +52,29 @@ jobs:
           "Version $version"
           "version=$version" >> $env:GITHUB_OUTPUT
 
-      # In the release profile: the tests that take the exe apart see the one that ships.
+      # In the release profile: the tests that take the exe apart see the one that ships. Its hash
+      # is kept so the check below can tell if the build made a different exe.
       - name: Test
-        run: cargo test --release --workspace --locked
+        run: |
+          cargo test --release --workspace --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $hash = (Get-FileHash -LiteralPath target/release/Sobreiro.exe -Algorithm SHA256).Hash
+          "TESTED_SHA256=$hash" >> $env:GITHUB_ENV
 
       - name: Build
         run: cargo build --release --locked
 
-      # The exe's details carry the version from Cargo.toml, so they match the tag too.
+      # The exe is the one the tests ran, and its details carry the version from Cargo.toml, so
+      # they match the tag too.
       - name: Check the exe
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           $exe = Get-Item -LiteralPath target/release/Sobreiro.exe
+          $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash
+          if ($hash -cne $env:TESTED_SHA256) {
+            throw "The build made a different exe from the one the tests ran"
+          }
           $details = $exe.VersionInfo
           if ($details.ProductVersion -cne $env:VERSION) {
             throw "The exe's product version is $($details.ProductVersion), not $env:VERSION"
@@ -73,7 +83,7 @@ jobs:
             throw "The exe's original file name is $($details.OriginalFilename)"
           }
           '{0}: {1} bytes, version {2}' -f $exe.Name, $exe.Length, $details.ProductVersion
-          'SHA-256: {0}' -f (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash
+          'SHA-256: {0}' -f $hash
 
       # Handed to the publish job only for a tag, and kept for a day.
       - if: github.event_name == 'push' && github.ref_type == 'tag'
