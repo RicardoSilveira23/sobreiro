@@ -1,0 +1,99 @@
+// The glyphs of the Battery and Thermometer styles, in DIPs, drawn as 1.1's WPF card draws them.
+// What fills them is decided in Rust from Core's GlyphFill; this file only draws.
+
+// 128 x 40: an outline and a nub, ten cells. Lit cells are what is left now, the faint ones what
+// the pace will use by the reset, the rest the track.
+export component BatteryGlyph inherits Rectangle {
+    // Cells that are left, and of those the ones the pace will have used.
+    in property <int> left-cells;
+    in property <int> soon-cells;
+    in property <color> fill;
+    in property <color> track;
+    in property <color> soft;
+    width: 128px;
+    height: 40px;
+
+    // 1.1 strokes a 117 x 38 rectangle at (1, 1), radius 5, with a line 1.5 wide centred on its
+    // edge. A path keeps the line's fraction of a pixel, which a rectangle's border would round.
+    // The toolkit fits a stroked path into its box less the stroke, offset by half a stroke, so
+    // the box is one stroke larger than the glyph and starts half a stroke before it.
+    Path {
+        x: -0.75px;
+        y: -0.75px;
+        width: 129.5px;
+        height: 41.5px;
+        viewbox-width: 128;
+        viewbox-height: 40;
+        stroke: root.soft;
+        stroke-width: 1.5px;
+        commands: "M 6 1 L 113 1 A 5 5 0 0 1 118 6 L 118 34 A 5 5 0 0 1 113 39 L 6 39 A 5 5 0 0 1 1 34 L 1 6 A 5 5 0 0 1 6 1 Z";
+    }
+
+    Rectangle {
+        x: 120px;
+        y: 13px;
+        width: 5px;
+        height: 14px;
+        border-radius: 1.5px;
+        background: root.soft;
+    }
+
+    for i in 10: Rectangle {
+        x: 5px + 11px * i;
+        y: 5px;
+        width: 8px;
+        height: 30px;
+        border-radius: 1.5px;
+        background: i < root.left-cells - root.soon-cells ? root.fill : (i < root.left-cells ? root.fill.with-alpha(0.35) : root.track);
+    }
+}
+
+// 30 x 104: the tube, the faint share the pace will use, the solid rest and the bulb. The tube is
+// 80 high from 4 down, and its fill runs on into the bulb, which is centred 93 down.
+export component ThermometerGlyph inherits Rectangle {
+    // What is left now, and the share of the tube of that the pace will have used, in percent.
+    in property <float> left-percent;
+    in property <float> soon-percent;
+    // The colour of the fill: the level's, or the track with no reading.
+    in property <color> fill;
+    in property <color> track;
+    width: 30px;
+    height: 104px;
+
+    private property <length> top-left: 4px + 80px * (1 - root.left-percent / 100);
+    private property <length> top-soon: root.top-left + 80px * root.soon-percent / 100;
+
+    Rectangle {
+        x: 10px;
+        y: 4px;
+        width: 10px;
+        height: 86px;
+        border-radius: 5px;
+        background: root.track;
+    }
+
+    Rectangle {
+        x: 10px;
+        y: root.top-left;
+        width: 10px;
+        height: root.top-soon - root.top-left;
+        background: root.fill.with-alpha(0.35);
+    }
+
+    Rectangle {
+        x: 10px;
+        y: root.top-soon;
+        width: 10px;
+        height: 90px - root.top-soon;
+        background: root.fill;
+    }
+
+    Rectangle {
+        x: 6px;
+        y: 84px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: root.fill;
+    }
+}
