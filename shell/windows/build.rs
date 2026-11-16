@@ -1,6 +1,10 @@
-//! Compiles the UI, and in the release build builds the bridge to carry inside the exe.
+//! Compiles the UI, gives the exe its icon and version details, and in the release build builds
+//! the bridge to carry inside the exe.
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+
+#[path = "build/resources.rs"]
+mod resources;
 
 type Failure = Box<dyn std::error::Error>;
 
@@ -9,6 +13,8 @@ fn main() -> Result<(), Failure> {
     let config = slint_build::CompilerConfiguration::new()
         .embed_resources(slint_build::EmbedResourcesKind::EmbedFiles);
     slint_build::compile_with_config("ui/app.slint", config)?;
+
+    resources::link_exe_resources(Path::new(&std::env::var("OUT_DIR")?))?;
 
     println!("cargo::rustc-check-cfg=cfg(carries_bridge)");
     // The release build carries the bridge, built from the same source, so Sobreiro.exe stays
