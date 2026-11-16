@@ -17,8 +17,8 @@ const with20 = without20.replace(/^(\| 1\.1\.0 \| \d{4}-.*\n)/m, `$1${ROW_20}\n`
 
 // The cards read back: [{ title, big, base, fig }].
 const cards = (html) =>
-  [...html.matchAll(/<p class="big"><b>(.*?)<\/b> <span>(.*?)<\/span><\/p><\/div><figcaption>(.*?)<\/figcaption><p class="d">1\.1 (.*?) → 2\.0 <b>(.*?)<\/b><\/p>/g)].map(
-    ([, x, word, title, base, fig]) => ({ title, big: `${x} ${word}`, base, fig }),
+  [...html.matchAll(/<figcaption>(.*?)<\/figcaption><p class="big"><b>(.*?)<\/b> (.*?)<\/p><div class="pair"><p><span>1\.1<\/span><i [^>]*><\/i><em>(.*?)<\/em><\/p><p class="new"><span>2\.0<\/span><i [^>]*><\/i><em>(.*?)<\/em><\/p><\/div>/g)].map(
+    ([, title, x, word, base, fig]) => ({ title, big: `${x} ${word}`, base, fig }),
   );
 
 test("the page and the docs are what docs/baseline.md gives", () => {
@@ -70,10 +70,9 @@ test("with a 2.0 row: a card per figure, every figure the table's own, 2.0 again
   assert.match(svg(c), />7 MB<tspan class="x" dx="8">14× less</);
 });
 
-test("the rings: the larger figure fills its ring, and the inner drains from 1.1's level", () => {
+test("the bars: zero-based shares of the larger, and 2.0's shrinks from 1.1's length", () => {
   const html = pageSection(comparison(with20));
-  // Memory: 1.1 is the larger, so the outer ring is full and the inner stands at 7/96.
-  assert.match(html, /class="was" [^>]*stroke-dashoffset="0"\/><circle class="now" [^>]*stroke-dashoffset="92\.7" style="--from:0"/);
+  assert.match(html, /<span>1\.1<\/span><i style="--w:1"><\/i><em>96 MB<\/em><\/p><p class="new"><span>2\.0<\/span><i style="--w:0\.073;--from:1"><\/i><em>7 MB<\/em>/);
 });
 
 test("downloads: 2.0 then 1.1, each its tag; 1.0 predates the repository and has none", () => {

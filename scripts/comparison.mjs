@@ -135,23 +135,21 @@ function stepWords(c) {
 const rustWords = (c) =>
   c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 below." : "2.0, rewritten in Rust, is set against 1.1 here once it is released.";
 const MEASURED = "Measured the same way on one PC, after 10 minutes left alone.";
-const KEY = '<i class="k1"></i>1.1, the outer ring <i class="k2"></i>2.0, the inner ring.';
+const KEY = "Each bar starts at zero; shorter is lighter.";
 // A multiple cut for the card: the number large, its word after it.
 const cut = (t) => (t === "about the same" ? ["≈", "about the same"] : t.split(" "));
-const offset = (f) => String(Math.round((1 - f.share) * 1000) / 10);
 
 export function pageSection(c) {
   const charts = c.metrics.map((m) => {
     const [a, b] = m.figures;
     const [x, word] = cut(m.multiple);
+    const bar = (r, f, cls) =>
+      `<p${cls}><span>${esc(r.name)}</span><i style="--w:${share(f.share)}${cls ? `;--from:${share(a.share)}` : ""}"></i><em>${esc(f.text)}</em></p>`;
     return [
-      `      <figure class="m"><div class="ring">`,
-      `<svg viewBox="0 0 52 52" aria-hidden="true"><circle class="tk" cx="26" cy="26" r="23.5"/><circle class="tk" cx="26" cy="26" r="18.5"/>`,
-      `<circle class="was" cx="26" cy="26" r="23.5" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="${offset(a)}"/>`,
-      `<circle class="now" cx="26" cy="26" r="18.5" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="${offset(b)}" style="--from:${offset(a)}"/></svg>`,
-      `<p class="big"><b>${esc(x)}</b> <span>${esc(word)}</span></p></div>`,
+      `      <figure class="m">`,
       `<figcaption>${esc(m.title)}</figcaption>`,
-      `<p class="d">${esc(c.charted[0].name)} ${esc(a.text)} → ${esc(c.charted[1].name)} <b>${esc(b.text)}</b></p>`,
+      `<p class="big"><b>${esc(x)}</b> ${esc(word)}</p>`,
+      `<div class="pair">${bar(c.charted[0], a, "")}${bar(c.charted[1], b, ' class="new"')}</div>`,
       `</figure>`,
     ].join("");
   });

@@ -101,24 +101,26 @@ the table differ: no figure is typed on the page.
 |---|---|
 | 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
 | 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured |
-| Key | Two ring swatches: 1.1, the outer ring; 2.0, the inner ring |
-| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: two rings, the multiple inside them ("14×" over "less"), the name, then "1.1 96 MB → 2.0 7 MB". Two to a row, four from 1000 px. |
+| Caption | "Each bar starts at zero; shorter is lighter." |
+| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×" then "less"), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px, four from 1000 px. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, and "How it is measured" |
 
-- The rings echo the pill's: the larger of the two figures is a full ring, the other its share.
-  1.1's ring is Line, 2.0's Violet, on Box tracks, with round ends.
+- The multiple is the headline and the bars are its proof: linear, from zero, each a share of
+  the larger figure, so a 14× gap shows as a sliver beside a full bar. 1.1's bar is Line,
+  2.0's Violet. Each card is a diagram box: Box fill, 1.5 px Line border, 8 px corners.
 - Until 2.0.0 has a row, only the two paragraphs and the 1.1 button show: one release has
   nothing to be set against.
 - A row is measured from the file attached to the release, so a row means a download. 1.0 was
   released before this repository was public and has no button.
-- Pointing at a card, or tapping it, drains the inner ring from 1.1's level to 2.0's in 0.9 s
+- Pointing at a card, or tapping it, shrinks 2.0's bar from 1.1's length to its own in 0.9 s
   on the page's easing. It is the one motion on hover, and none plays for reduced motion.
 
 | Thing | Size |
 |---|---|
-| Rings | 132 px; radii 23.5 and 18.5 in a 52-unit square, stroke 3.5 |
-| Multiple | Unbounded 700, 28 px, the word under it 12.5 px Soft |
-| Card name | Inter 600, 14.5 px; figures 13 px Soft, 2.0's Inter 600 Ink |
+| Card | 14 px padding above, 16 px at the sides and below; 12 px between cards |
+| Multiple | Unbounded 700, 32 px, Ink; its word 15 px Soft |
+| Bars | 10 px tall, square at zero, 4 px corners at the tip; release label Sora 600 13 px |
+| Figures | 13 px, tabular, 8 px after the bar; 2.0's Inter 600 Ink, 1.1's Soft |
 
 ### The words
 
@@ -144,10 +146,10 @@ The page:
 | Ground | `#ebe6ff` | The page, a light lavender |
 | Ink | `#1d1447` | Text, the answer dot, the scale's marker |
 | Soft | `#4d457c` | Smaller text: meta line, notes, key, addresses, footer |
-| Violet | `#6f4df6` | 2.0's ring in the comparison, Download's fill, Manual's border, the two rules, the step circles, the request dot, the pulse |
+| Violet | `#6f4df6` | 2.0's bars in the comparison, Download's fill, Manual's border, the two rules, the step circles, the request dot, the pulse |
 | Violet text | `#5a3dd1` | Manual's label, step numbers, footer links |
 | On violet | `#ffffff` | Download's label and GitHub's mark |
-| Line | `#b9adf5` | Wires, box borders, the line joining the steps, 1.1's ring in the comparison |
+| Line | `#b9adf5` | Wires, box borders, the line joining the steps, the comparison's card borders and 1.1's bars |
 | Box | `#f6f3ff` | The fill of the diagram's boxes |
 
 Violet is an accent. It never fills an area larger than the Download button.
@@ -201,7 +203,7 @@ All four faces are openly licensed, served from the site, Latin range only.
 
 The diagram plays one loop of 5 seconds. It stands for the app's real 5 minutes. Nothing else
 on the page moves: no entrances, nothing on scroll, nothing on hover. The comparison's
-inner ring drains once when a card is pointed at or tapped.
+2.0 bar shrinks once when a card is pointed at or tapped.
 
 | Motion | Trigger | Length | Tells the reader |
 |---|---|---|---|
