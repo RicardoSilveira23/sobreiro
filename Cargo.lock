@@ -4269,6 +4269,7 @@ dependencies = [
  "slint",
  "slint-build",
  "sobreiro-core",
+ "windows",
 ]
 
 [[package]]
