@@ -1,0 +1,9 @@
+{
+  "style": "bars",
+  "bar_colour": "purple",
+  "show": "trayandpill",
+  "pace": "everyday",
+  "future_theme": "dusk",
+  "future_list": [1,  2.50, null],
+  "future_nested": {"a": {"b": true}, "c": "x"}
+}
