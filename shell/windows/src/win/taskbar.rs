@@ -23,13 +23,13 @@ use windows::Win32::UI::HiDpi::{
 };
 use windows::Win32::UI::Shell::SHQueryUserNotificationState;
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, EVENT_OBJECT_LOCATIONCHANGE,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, ENDSESSION_LOGOFF, EVENT_OBJECT_LOCATIONCHANGE,
     EVENT_SYSTEM_FOREGROUND, FindWindowExW, FindWindowW, GW_HWNDPREV, GetWindow, GetWindowRect,
     GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, RegisterClassW,
     RegisterWindowMessageW, SM_CXSMICON, SW_HIDE, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE,
     SWP_NOZORDER, SWP_SHOWWINDOW, SetWindowPos, ShowWindow, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
-    WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WM_SETTINGCHANGE, WM_TIMECHANGE, WNDCLASSW,
-    WS_EX_TOOLWINDOW,
+    WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WM_QUERYENDSESSION, WM_SETTINGCHANGE, WM_TIMECHANGE,
+    WNDCLASSW, WS_EX_TOOLWINDOW,
 };
 use windows::core::{PCWSTR, w};
 
@@ -58,6 +58,9 @@ pub enum Broadcast {
 pub type WinEventHandler = fn(WinEvent);
 pub type BroadcastHandler = fn(Broadcast);
 pub type TrayHandler = fn(TrayEvent);
+/// Told that Windows asks to end the session: true for a sign-out, false for a shutdown, a
+/// restart or an installer.
+pub type SessionEndHandler = fn(bool);
 
 const MESSAGE_CLASS: PCWSTR = w!("SobreiroPillMessages");
 
@@ -65,8 +68,14 @@ thread_local! {
     static WIN_EVENT_HANDLER: Cell<Option<WinEventHandler>> = const { Cell::new(None) };
     static BROADCAST_HANDLER: Cell<Option<BroadcastHandler>> = const { Cell::new(None) };
     static TRAY_HANDLER: Cell<Option<TrayHandler>> = const { Cell::new(None) };
+    static SESSION_END_HANDLER: Cell<Option<SessionEndHandler>> = const { Cell::new(None) };
     /// The number of the "TaskbarCreated" message, 0 until it is registered.
     static TASKBAR_CREATED: Cell<u32> = const { Cell::new(0) };
+}
+
+/// Sets what is told, on this thread, when Windows asks to end the session.
+pub fn on_session_ending(handler: SessionEndHandler) {
+    let _ = SESSION_END_HANDLER.try_with(|cell| cell.set(Some(handler)));
 }
 
 fn hwnd(handle: isize) -> HWND {
@@ -336,6 +345,13 @@ unsafe extern "system" fn message_procedure(
             handler(notify_icon::decode(wparam.0, lparam.0));
         }
         return LRESULT(0);
+    }
+    if message == WM_QUERYENDSESSION {
+        // The handler quits the app; the end itself is let go on: TRUE.
+        if let Some(handler) = SESSION_END_HANDLER.try_with(Cell::get).ok().flatten() {
+            handler(lparam.0 as u32 & ENDSESSION_LOGOFF != 0);
+        }
+        return LRESULT(1);
     }
     let created = TASKBAR_CREATED.try_with(Cell::get).unwrap_or(0);
     let broadcast = if message == WM_DISPLAYCHANGE {
