@@ -1,0 +1,47 @@
+// The pill's tooltip: a small box of plain text in a window of its own, over the taskbar. It looks
+// as 1.1's does, which is WPF's own tooltip and does not follow the theme: the system's tooltip
+// colours, a thin grey edge, Segoe UI at 12 DIPs, 5 DIPs in from the edge and 3 down. The Rust
+// side (src/tooltip_window.rs) reads the system's colours and hands them in.
+// The figures are in DIPs: the toolkit scales them to the window's monitor.
+global Metrics {
+    out property <length> font-size: 12px;
+    out property <length> pad-x: 5px;
+    out property <length> pad-y: 3px;
+    out property <length> edge: 1px;
+}
+
+export component Tooltip inherits Window {
+    in property <string> text;
+    in property <color> ground;
+    in property <color> ink;
+    in property <color> edge-colour;
+    // The size the tooltip wants, for the window that holds it.
+    out property <length> tip-width: label.preferred-width + 2 * (Metrics.pad-x + Metrics.edge);
+    out property <length> tip-height: label.preferred-height + 2 * (Metrics.pad-y + Metrics.edge);
+    width: root.tip-width;
+    height: root.tip-height;
+    no-frame: true;
+    background: root.ground;
+    title: "Sobreiro tooltip";
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+        border-width: Metrics.edge;
+        border-color: root.edge-colour;
+    }
+
+    label := Text {
+        x: Metrics.pad-x + Metrics.edge;
+        y: Metrics.pad-y + Metrics.edge;
+        text: root.text;
+        font-family: "Segoe UI";
+        font-size: Metrics.font-size;
+        color: root.ink;
+        wrap: no-wrap;
+        // The pill carries the name for a screen reader; the tooltip is the same words.
+        accessible-role: none;
+    }
+}

@@ -41,6 +41,7 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 # sign-in is read from Credential Manager.
 windows = { version = "0.62", features = [
     "Win32_Foundation",
+    "Win32_Globalization",
     "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_Security_Credentials",

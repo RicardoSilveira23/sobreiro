@@ -289,6 +289,11 @@ impl MessageWindow {
         .ok()?;
         Some(MessageWindow(window.0 as isize, PhantomData))
     }
+
+    /// The window's handle, for what needs a hidden window of ours (the pill's menu).
+    pub fn handle(&self) -> isize {
+        self.0
+    }
 }
 
 impl Drop for MessageWindow {
@@ -364,6 +369,23 @@ pub fn move_to(window: isize, x: i32, y: i32) {
             0,
             0,
             SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        )
+    };
+}
+
+/// Moves a window to (x, y) without showing it, activating it or changing the z-order. A window
+/// that moves to another monitor is told that monitor's scale, shown or not.
+pub fn move_hidden(window: isize, x: i32, y: i32) {
+    // SAFETY: changes a window of this process; any handle is allowed and a bad one fails.
+    let _ = unsafe {
+        SetWindowPos(
+            hwnd(window),
+            None,
+            x,
+            y,
+            0,
+            0,
+            SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOACTIVATE,
         )
     };
 }

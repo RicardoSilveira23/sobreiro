@@ -1,7 +1,10 @@
 //! `Sobreiro.exe --born <owner>` shows a small window that is born owned by the given window and
-//! never activated. This test runs it for three seconds beside a window of its own that holds the
-//! focus, and looks at the window from outside: its owner from the first look, its extended style,
-//! and that neither it nor its thread ever takes the foreground, the focus or the active state.
+//! never activated, for the pill, and makes the pill's tooltip window the way the shell does, then
+//! shows it and hides it three times. This test runs it for a few seconds beside a window of its own
+//! that holds the focus, and looks at both windows from outside: their owner from the first look,
+//! their extended style, that neither they nor their thread ever takes the foreground, the focus or
+//! the active state, that the tooltip is shown and hidden when the exe says so, and that after its
+//! three turns the pill's stand-in still has its owner and the owner has not been raised.
 // The test calls Windows to make and look at windows, and fails by panicking.
 #![allow(unsafe_code, clippy::unwrap_used, clippy::expect_used)]
 
@@ -18,7 +21,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DestroyWindow, DispatchMessageW, GUITHREADINFO, GW_OWNER, GWL_EXSTYLE,
     GetForegroundWindow, GetGUIThreadInfo, GetWindow, GetWindowLongPtrW, GetWindowThreadProcessId,
     IsWindowVisible, MSG, PM_REMOVE, PeekMessageW, SetForegroundWindow, TranslateMessage,
-    WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_POPUP, WS_VISIBLE,
+    WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP, WS_VISIBLE,
 };
 use windows::core::w;
 
@@ -132,7 +135,9 @@ struct Setting {
     holds_foreground: bool,
 }
 
-fn look(born: HWND, setting: &Setting, looks: u32) {
+/// Whether the window must be shown at a look: when the exe has said so, or has said it is hiding.
+/// Nothing is asserted while it is between the two.
+fn look(born: HWND, setting: &Setting, looks: u32, visible: Option<bool>) {
     let Setting {
         mine,
         stand_in,
@@ -140,7 +145,14 @@ fn look(born: HWND, setting: &Setting, looks: u32) {
     } = *setting;
     // SAFETY: reads from windows and a thread that are alive.
     unsafe {
-        assert!(IsWindowVisible(born).as_bool(), "the window is not shown");
+        if let Some(visible) = visible {
+            assert_eq!(
+                IsWindowVisible(born).as_bool(),
+                visible,
+                "look {looks}: the window is {}",
+                if visible { "not shown" } else { "shown" }
+            );
+        }
         assert_eq!(
             GetWindow(born, GW_OWNER).ok(),
             Some(stand_in),
@@ -180,7 +192,8 @@ fn look(born: HWND, setting: &Setting, looks: u32) {
 }
 
 /// The exe makes two windows, one after the other, and both are alive together; each is looked at
-/// the same way from the moment its handle is printed.
+/// the same way from the moment its handle is printed. The second is the tooltip's: the exe hides
+/// it when it is taken, then shows and hides it three times, and tells the test as it goes.
 #[test]
 fn the_windows_are_owned_and_never_activated() {
     let mine = make_window(true, 100);
@@ -212,18 +225,46 @@ fn the_windows_are_owned_and_never_activated() {
     );
     let receive = lines(&mut child.0);
     let first = next_handle(&receive);
-    look(first, &setting, 0);
+    look(first, &setting, 0, Some(true));
     let second = next_handle(&receive);
     assert_ne!(first, second, "the same window twice");
 
+    // The tooltip's window is hidden until its first turn; then what the exe last said holds. A
+    // line comes a moment after what it tells of, and the next turn is 300 ms away, so a state is
+    // held to for 200 ms after the line that says it was read, and not asserted after that.
+    let mut tooltip_visible = Some(false);
+    let mut said_at = Instant::now();
+    let (mut shown, mut hidden) = (0, 0);
     let mut looks = 0;
     pump(Duration::from_millis(2500), || {
+        while let Ok(line) = receive.try_recv() {
+            said_at = Instant::now();
+            match line.as_str() {
+                "showing" | "hiding" => tooltip_visible = None,
+                "shown" => {
+                    shown += 1;
+                    tooltip_visible = Some(true);
+                }
+                "hidden" => {
+                    hidden += 1;
+                    tooltip_visible = Some(false);
+                }
+                other => panic!("an unexpected line from the exe: {other}"),
+            }
+        }
+        let expected = tooltip_visible.filter(|_| said_at.elapsed() < Duration::from_millis(200));
         looks += 1;
-        look(first, &setting, looks);
-        look(second, &setting, looks);
+        look(first, &setting, looks, Some(true));
+        look(second, &setting, looks, expected);
         false
     });
     assert!(looks > 50, "too few looks: {looks}");
+    assert_eq!((shown, hidden), (3, 3), "the tooltip's three turns");
+    // After the three turns the stand-in for the pill still has its owner (looked at above, at
+    // every look), and the owner was not raised along with the tooltip: it is no topmost window.
+    // SAFETY: reads from a window that is alive.
+    let owner_style = unsafe { GetWindowLongPtrW(stand_in, GWL_EXSTYLE) } as u32;
+    assert_eq!(owner_style & WS_EX_TOPMOST.0, 0, "the owner was raised");
 
     // The exe's windows are owned by a window of this thread, so it keeps pumping while it waits.
     let mut status = None;

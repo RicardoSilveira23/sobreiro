@@ -294,10 +294,48 @@ export component Pill inherits Window {
     background: transparent;
     title: "Sobreiro";
 
+    // The tooltip's text, which is also the pill's name for a screen reader.
+    in property <string> name;
+    // The pointer came onto the pill or left it.
+    callback hover-changed(bool);
+    // A button went down on the pill, for any button.
+    callback pressed();
+    callback left-clicked();
+    callback right-clicked();
+
     face := PillFace {
         x: 0px;
         y: 0px;
         data: root.data;
+    }
+
+    // Over the face, taking the pointer for the whole window.
+    touch := TouchArea {
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+        accessible-role: button;
+        accessible-label: root.name;
+        accessible-action-default => {
+            root.left-clicked();
+        }
+        changed has-hover => {
+            root.hover-changed(self.has-hover);
+        }
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.pressed();
+            }
+            // As 1.1: a click is the button coming up with the pointer still on the pill.
+            if event.kind == PointerEventKind.up && self.has-hover {
+                if event.button == PointerEventButton.left {
+                    root.left-clicked();
+                } else if event.button == PointerEventButton.right {
+                    root.right-clicked();
+                }
+            }
+        }
     }
 }
 
