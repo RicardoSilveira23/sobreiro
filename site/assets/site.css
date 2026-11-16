@@ -2,6 +2,8 @@
 :root {
   --bg: #ebe6ff; --ink: #1d1447; --soft: #4d457c; --v: #6f4df6; --vt: #5a3dd1; --on: #ffffff;
   --line: #b9adf5; --box: #f6f3ff;
+  /* 2.0, the Rust release: its mark in the comparison, and nothing else */
+  --rust: #b7410e;
   /* The pill, as the app draws it on a dark taskbar */
   --tb: #1c1c1c; --dim: #9a9a9a; --purple: #a594ff; --amber: #ffb020; --red: #ff6b6b;
   --gl: max(16px, env(safe-area-inset-left, 0px)); --gr: max(16px, env(safe-area-inset-right, 0px));
@@ -112,6 +114,10 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .cmp h2 { margin-bottom: 0; }
 .cmp .lead { font-size: 14.5px; color: var(--soft); max-width: 62ch; }
 .tell { display: grid; gap: 16px; align-content: start; }
+.r20 { display: flex; gap: 12px; align-items: start; }
+.rmark { flex: none; width: 36px; height: 36px; margin-top: 2px; color: var(--on); }
+.rmark .tile { fill: var(--rust); }
+.rmark .trunk { transform-box: view-box; transform-origin: 32px 32px; }
 .key2 { font-size: 13px; color: var(--soft); }
 .charts { display: grid; gap: 12px; }
 .m { display: grid; gap: 6px; align-content: start; padding: 14px 16px 16px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); }
@@ -165,6 +171,10 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
   @keyframes ask { 0% { --p: 0; opacity: 0; background: var(--v); } 4% { --p: 0; opacity: 1; background: var(--v); } 24% { --p: 1; opacity: 1; background: var(--v); } 30% { --p: 1; background: var(--ink); } 52% { --p: 0; opacity: 1; background: var(--ink); } 56%, 100% { --p: 0; opacity: 0; background: var(--ink); } }
   @keyframes land { 0%, 54% { --p: 1; opacity: 0; background: var(--ink); } 58% { --p: 1; opacity: 1; background: var(--ink); } 78% { --p: 0; opacity: 1; background: var(--ink); } 84%, 100% { --p: 0; opacity: 0; background: var(--ink); } }
   .pair .new i { animation: shrink 5s linear infinite; }
+  .rmark .tile { animation: rust 5s linear infinite; }
+  .rmark .trunk { animation: turn 5s linear infinite; }
+  @keyframes rust { 0%, 8% { fill: var(--v); } 26%, 92% { fill: var(--rust); } 100% { fill: var(--v); } }
+  @keyframes turn { 0%, 8% { transform: rotate(0deg); animation-timing-function: var(--ease); } 26%, 100% { transform: rotate(360deg); } }
   @keyframes shrink {
     0% { width: calc((100% - 104px) * var(--from)); opacity: 0; }
     8% { width: calc((100% - 104px) * var(--from)); opacity: 1; animation-timing-function: var(--ease); }

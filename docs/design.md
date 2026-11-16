@@ -100,7 +100,7 @@ the table differ: no figure is typed on the page.
 | Part | Holds |
 |---|---|
 | 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
-| 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured |
+| 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured, led by the mark (36 px) in Rust |
 | Caption | "Each bar starts at zero; shorter is lighter." |
 | Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the downloads level with the cards' foot. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, sharing the row's width equally; "How it is measured" on its own line under them |
@@ -154,6 +154,7 @@ The page:
 | On violet | `#ffffff` | Download's label and GitHub's mark |
 | Line | `#b9adf5` | Wires, box borders, the line joining the steps, the comparison's card borders and 1.1's bars |
 | Box | `#f6f3ff` | The fill of the diagram's boxes |
+| Rust | `#b7410e` | The 2.0 mark's tile in the comparison, and nothing else |
 
 Violet is an accent. It never fills an area larger than the Download button.
 
@@ -217,6 +218,7 @@ on the page moves: no entrances, nothing on scroll, nothing on hover. The compar
 | Figures count | The answer dot lands | 0.8 s | The same reading, as a number |
 | Marker on the scale | The answer dot lands | 0.9 s | Where the session stands against 70% and 90%, so the colour change has a reason |
 | 2.0's bars | The loop starts | Fade in 0.4 s at 1.1's length, shrink 0.9 s from 0.4 s, fade out from 4.6 s | How much lighter 2.0 is than 1.1, figure by figure |
+| 2.0's mark | With the bars' shrink | 0.9 s, back to Violet in the fade | The trunk turns once as the tile goes from Violet to Rust: this release is the Rust one |
 | 2.0's figures and the multiples | With the bars' shrink | 0.9 s | The figure counts from 1.1's down to 2.0's, and the multiple up from 1.0×: always 1.1's figure over the one shown |
 | Pulse | The answer dot lands | 0.6 s | A new reading has just arrived. A violet outline grows 12 px from the pill and fades from 55% to nothing. |
 
@@ -314,6 +316,7 @@ the switches stay hidden.
 | With no script the dots still travel and the pill stays at its first reading | The style stays |
 | The manual is rewritten in this look, and the README updated to match, in the same change | |
 | A public repository names no other repository | |
+| Violet stays the brand; Rust marks only the 2.0 release, on its line in the comparison | A rust brand would sit beside the pill's amber and red and read as a warning; the mark, favicon, share picture and app icon stay violet |
 On the drawn pill: the rule for this project's pictures was that only the app draws them. Drawing the
 pill on this page is the exception, for this page's diagram. The rule holds everywhere else.
 

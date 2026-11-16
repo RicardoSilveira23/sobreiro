@@ -135,12 +135,25 @@ function stepWords(c) {
 }
 const rustWords = (c) =>
   c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 here." : "2.0, rewritten in Rust, is set against 1.1 here once it is released.";
+// The mark, inline so its tile and trunk can move: from the site's own file, its colours swapped
+// for classes (site.css) so the page holds no colour of its own.
+export function rustMark(svgText) {
+  const inner = svgText
+    .replace(/^[\s\S]*?<svg[^>]*>/, "")
+    .replace(/<\/svg>\s*$/, "")
+    .replace(/<rect([^>]*?) fill="#[0-9a-fA-F]+"\/>/, '<rect class="tile"$1/>')
+    .replace(/(fill|stroke)="#fff(?:fff)?"/gi, '$1="currentColor"');
+  const tile = inner.match(/^<rect class="tile"[^>]*\/>/);
+  if (!tile) throw new Error("the mark has no tile to colour");
+  return `<svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">${tile[0]}<g class="trunk">${inner.slice(tile[0].length)}</g></svg>`;
+}
+
 const MEASURED = "Measured the same way on one PC, after 10 minutes left alone.";
 const KEY = "Each bar starts at zero; shorter is lighter.";
 // A multiple cut for the card: the number large, its word after it.
 const cut = (t) => (t === "about the same" ? ["≈", "about the same"] : t.split(" "));
 
-export function pageSection(c) {
+export function pageSection(c, mark = readFileSync(join(root, "site/assets/img/sobreiro-mark.svg"), "utf8")) {
   const charts = c.metrics.map((m) => {
     const [a, b] = m.figures;
     const [x, word] = cut(m.multiple);
@@ -165,7 +178,9 @@ export function pageSection(c) {
     `    <div class="tell">`,
     `    <h2 id="cmp">How heavy each release is</h2>`,
     ...(c.step ? [`    <p class="lead">${esc(stepWords(c))}</p>`] : []),
-    `    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`,
+    c.charted.length
+      ? `    <p class="lead r20">${rustMark(mark)}<span>${esc(rustWords(c))} ${MEASURED}</span></p>`
+      : `    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`,
     ...(charts.length ? [`    <p class="key2">${KEY}</p>`] : []),
     `    </div>`,
     ...(charts.length ? [`    <div class="charts">`, ...charts, `    </div>`] : []),

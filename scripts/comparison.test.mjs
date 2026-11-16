@@ -113,3 +113,12 @@ test("the README says the same, and shows the picture and table once 2.0 has a r
   assert.match(r, /^\| Sobreiro\.exe \| 168\.9 MB \| 9\.3 MB, 18× smaller \|$/m);
   assert.match(r, /2\.0 rewrites the shell in Rust, and is set against 1\.1 here\./);
 });
+
+test("2.0's line carries the mark, inline, in classes only; without 2.0 there is none", () => {
+  assert.doesNotMatch(pageSection(comparison(without20)), /rmark/);
+  const html = pageSection(comparison(with20));
+  const svg = html.match(/<p class="lead r20"><svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">(.*?)<\/svg><span>2\.0 rewrites/)?.[1];
+  assert.ok(svg, "the mark leads 2.0's line");
+  assert.match(svg, /^<rect class="tile" width="64" height="64" rx="14"\/><g class="trunk">/);
+  assert.doesNotMatch(svg, /#[0-9a-f]{3,8}\b/i, "no colour in the markup");
+});
