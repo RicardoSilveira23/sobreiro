@@ -366,6 +366,53 @@ fn the_badge_text_and_the_resets_in_text_share_a_baseline() {
     }
 }
 
+/// The first and the last column (in pixels) of the rectangle (in pixels) with a pixel that is not
+/// `ground` by more than 40 on a channel.
+fn ink_columns(
+    card: &Picture,
+    x: (usize, usize),
+    y: (usize, usize),
+    ground: Rgb,
+) -> (usize, usize) {
+    let inked: Vec<usize> = (x.0..x.1.min(card.width))
+        .filter(|&column| card.differs((column, column + 1), y, ground, 40))
+        .collect();
+    (*inked.first().unwrap(), *inked.last().unwrap())
+}
+
+#[test]
+fn the_figures_and_the_resets_in_text_are_where_1_1_puts_them() {
+    // The tabular copies of the fonts put the digits' left edges within a pixel of 1.1's, where the
+    // proportional ones were up to four off. 1.1's still of the same state, dark, at 100%.
+    let still = decode(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../media/stills/details/both-bars-dark@1x.png"),
+    );
+    let card = picture("both", "dark", "purple", "1");
+    assert_eq!((card.width, card.height), (still.width, still.height));
+    let ground = NightPalette::for_dark(true).ground;
+    // The figures' lines, with the meter's tick below them left out, and the first row's
+    // resets-in line, right of its badge.
+    for (label, rows) in [
+        ("session", (64, 92)),
+        ("weekly", (158, 186)),
+        ("copilot", (298, 326)),
+    ] {
+        let ours = ink_columns(&card, (195, 276), rows, ground).0;
+        let theirs = ink_columns(&still, (195, 276), rows, ground).0;
+        assert!(
+            ours.abs_diff(theirs) <= 1,
+            "the {label} figure starts at {ours}, 1.1's at {theirs}"
+        );
+    }
+    let ours = ink_columns(&card, (100, 270), (114, 134), ground).1;
+    let theirs = ink_columns(&still, (100, 270), (114, 134), ground).1;
+    assert!(
+        ours.abs_diff(theirs) <= 1,
+        "the resets-in text ends at {ours}, 1.1's at {theirs}"
+    );
+}
+
 #[test]
 fn a_far_ends_badge_puts_the_resets_in_text_on_a_second_line() {
     for (theme, dark) in THEMES {

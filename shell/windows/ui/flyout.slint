@@ -5,6 +5,11 @@
 import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
 import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
 import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+// Copies with tabular digits as their default, for the figure, the badge, the resets-in line and
+// the detail line (shell/windows/fonts/README.md).
+import "../fonts/InterTabular-Regular.ttf";
+import "../fonts/InterTabular-Medium.ttf";
+import "../fonts/UnboundedTabular-Bold.ttf";
 import { BatteryGlyph, ThermometerGlyph } from "flyout-glyphs.slint";
 
 // One limit: the label and figure, the meter, the badge and the words under it. An empty string
@@ -165,7 +170,7 @@ component BarRow inherits Rectangle {
 
     Placed {
         text: root.bar.figure;
-        font-family: "Unbounded";
+        font-family: "Unbounded Tabular";
         font-weight: 700;
         font-size: 22px;
         color: root.colours.ink;
@@ -206,7 +211,7 @@ component BarRow inherits Rectangle {
 
         badge-text := Placed {
             text: root.bar.badge;
-            font-family: "Inter";
+            font-family: "Inter Tabular";
             font-weight: 500;
             font-size: 13px;
             color: root.bar.badge-ink;
@@ -217,7 +222,7 @@ component BarRow inherits Rectangle {
 
     resets-text := Placed {
         text: root.bar.resets;
-        font-family: "Inter";
+        font-family: "Inter Tabular";
         font-size: 14px;
         color: root.colours.soft;
         x: root.wrapped ? 0px : (root.has-badge ? root.badge-width + M.badge-gap : 0px);
@@ -226,6 +231,7 @@ component BarRow inherits Rectangle {
 
     detail-text := Block {
         text: root.bar.detail;
+        font-family: "Inter Tabular";
         color: root.colours.soft;
         baseline: root.detail-top + 15px;
     }
@@ -312,7 +318,7 @@ component GlyphColumn inherits Rectangle {
 
     fig := Placed {
         text: root.bar.left-figure;
-        font-family: "Unbounded";
+        font-family: "Unbounded Tabular";
         font-weight: 700;
         font-size: 22px;
         color: root.colours.ink;
@@ -352,7 +358,7 @@ component GlyphColumn inherits Rectangle {
 
         badge-text := Placed {
             text: root.bar.badge;
-            font-family: "Inter";
+            font-family: "Inter Tabular";
             font-weight: 500;
             font-size: 13px;
             color: root.bar.badge-ink;
@@ -363,7 +369,7 @@ component GlyphColumn inherits Rectangle {
 
     Placed {
         text: root.bar.resets;
-        font-family: "Inter";
+        font-family: "Inter Tabular";
         font-size: 13px;
         color: root.colours.soft;
         x: (M.column - self.width) / 2;
@@ -372,6 +378,7 @@ component GlyphColumn inherits Rectangle {
 
     detail-text := Block {
         text: root.bar.detail;
+        font-family: "Inter Tabular";
         color: root.colours.soft;
         wrap-width: M.column;
         horizontal-alignment: center;
