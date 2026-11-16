@@ -10,13 +10,17 @@ mod clock;
 mod diagnostics;
 mod flyout;
 mod icon_pictures;
+mod licences;
 mod pictures;
 mod pill_face;
 mod pill_feed;
 mod pill_host;
+mod pill_menu;
 mod providers;
 mod specimen;
 mod theme;
+mod tooltip;
+mod tooltip_window;
 mod win;
 
 use std::process::ExitCode;
@@ -29,6 +33,7 @@ mod ui {
 }
 
 fn main() -> ExitCode {
+    licences::keep();
     // Arguments are compared as they come: one that is not Unicode matches nothing.
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {

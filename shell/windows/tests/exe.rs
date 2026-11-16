@@ -121,6 +121,26 @@ fn the_fonts_are_inside_the_exe() {
 }
 
 #[test]
+fn the_notices_and_licences_are_inside_the_exe() {
+    let exe = std::fs::read(EXE).unwrap();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let files = [
+        "notices.txt",
+        "../../LICENSE",
+        "../../src/Sobreiro/Fonts/OFL-Inter.txt",
+        "../../src/Sobreiro/Fonts/OFL-Unbounded.txt",
+    ];
+    for name in files {
+        let text = std::fs::read_to_string(root.join(name)).unwrap();
+        let text = text.replace("\r\n", "\n");
+        assert!(
+            contains(&exe, text.as_bytes()),
+            "{name} is not inside the exe"
+        );
+    }
+}
+
+#[test]
 fn the_c_runtime_is_inside_the_exe() {
     let exe = std::fs::read(EXE).unwrap().to_ascii_lowercase();
     for dll in ["vcruntime", "api-ms-win-crt"] {
