@@ -1,4 +1,4 @@
-// The releases compared (docs/design.md, "How heavy each release is"). Each loop of 2.0's bar
+// The releases compared (docs/design.md, "Why 2.0 moved to Rust"). Each loop of 2.0's bar
 // (site.css, "shrink") the figure at its tip counts down from 1.1's to 2.0's while the bar
 // shrinks, and the multiple counts up with it: it is always 1.1's figure over the one shown.
 // Without script, or with reduced motion (no animation runs), the final figures stand.

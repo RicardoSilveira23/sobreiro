@@ -54,7 +54,7 @@ One page, light only. Content is at most 1152 px wide with 16 px at each side.
 | 3 | Diagram | The pill with its key and colour scale, Sobreiro.exe, the two addresses |
 | 4 | What it sends | Three lines, each with its dot |
 | 5 | Before you install | One short paragraph |
-| 6 | How heavy each release is | One line, a bar chart per figure, a download per release |
+| 6 | Why 2.0 moved to Rust | The mark and the heading, two short paragraphs, a card per figure, a download per release |
 | 7 | Footer | Two links, the name line and the disclaimer |
 
 24 px between parts.
@@ -65,7 +65,7 @@ One page, light only. Content is at most 1152 px wide with 16 px at each side.
 Header ............................................
 Words                    |  Diagram
 Before you install       |  What it sends
-How heavy each release is, across both columns ...
+Why 2.0 moved to Rust, across both columns .........
 Footer ............................................
 ```
 
@@ -91,7 +91,7 @@ Footer ............................................
 The scale is hidden from screen readers. They get one line instead: "A ring is purple below
 70%, amber from 70% and red from 90%."
 
-### How heavy each release is
+### Why 2.0 moved to Rust
 
 What the releases bought, so the download is chosen on numbers. `scripts/comparison.mjs` writes
 the section from the Releases table in `docs/baseline.md`, and a test fails when the page and
@@ -99,8 +99,9 @@ the table differ: no figure is typed on the page.
 
 | Part | Holds |
 |---|---|
-| 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
-| Why 2.0 moved to Rust | A heading led by the mark (36 px) in Rust, then one short paragraph: WPF held most of 1.1's memory, three other shells were measured, the Rust one rested lowest. No figures in it. |
+| Heading | The section's one heading, led by the mark (36 px) in Rust: "Why 2.0 moved to Rust", or "moves" until 2.0.0 has a row |
+| 1.0 to 1.1 | What 1.1 changed (idle), with the CPU figures and the start's cost, and that most of its memory still went to WPF |
+| Why Rust | Three other shells were measured; the Rust one rested lowest and ships as one small file. No figures in it. |
 | Caption | "Each bar starts at zero; shorter is lighter." |
 | Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the cards top-aligned with the heading. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, sharing the row's width equally; "How it is measured" on its own line under them |
@@ -134,7 +135,7 @@ the table differ: no figure is typed on the page.
 | Meta line | Free, for Windows 11. Needs GitHub Copilot with AI credits, or Claude Code on Pro, Max or Ultra. |
 | Run it | 1 Download Sobreiro.exe, one file. 2 Open it. Then, beside the mark: The pill appears beside the clock. |
 | What it sends | Two requests, with a sign-in already on this PC. The numbers come back and go to the taskbar. Nothing else leaves: no telemetry, no update checks, no token stored, logged or renewed. |
-| How heavy each release is | Generated from `docs/baseline.md`: what 1.1 changed, then 2.0 against 1.1. Buttons: Download 2.0, Download 1.1. |
+| Why 2.0 moved to Rust | Generated from `docs/baseline.md`: what 1.1 left, why Rust, then 2.0 against 1.1. Buttons: Download 2.0, Download 1.1. |
 | Before you install | Both addresses are undocumented and can change, and Anthropic's terms don't allow third-party apps to use Claude sign-ins. Windows may warn about an unknown publisher until the app is signed. |
 | Footer | Open an issue. By Ricardo Silveira. Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings. Not affiliated with or endorsed by Anthropic or GitHub. |
 

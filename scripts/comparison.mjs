@@ -133,8 +133,6 @@ function stepWords(c) {
     ` ${multiple(cpu1.value, cpu0.value, CPU)}${start}.`
   );
 }
-const rustWords = (c) =>
-  c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 here." : "2.0, rewritten in Rust, is set against 1.1 here once it is released.";
 // The mark, inline so its tile and trunk can move: from the site's own file, its colours swapped
 // for classes (site.css) so the page holds no colour of its own.
 export function rustMark(svgText) {
@@ -149,14 +147,16 @@ export function rustMark(svgText) {
 }
 
 // Why 2.0 is in Rust, from docs/roadmap.md, "The decision". No figures: the cards carry them.
-const WHY_TITLE = "Why 2.0 moved to Rust";
+const whyTitle = (c) => (c.charted.length ? "Why 2.0 moved to Rust" : "Why 2.0 moves to Rust");
+const STILL = "Most of its memory still went to WPF, the toolkit it is drawn with.";
 const WHY =
-  "1.1 had cut the idle work, but most of its memory went to WPF, the toolkit it is drawn with." +
-  " Three other shells were built and measured the same way. The one in Rust rested lowest and" +
+  "Three other shells were built and measured the same way. The one in Rust rested lowest and" +
   " ships as one small file, so 2.0 rewrites the shell and its logic in Rust.";
 const AGAINST = "The cards set it against 1.1, on one PC after 10 minutes left alone.";
+const COMING = "Its figures join here when it is released.";
+// The section's words: what 1.1 left, then why Rust.
+const whyWords = (c) => [c.step ? `${stepWords(c)} ${STILL}` : null, `${WHY} ${c.charted.length ? AGAINST : COMING}`].filter(Boolean);
 
-const MEASURED = "Measured the same way on one PC, after 10 minutes left alone.";
 const KEY = "Each bar starts at zero; shorter is lighter.";
 // A multiple cut for the card: the number large, its word after it.
 const cut = (t) => (t === "about the same" ? ["≈", "about the same"] : t.split(" "));
@@ -184,11 +184,8 @@ export function pageSection(c, mark = readFileSync(join(root, "site/assets/img/s
     OPEN,
     `  <section class="cmp" aria-labelledby="cmp">`,
     `    <div class="tell">`,
-    `    <h2 id="cmp">How heavy each release is</h2>`,
-    ...(c.step ? [`    <p class="lead">${esc(stepWords(c))}</p>`] : []),
-    ...(c.charted.length
-      ? [`    <h3 class="r20">${rustMark(mark)}${WHY_TITLE}</h3>`, `    <p class="lead">${esc(WHY)} ${esc(AGAINST)}</p>`]
-      : [`    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`]),
+    `    <h2 id="cmp" class="r20">${rustMark(mark)}${esc(whyTitle(c))}</h2>`,
+    ...whyWords(c).map((w) => `    <p class="lead">${esc(w)}</p>`),
     ...(charts.length ? [`    <p class="key2">${KEY}</p>`] : []),
     `    </div>`,
     ...(charts.length ? [`    <div class="charts">`, ...charts, `    </div>`] : []),
@@ -239,11 +236,9 @@ export function readmeBlock(c) {
     : [];
   return [
     OPEN,
-    "## How heavy each release is",
+    `## ${whyTitle(c)}`,
     "",
-    ...(c.charted.length
-      ? [stepWords(c), "", `### ${WHY_TITLE}`, "", `${WHY} ${AGAINST}`]
-      : [[stepWords(c), rustWords(c)].filter(Boolean).join(" ") + " " + MEASURED]),
+    whyWords(c).join("\n\n"),
     ...table,
     "",
     "Every figure, and how it is measured: [docs/baseline.md](docs/baseline.md).",

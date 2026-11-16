@@ -44,7 +44,8 @@ test("without a 2.0 row it builds: the words, no rings, no picture, no 2.0 butto
   const html = pageSection(c);
   assert.equal(cards(html).length, 0);
   assert.doesNotMatch(html, /class="charts"|Download 2\.0|v2\.0\.0/);
-  assert.match(html, /2\.0, rewritten in Rust, is set against 1\.1 here once it is released\./);
+  assert.match(html, /<h2 id="cmp" class="r20"><svg class="rmark"[^]*?<\/svg>Why 2\.0 moves to Rust<\/h2>/);
+  assert.match(html, /Its figures join here when it is released\./);
   assert.match(html, /fell from 14\.9 s to 2\.0 s, 7\.5× less, for a start 0\.07 s slower\./);
   assert.equal(svg(c), null);
   assert.match(docsBlock(c), /2\.0\.0, rewritten in Rust, is set against 1\.1 here once its release row is in\./);
@@ -111,13 +112,13 @@ test("the README says the same, and shows the picture and table once 2.0 has a r
   const r = readmeBlock(comparison(with20));
   assert.match(r, /<img src="docs\/images\/comparison\.svg" width="760" alt="Private memory: 1\.1 96 MB, 2\.0 7 MB\./);
   assert.match(r, /^\| Sobreiro\.exe \| 168\.9 MB \| 9\.3 MB, 18× smaller \|$/m);
-  assert.match(r, /^### Why 2\.0 moved to Rust$/m);
+  assert.match(r, /^## Why 2\.0 moved to Rust$/m);
 });
 
-test("2.0's line carries the mark, inline, in classes only; without 2.0 there is none", () => {
-  assert.doesNotMatch(pageSection(comparison(without20)), /rmark/);
+test("the heading carries the mark, inline, in classes only", () => {
+  assert.match(pageSection(comparison(without20)), /class="rmark"/);
   const html = pageSection(comparison(with20));
-  const svg = html.match(/<h3 class="r20"><svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">(.*?)<\/svg>Why 2\.0 moved to Rust<\/h3>/)?.[1];
+  const svg = html.match(/<h2 id="cmp" class="r20"><svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">(.*?)<\/svg>Why 2\.0 moved to Rust<\/h2>/)?.[1];
   assert.ok(svg, "the mark leads the Rust heading");
   assert.match(svg, /^<rect class="tile" width="64" height="64" rx="14"\/><g class="trunk">/);
   assert.doesNotMatch(svg, /#[0-9a-f]{3,8}\b/i, "no colour in the markup");

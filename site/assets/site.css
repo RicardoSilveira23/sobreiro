@@ -109,7 +109,7 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .key i.back { background: var(--ink); }
 .key i.none { background: none; border: 1.5px solid var(--soft); }
 
-/* How heavy each release is: one small bar chart per figure, generated from docs/baseline.md */
+/* Why 2.0 moved to Rust: the releases compared, generated from docs/baseline.md */
 .cmp { display: grid; gap: 16px; padding-top: 14px; border-top: 2px solid var(--v); }
 .cmp h2 { margin-bottom: 0; }
 .cmp .lead { font-size: 14.5px; color: var(--soft); max-width: 62ch; }
