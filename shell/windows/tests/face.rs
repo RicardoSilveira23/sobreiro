@@ -200,11 +200,10 @@ fn each_picture_is_the_size_of_1_1s_pill_at_that_scale() {
                     };
                     let picture = picture(state, theme, colour, label);
                     let name = name(state, theme, colour, label);
-                    assert!(
-                        picture.width.abs_diff(widths[at]) <= 1,
+                    assert_eq!(
+                        picture.width, widths[at],
                         "{name} is {} wide, 1.1's is {}",
-                        picture.width,
-                        widths[at]
+                        picture.width, widths[at]
                     );
                     assert_eq!(
                         picture.height, height,
