@@ -9,3 +9,4 @@ pub mod menu;
 pub mod probe;
 pub mod registry;
 pub mod taskbar;
+pub mod tray_picture;

@@ -1,0 +1,11 @@
+{
+  "chained_command": "node status.js",
+  "previous_status_line": { "type": "command", "command": "node status.js", "padding": 1 },
+  "style": "thermometer",
+  "bar_colour": "accent",
+  "show": "trayandpill",
+  "pace": "weekdays",
+  "future_theme": "dusk",
+  "future_list": [1,  2.50, null],
+  "future_nested": {"a": {"b": true}, "c": "x"}
+}

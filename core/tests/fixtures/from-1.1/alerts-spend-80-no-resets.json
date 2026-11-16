@@ -1,0 +1,6 @@
+{
+  "spend": {
+    "resets_at": null,
+    "threshold": 80
+  }
+}

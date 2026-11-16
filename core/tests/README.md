@@ -165,7 +165,8 @@ the words of the flow.
 | `BridgeLocatorTests.cs` | `core/tests/all/bridge_locator.rs` | 7 | 7 | 7 |
 | `ConnectMessageTests.cs` | `core/tests/all/connect_message.rs` | 8 | 8 | 8, and 1 new |
 | | `core/tests/all/csharp_files.rs` | | | 2 new |
-| | | 110 | 95 | 75, and 16 new |
+| | `core/tests/all/bridge_refresh.rs` | | | 9 new |
+| | | 110 | 95 | 75, and 25 new |
 
 `ClaudePathsTests.cs`, also of this folder, came with "Paths and config" above.
 
@@ -1205,6 +1206,48 @@ cannot start.
   leave half of a character, which its UTF-8 writer wrote as U+FFFD; Core writes the same.
   Also `a_pair_that_fits_exactly_is_kept_whole_before_the_cut`,
   `an_entry_of_exactly_the_cap_is_not_cut` and `an_offset_west_of_utc_is_written_with_a_minus`.
+
+## Files that 1.1.0 wrote
+
+No C# test behind these: `core/tests/all/from_1_1.rs` reads the data files that 1.1.0 wrote and
+changes them as 1.1 would, so that 2.0 and 1.1 can each open what the other left. The files are
+in `core/tests/fixtures/from-1.1/`, kept byte for byte by `core/tests/fixtures/.gitattributes`.
+Each test is named after its fixture, and `cargo test -p sobreiro-core from_1_1` runs them.
+
+The files were written by the Core of the tag `v1.1.0` itself, through a throwaway console
+program that is not committed, on made-up values. It called `AppConfig.Save` (after
+`Connection.PlanConnect` for the config left by Connect), `UsageFile.Write` (on a snapshot built
+by hand for the reads and each `before`, and after `UsageMerge.Merge` for each `after`), and
+`AlertState.Save` (after `AlertPolicy.Check` for each `after`). The readings that were merged are
+held as `NAME.reading.json`.
+
+### Rust tests with no C# test
+
+- Reads, 32 tests: each file is loaded by Core, compared with the values 1.1 reads (written out
+  in the test), and written back to the same bytes.
+  - `config_style_bars`, `config_style_battery`, `config_style_thermometer`,
+    `config_bar_colour_purple`, `config_bar_colour_accent`, `config_show_trayandpill`,
+    `config_show_trayonly`, `config_pace_everyday`, `config_pace_weekdays`: every member of each
+    setting.
+  - `config_connect_previous_status_line`, `config_connect_no_previous_status_line`: the config
+    as Connect leaves it, with a status line of the user's and with none (`null`).
+  - `config_chained_command`, `config_unknown_keys`: a chained command, and three keys 1.1 does
+    not know, written back after the known ones.
+  - `usage_windows_only`, `usage_spend_limit`: the windows alone, and a spend limit with every
+    field 1.1 writes.
+  - `alerts_{session,weekly,copilot_credits,spend}_{80,95}_{resets,no_resets}`: 16 tests, one
+    mark each, at each threshold, with and without a reset time; and `alerts_all_kinds`.
+- Pairs, 13 tests: Core loads `before`, makes the change, and writes `after` to the byte.
+  - `config_change_style`, `config_change_bar_colour`, `config_change_show`,
+    `config_change_pace`: a config holding a previous status line, a chained command and
+    unknown keys; one setting changed, every other key and value kept.
+  - `usage_status_line_window_kept`, `usage_status_line_window_replaced`,
+    `usage_status_line_spend_cap_changed`, `usage_status_line_window_dropped`: a status line
+    reading merged as the bridge does it (`NAME.reading.json` is its stdin).
+  - `usage_live_usage_window_replaced`, `usage_live_usage_window_kept`: a Live usage reading
+    merged as authoritative (`NAME.reading.json` is the reply of the usage API).
+  - `alerts_mark_raised`, `alerts_mark_new_period`, `alerts_mark_added`: the limits checked as
+    1.1 checks them, and the state it keeps saved.
 
 ## The measuring tool and the pictures, which are not ported
 

@@ -13,6 +13,7 @@
 //! Windows calls back with no data of ours, so the tracker lives in a value of the UI thread.
 //! A callback that comes while the tracker is busy (Windows can call back inside a call the
 //! tracker makes) runs a turn of the event loop later. Each step that fails is let go.
+use crate::carried_bridge;
 use crate::clock;
 use crate::diagnostics::Diagnostics;
 use crate::pill_face::face_data;
@@ -445,10 +446,10 @@ impl Host {
             credentials_file_exists: self.places.claude.credentials_file().is_file(),
         };
         let settings = self.places.claude.settings_file();
-        let bridge = self.places.app.bridge_file();
+        let bridge = carried_bridge::own(&self.places.app);
         let shown = self.feed.shown(now, &around, || {
             let text = std::fs::read_to_string(settings).unwrap_or_default();
-            connection::state(&text, Some(&bridge))
+            connection::state(&text, bridge.as_deref())
         });
         let (model, text) = match shown {
             Some(shown) => (Some(shown.model), shown.tooltip),

@@ -771,6 +771,52 @@ between them while the pill is up.
   and 200% as pictures only), the flyout at 150%, and a change of scale while the flyout or
   the tooltip is open.
 
+### B, for 2.0: the pill beside 1.1's
+
+Compared on 2026-11-16 for [#27](https://github.com/RicardoSilveira23/sobreiro/issues/27),
+picture against picture. 2.0's pill comes from `Sobreiro.exe --pill-pictures`; 1.1's from its
+own `PillView`, rendered as its `--media` stills are. Both in the same 11 states, both taskbar
+themes and both bar colours, at 100%, 150% and 200%: 132 pairs, set side by side. At 150% and
+200% 1.1 was laid out at that scale, as its per-monitor window is; the `--media` stills lay it
+out at 100% and scale the drawing. Claude's block alone gives the same bytes as the `--media`
+stills at 100% and 200%; with Copilot's block the stills' bar holds 17.6% where the pairs hold
+17%, one row of pixels apart. In short: shapes and colours match by eye; the pill is wider;
+its text is lighter; and it is a pixel or two taller at 150% and 200%.
+
+The same by eye:
+
+- The rings: size, stroke, gap, track and arc ends. At 100% and 200% they lie on the same
+  pixels; the shade of the fills' anti-aliased edges and caps differs, by up to about 75
+  levels in a few dozen pixels. At 150% the edges differ more and still match by eye.
+- The level colours, in both themes and both bar colours. The ink and the reset date are
+  within two levels of 255.
+- A stopped block: `*` after each figure and the grey fill over the track. Copilot's bar with
+  its round ends, and the reset date.
+
+What differs:
+
+- **Every pill is wider.** Each figure is right-aligned in a box as wide as the widest of
+  `00%` to `99%` ([#23](https://github.com/RicardoSilveira23/sobreiro/issues/23)), so a
+  changing figure moves nothing. The box is 2 DIPs wider than `45%`, which sets the width of
+  Claude's lines, and 6.4 wider than Copilot's `17%`; a narrower figure leaves a gap after its
+  label. With no reading the dash sits at the box's right: the pill is 103 pixels wide at
+  100%, where 1.1's is 75. Beyond the box, a block is up to 3 pixels wider at 100%, because
+  each text's width rounds up to a whole DIP. The taskbar has little room, so the box goes and
+  the pill is to be no wider than 1.1's in any state. Ticket
+  [#61](https://github.com/RicardoSilveira23/sobreiro/issues/61).
+- **The text is lighter.** The figures carry 16% less ink at 100%, 20% less at 150% and 8% less
+  at 200%; the labels 5 to 7% less at 100% and 150%. The glyphs stand in the same places, within
+  half a pixel at 100%. Ticket [#59](https://github.com/RicardoSilveira23/sobreiro/issues/59).
+- **With Claude's block, 2.0 is 57 and 76 pixels tall at 150% and 200%, where 1.1 is 56 and
+  74.** 1.1 rounds each line, 14.52 DIPs in Inter 12, to the scale's pixels; 2.0 sets 15 DIPs,
+  so its second line sits 1 to 2 pixels lower. 2.0 also centres a label and its figure apart in
+  their line, where 1.1 sets them on one baseline: under half a pixel. 1.1's `--media` still at
+  200% is 76 pixels, as 2.0's is. Ticket
+  [#46](https://github.com/RicardoSilveira23/sobreiro/issues/46).
+
+Not compared: the ground under the pointer, which is not in the picture set (the same alpha
+and corner radius in both), and 1.1 on a live display at 150% or 200%, which #46 starts with.
+
 ## Notes on each point
 
 ### Idle memory, exe size and start time

@@ -257,6 +257,13 @@ In this order:
 2. **Core, one area at a time, with its tests.** The spike's rewrite is read, not taken over.
 3. **The shell to parity:** pill, flyout, tray icons and menu, Connect, alerts, start at
    sign-in, the migration.
+   The pill's face was set beside 1.1's on 2026-11-16, in every state, theme, bar colour and
+   scale ([note](shell-comparison.md#b-for-20-the-pill-beside-11s)). Shapes and colours match
+   by eye. It is wider, which the taskbar cannot spare: the figure box goes and the pill is to
+   be no wider than 1.1's ([#61](https://github.com/RicardoSilveira23/sobreiro/issues/61)).
+   Its text is lighter ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)), and
+   it is a pixel or two taller at 150% and 200%
+   ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
 4. **The release:** its baseline row, and the comparison below.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
@@ -289,8 +296,9 @@ Settled before Core is ported.
   format, lint with warnings as errors, the tests, and the release build kept as an artifact.
 - **The release build is one exe with nothing beside it.** The three fonts and the C runtime
   are inside. The tests take the exe apart to see that, and run a copy alone in an empty
-  folder, where it draws a line of text in each font without a window. 8.8 MB as it stands,
-  with the toolkit linked in and only that specimen to draw.
+  folder, where it draws a line of text in each font without a window. The bridge, built in
+  the same build, is inside it too; the debug build looks for it beside the exe. 9.9 MB as it
+  stands, with the toolkit, the pill and the bridge inside.
 - **Versions.** The compiler is pinned in `rust-toolchain.toml` and every library in
   `Cargo.lock`, which CI does not let move. The UI toolkit is pinned to one exact version on
   top of that, because the pill leans on how that version makes a window. Every library the

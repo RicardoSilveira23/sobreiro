@@ -1,0 +1,1 @@
+{"observed_at":1790000600,"rate_limits":{"five_hour":{"used_percentage":60,"resets_at":1790010000,"observed_at":1789999900},"seven_day":{"used_percentage":30,"resets_at":1790500000,"observed_at":1790000000},"spend_limit":{"used_percentage":40,"resets_at":1792000000,"used_usd":40,"limit_usd":100,"period":"monthly","observed_at":1790000000}}}
