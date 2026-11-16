@@ -1,10 +1,12 @@
-//! The pill's data step: Claude's and Copilot's pollers, and from what they hold, the settings
-//! and the clock, the model the pill draws, or none when the user keeps the pill off.
+//! The data step: Claude's and Copilot's pollers, and from what they hold, the settings and the
+//! clock, one snapshot per redraw. The pill's model is a part of it, none when the user keeps the
+//! pill off.
 //!
 //! Nothing here starts a thread, touches a window or reads the registry, so a test drives it
 //! with Core's providers and a made-up clock. The shell runs the polls this hands out on
-//! threads of its own and hands the answers back (see `pill_host`).
+//! threads of its own and hands the answers back (see `app_host`).
 use chrono::{DateTime, Utc};
+use sobreiro_core::colours::TaskbarColours;
 use sobreiro_core::config::{AppConfig, ShowOption};
 use sobreiro_core::connect::ConnectionState;
 use sobreiro_core::display::ClockFormat;
@@ -39,12 +41,13 @@ pub struct Handled {
     pub runs: Vec<Run>,
 }
 
-/// What the step looks at besides the providers.
-pub struct Surroundings<'a> {
-    pub show: ShowOption,
-    pub zone: &'a Zone,
+/// What a snapshot is made from besides the providers, taken by value so the snapshot owns it.
+pub struct Surroundings {
+    pub config: AppConfig,
+    pub colours: TaskbarColours,
+    pub zone: Zone,
     /// How the user writes a time of day, for the tooltip.
-    pub clock: &'a ClockFormat,
+    pub clock: ClockFormat,
     /// Claude Code's sign-in file is on this PC.
     pub credentials_file_exists: bool,
 }
@@ -53,6 +56,25 @@ pub struct Surroundings<'a> {
 pub struct Shown {
     pub model: PillModel,
     pub tooltip: String,
+}
+
+/// What one redraw draws from: the figures, what is shown of them, and the settings and
+/// surroundings they were read with. Each part of the app (the pill, later the tray icons, the
+/// flyout and the toasts) takes its own view of it.
+// The tray icons, the flyout and the toasts read the fields the pill does not.
+#[allow(dead_code)]
+pub struct Snapshot {
+    pub now: DateTime<Utc>,
+    pub claude: Vec<Limit>,
+    pub copilot: Vec<Limit>,
+    /// Whether Claude is shown next to, or instead of, Copilot (Core's `limit_list`).
+    pub show_claude: bool,
+    pub config: AppConfig,
+    pub colours: TaskbarColours,
+    pub zone: Zone,
+    pub clock: ClockFormat,
+    /// The pill's model and tooltip; none while the settings keep the pill off.
+    pub pill: Option<Shown>,
 }
 
 /// The two pollers and the last line told for each.
@@ -104,18 +126,17 @@ impl Feed {
         }
     }
 
-    /// What the pill shows at `now`, as 1.1's `UpdatePill` makes it: the model it draws and the
-    /// tooltip's text, or `None` when the settings keep the pill off. `connection` is asked only when Claude has no limits, as in
-    /// 1.1: with limits Claude is on this PC and its settings need not be read.
-    pub fn shown(
+    /// Everything one redraw draws from, made once at `now`, as 1.1's `Refresh` reads it. The
+    /// limits and whether Claude shows are filled whatever Show says, as the tray icons and the
+    /// flyout need them too; only the pill's part is none when the settings keep the pill off.
+    /// `connection` is asked only when Claude has no limits, as in 1.1: with limits Claude is on
+    /// this PC and its settings need not be read.
+    pub fn snapshot(
         &self,
         now: DateTime<Utc>,
-        around: &Surroundings<'_>,
+        around: Surroundings,
         connection: impl FnOnce() -> ConnectionState,
-    ) -> Option<Shown> {
-        if around.show != ShowOption::TrayAndPill {
-            return None;
-        }
+    ) -> Snapshot {
         let claude = self.claude.provider().limits(now);
         let copilot = self.copilot.provider().limits(now);
         let connection = if claude.is_empty() {
@@ -126,23 +147,36 @@ impl Feed {
         let on_pc =
             limit_list::claude_on_pc(around.credentials_file_exists, claude.len(), connection);
         let show_claude = limit_list::show_claude(on_pc, !copilot.is_empty());
-        let shown: Vec<Limit> = if show_claude {
-            claude.into_iter().chain(copilot).collect()
-        } else {
-            copilot
-        };
-        let model = PillModel::from_states(
-            &shown,
-            around.zone,
-            show_claude,
-            self.claude.state(),
-            misses(&self.claude),
-            self.copilot.state(),
-            misses(&self.copilot),
+        let pill = (around.config.show == ShowOption::TrayAndPill).then(|| {
+            let shown: Vec<Limit> = if show_claude {
+                claude.iter().chain(copilot.iter()).cloned().collect()
+            } else {
+                copilot.clone()
+            };
+            let model = PillModel::from_states(
+                &shown,
+                &around.zone,
+                show_claude,
+                self.claude.state(),
+                misses(&self.claude),
+                self.copilot.state(),
+                misses(&self.copilot),
+                now,
+            );
+            let tooltip = tooltip(&shown, show_claude, now, &around.zone, &around.clock);
+            Shown { model, tooltip }
+        });
+        Snapshot {
             now,
-        );
-        let tooltip = tooltip(&shown, show_claude, now, around);
-        Some(Shown { model, tooltip })
+            claude,
+            copilot,
+            show_claude,
+            config: around.config,
+            colours: around.colours,
+            zone: around.zone,
+            clock: around.clock,
+            pill,
+        }
     }
 }
 
@@ -152,19 +186,15 @@ fn tooltip(
     shown: &[Limit],
     show_claude: bool,
     now: DateTime<Utc>,
-    around: &Surroundings<'_>,
+    zone: &Zone,
+    clock: &ClockFormat,
 ) -> String {
     let mut parts = Vec::new();
     if show_claude {
-        parts.push(tooltip_text::render(shown, now, around.zone, around.clock));
+        parts.push(tooltip_text::render(shown, now, zone, clock));
     }
     if let Some(credits) = shown.iter().find(|limit| limit.kind == LimitKind::Credits) {
-        parts.push(tooltip_text::render_copilot(
-            credits,
-            now,
-            around.zone,
-            around.clock,
-        ));
+        parts.push(tooltip_text::render_copilot(credits, now, zone, clock));
     }
     parts.join(
         "
