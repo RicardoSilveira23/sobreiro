@@ -56,6 +56,42 @@ global Metrics {
     out property <length> pad-y: 4px;
     // How much larger than its real size a text is measured at: see `Measure`.
     out property <float> measure-scale: 1000;
+    // Every text is drawn twice, the second time with its alpha times a factor k that depends on
+    // the window's scale, so a pixel's alpha a becomes a + k * a * (1 - a). The software renderer
+    // uses a glyph's coverage as alpha with no gamma step, so its text is lighter than 1.1's. A
+    // thin glyph has more partly covered pixels and gains more from a second pass than a bold one,
+    // so the labels, `*` and reset date (Inter) and the figures (Unbounded Bold) have factors of
+    // their own, picked so the text column's summed alpha matches 1.1's in every state (see the
+    // `face` test). The renderer also cuts a glyph's size to whole pixels (11 DIPs at 150% is drawn
+    // at 16 px, laid out at 16.5): a figure's second pass is drawn at the next whole pixel, 17,
+    // which puts back the ink the cut takes and leaves no stronger row under the baseline.
+    out property <float> label-pass-100: 0.26;
+    out property <float> label-pass-150: 0.35;
+    out property <float> label-pass-200: 0.18;
+    out property <float> figure-pass-100: 0.82;
+    out property <float> figure-pass-150: 0.65;
+    out property <float> figure-pass-200: 0.38;
+
+    // A second pass's factor at a scale, from its factors at 100%, 150% and 200%: linear between
+    // them, the end ones outside.
+    pure function between(scale: float, at-100: float, at-150: float, at-200: float) -> float {
+        if scale <= 1 {
+            return at-100;
+        } else if scale <= 1.5 {
+            return at-100 + (at-150 - at-100) * (scale - 1) / 0.5;
+        } else if scale <= 2 {
+            return at-150 + (at-200 - at-150) * (scale - 1.5) / 0.5;
+        }
+        return at-200;
+    }
+
+    public pure function label-pass(scale: float) -> float {
+        return between(scale, label-pass-100, label-pass-150, label-pass-200);
+    }
+
+    public pure function figure-pass(scale: float) -> float {
+        return between(scale, figure-pass-100, figure-pass-150, figure-pass-200);
+    }
 }
 
 // Measures a text at `measure-scale` times its size; never drawn. The toolkit rounds a text's
@@ -144,6 +180,9 @@ component Line inherits Rectangle {
     width: root.column;
     height: root.line-height;
 
+    // The second passes' colours: the ink at a fraction of its alpha.
+    private property <color> label-twin: root.ink.transparentize(1 - Metrics.label-pass(1px / 1phx));
+    private property <color> figure-twin: root.ink.transparentize(1 - Metrics.figure-pass(1px / 1phx));
     private property <length> baseline: round(max(label.font-metrics.ascent, figure.font-metrics.ascent) / 1phx) * 1phx;
     private property <length> star-width: root.line.star ? star-m.preferred-width / Metrics.measure-scale : 0px;
     private property <length> figure-x: root.column - root.star-width - figure-m.preferred-width / Metrics.measure-scale;
@@ -165,6 +204,17 @@ component Line inherits Rectangle {
         accessible-role: none;
     }
 
+    Text {
+        text: root.line.label;
+        font-family: "Inter";
+        font-size: Metrics.label-size;
+        color: root.label-twin;
+        x: root.label-x;
+        y: root.baseline - label.font-metrics.ascent;
+        height: label.preferred-height;
+        accessible-role: none;
+    }
+
     figure := Text {
         text: root.line.figure;
         font-family: "Unbounded";
@@ -177,11 +227,36 @@ component Line inherits Rectangle {
         accessible-role: none;
     }
 
+    // At the figure's size rounded up to whole pixels (the same size at 100% and 200%), ending
+    // where the figure ends, on its baseline.
+    Text {
+        text: root.line.figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: ceil(Metrics.figure-size / 1phx) * 1phx;
+        color: root.figure-twin;
+        x: root.figure-x + figure.preferred-width - self.preferred-width;
+        y: root.baseline - self.font-metrics.ascent;
+        height: self.preferred-height;
+        accessible-role: none;
+    }
+
     if root.line.star: Text {
         text: "*";
         font-family: "Inter";
         font-size: Metrics.label-size;
         color: root.ink;
+        x: root.column - root.star-width;
+        y: root.baseline - self.font-metrics.ascent;
+        height: self.preferred-height;
+        accessible-role: none;
+    }
+
+    if root.line.star: Text {
+        text: "*";
+        font-family: "Inter";
+        font-size: Metrics.label-size;
+        color: root.label-twin;
         x: root.column - root.star-width;
         y: root.baseline - self.font-metrics.ascent;
         height: self.preferred-height;
@@ -229,16 +304,32 @@ component CopilotText inherits VerticalLayout {
     }
 
     first := Line { line: root.credits; ink: root.ink; column: root.column; line-height: root.line-height; }
-    Text {
-        text: root.reset-date;
-        font-family: "Inter";
-        font-size: Metrics.reset-size;
-        color: root.secondary;
-        horizontal-alignment: right;
-        vertical-alignment: top;
-        accessible-role: none;
+    // The date and its second pass share one box, so the layout sees one child.
+    Rectangle {
         width: root.column;
         height: root.reset-height;
+        Text {
+            text: root.reset-date;
+            font-family: "Inter";
+            font-size: Metrics.reset-size;
+            color: root.secondary;
+            horizontal-alignment: right;
+            vertical-alignment: top;
+            accessible-role: none;
+            width: parent.width;
+            height: parent.height;
+        }
+        Text {
+            text: root.reset-date;
+            font-family: "Inter";
+            font-size: Metrics.reset-size;
+            color: root.secondary.transparentize(1 - Metrics.label-pass(1px / 1phx));
+            horizontal-alignment: right;
+            vertical-alignment: top;
+            accessible-role: none;
+            width: parent.width;
+            height: parent.height;
+        }
     }
 }
 
