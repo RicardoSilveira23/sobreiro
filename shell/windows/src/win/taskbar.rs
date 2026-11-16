@@ -6,6 +6,7 @@
 //! the handler each is given is kept in a value of that thread.
 #![allow(unsafe_code)]
 
+use super::notify_icon::{self, TrayEvent};
 use sobreiro_core::display::flyout_placement::PixelRect;
 use std::cell::Cell;
 use std::ffi::c_void;
@@ -17,15 +18,16 @@ use windows::Win32::Graphics::Gdi::{
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Accessibility::{HWINEVENTHOOK, SetWinEventHook, UnhookWinEvent};
 use windows::Win32::UI::HiDpi::{
-    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForWindow, SetProcessDpiAwarenessContext,
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForSystem, GetDpiForWindow,
+    GetSystemMetricsForDpi, SetProcessDpiAwarenessContext,
 };
 use windows::Win32::UI::Shell::SHQueryUserNotificationState;
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, EVENT_OBJECT_LOCATIONCHANGE,
     EVENT_SYSTEM_FOREGROUND, FindWindowExW, FindWindowW, GW_HWNDPREV, GetWindow, GetWindowRect,
     GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, RegisterClassW,
-    RegisterWindowMessageW, SW_HIDE, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE, SWP_NOZORDER,
-    SWP_SHOWWINDOW, SetWindowPos, ShowWindow, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
+    RegisterWindowMessageW, SM_CXSMICON, SW_HIDE, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE,
+    SWP_NOZORDER, SWP_SHOWWINDOW, SetWindowPos, ShowWindow, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
     WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WM_SETTINGCHANGE, WM_TIMECHANGE, WNDCLASSW,
     WS_EX_TOOLWINDOW,
 };
@@ -55,12 +57,14 @@ pub enum Broadcast {
 
 pub type WinEventHandler = fn(WinEvent);
 pub type BroadcastHandler = fn(Broadcast);
+pub type TrayHandler = fn(TrayEvent);
 
 const MESSAGE_CLASS: PCWSTR = w!("SobreiroPillMessages");
 
 thread_local! {
     static WIN_EVENT_HANDLER: Cell<Option<WinEventHandler>> = const { Cell::new(None) };
     static BROADCAST_HANDLER: Cell<Option<BroadcastHandler>> = const { Cell::new(None) };
+    static TRAY_HANDLER: Cell<Option<TrayHandler>> = const { Cell::new(None) };
     /// The number of the "TaskbarCreated" message, 0 until it is registered.
     static TASKBAR_CREATED: Cell<u32> = const { Cell::new(0) };
 }
@@ -149,6 +153,19 @@ pub fn dpi_of(window: isize) -> u32 {
     }
     // SAFETY: asks Windows about a handle; any number is allowed.
     unsafe { GetDpiForWindow(hwnd(window)) }
+}
+
+/// The small-icon size, in pixels, at the primary taskbar's scale; the system's scale when there
+/// is no taskbar.
+pub fn small_icon_size() -> u32 {
+    let mut dpi = dpi_of(find_taskbar());
+    if dpi == 0 {
+        // SAFETY: takes no arguments.
+        dpi = unsafe { GetDpiForSystem() };
+    }
+    // SAFETY: reads a system metric for a scale; no pointers.
+    let size = unsafe { GetSystemMetricsForDpi(SM_CXSMICON, dpi) };
+    u32::try_from(size).unwrap_or(0)
 }
 
 /// The shell's notification state (QUNS_*), or None when the question fails.
@@ -245,8 +262,9 @@ unsafe extern "system" fn win_event(
     handler(event);
 }
 
-/// A hidden top-level window that hears "TaskbarCreated", display changes, setting changes and time changes. Top-level, not
-/// message-only: broadcasts skip message-only windows. Destroyed when dropped.
+/// A hidden top-level window that hears "TaskbarCreated", display changes, setting changes, time
+/// changes and the tray icons' messages. Top-level, not message-only: broadcasts skip
+/// message-only windows. Destroyed when dropped.
 /// Not Send: only the thread that made a window may destroy it.
 pub struct MessageWindow(isize, PhantomData<*const ()>);
 
@@ -254,13 +272,14 @@ impl MessageWindow {
     /// Makes the window on this thread. A window made by this thread while `born` has a window
     /// pending would be taken by it, so call this before the first `born::show`, or while none is
     /// pending.
-    pub fn create(handler: BroadcastHandler) -> Option<MessageWindow> {
+    pub fn create(handler: BroadcastHandler, tray: TrayHandler) -> Option<MessageWindow> {
         // SAFETY: registers a constant name; the same number comes back each time.
         let created = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
         TASKBAR_CREATED.try_with(|cell| cell.set(created)).ok()?;
         BROADCAST_HANDLER
             .try_with(|cell| cell.set(Some(handler)))
             .ok()?;
+        TRAY_HANDLER.try_with(|cell| cell.set(Some(tray))).ok()?;
         // SAFETY: the module handle of this exe; no name is passed.
         let instance = HINSTANCE(unsafe { GetModuleHandleW(PCWSTR::null()) }.ok()?.0);
         let class = WNDCLASSW {
@@ -312,6 +331,12 @@ unsafe extern "system" fn message_procedure(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    if message == notify_icon::TRAY_MESSAGE {
+        if let Some(handler) = TRAY_HANDLER.try_with(Cell::get).ok().flatten() {
+            handler(notify_icon::decode(wparam.0, lparam.0));
+        }
+        return LRESULT(0);
+    }
     let created = TASKBAR_CREATED.try_with(Cell::get).unwrap_or(0);
     let broadcast = if message == WM_DISPLAYCHANGE {
         Some(Broadcast::DisplayChanged)

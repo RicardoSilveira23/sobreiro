@@ -22,7 +22,6 @@ slint = { version = "=1.18.1", default-features = false, features = [
     "backend-winit",
     "renderer-software",
     "software-renderer-path",
-    "system-tray",
     "accessibility",
     "raw-window-handle-06",
 ] }

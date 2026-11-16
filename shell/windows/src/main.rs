@@ -24,6 +24,7 @@ mod specimen;
 mod theme;
 mod tooltip;
 mod tooltip_window;
+mod tray_icons;
 mod win;
 
 use std::process::ExitCode;
