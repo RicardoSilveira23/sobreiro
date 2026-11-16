@@ -357,6 +357,11 @@ mod tests {
         run_with(false, &files, &boxes, 2);
 
         assert_eq!(text(&files.settings), OLD);
+        // The manual: Disconnect leaves the bridge's copy in the data folder.
+        assert_eq!(
+            fs::read(files.bridge.as_ref().unwrap()).unwrap(),
+            BRIDGE_BYTES
+        );
         let calls = boxes.calls();
         assert_eq!(calls.len(), 2);
         assert_eq!(calls[0].1, "Disconnect from Claude Code");
