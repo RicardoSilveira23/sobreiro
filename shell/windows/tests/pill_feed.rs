@@ -346,7 +346,6 @@ fn a_poll_under_way_is_not_started_again() {
     answer(&mut feed, started);
 }
 
-/// A folder of the test's own, empty.
 #[test]
 fn the_tooltip_is_core_s_text_for_each_service_shown() {
     let feed = settled(
@@ -379,8 +378,7 @@ fn the_tooltip_is_core_s_text_for_each_service_shown() {
         .tooltip;
     assert_eq!(
         alone,
-        "AI credits 17% · resets Tue 1 Dec 12:00 PM
-as of 11:59 AM"
+        "AI credits 17% · resets Tue 1 Dec 12:00 PM\nas of 11:59 AM"
     );
 }
 
@@ -394,6 +392,7 @@ fn the_tooltip_with_no_reading_says_so() {
     assert_eq!(tooltip, "Sobreiro · no data yet");
 }
 
+/// A folder of the test's own, empty.
 fn folder(name: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(name);
     let _ = std::fs::remove_dir_all(&folder);

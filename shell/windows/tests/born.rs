@@ -16,17 +16,17 @@ use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::HiDpi::{
-    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, GetDpiForWindow, SetProcessDpiAwarenessContext,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, SetFocus, VK_MENU, keybd_event,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DestroyWindow, DispatchMessageW, GUITHREADINFO, GW_OWNER, GWL_EXSTYLE,
-    GetForegroundWindow, GetGUIThreadInfo, GetWindow, GetWindowLongPtrW, GetWindowRect,
-    GetWindowThreadProcessId, IsWindowVisible, MSG, PM_REMOVE, PeekMessageW, SetForegroundWindow,
-    TranslateMessage, WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
-    WS_VISIBLE,
+    CreateWindowExW, DestroyWindow, DispatchMessageW, GUITHREADINFO, GW_HWNDNEXT, GW_OWNER,
+    GWL_EXSTYLE, GetForegroundWindow, GetGUIThreadInfo, GetWindow, GetWindowLongPtrW,
+    GetWindowRect, GetWindowThreadProcessId, IsWindowVisible, MSG, PM_REMOVE, PeekMessageW,
+    SetForegroundWindow, TranslateMessage, WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WS_POPUP, WS_VISIBLE,
 };
 use windows::core::w;
 
@@ -133,18 +133,36 @@ fn next_handle(receive: &mpsc::Receiver<String>) -> HWND {
     HWND(handle as *mut _)
 }
 
-/// The colour on the screen at a window's top left corner, just inside its edge and padding.
+/// The colour on the screen at a window's top left corner, 3 DIPs in: past the edge (1 DIP, drawn
+/// on whole pixels) and in the padding (6 DIPs), at the window's own scale.
 /// Reads what the screen shows, so a window that was never painted gives what is behind it.
 fn pixel_inside(window: HWND) -> u32 {
     let mut rect = RECT::default();
     // SAFETY: reads a window that is alive, and the screen's colour at one point.
     unsafe {
         GetWindowRect(window, &mut rect).unwrap();
+        let dpi = i32::try_from(GetDpiForWindow(window)).unwrap().max(96);
+        let inside = (3 * dpi + 48) / 96;
         let screen = GetDC(None);
-        let colour = GetPixel(screen, rect.left + 3, rect.top + 3).0;
+        let colour = GetPixel(screen, rect.left + inside, rect.top + inside).0;
         ReleaseDC(None, screen);
         colour
     }
+}
+
+/// Whether `upper` is above `lower` in the z-order, as far as the windows below `upper` go.
+fn is_above(upper: HWND, lower: HWND) -> bool {
+    let mut at = upper;
+    // SAFETY: walks the windows below `upper`, which are asked about by handle only.
+    unsafe {
+        while let Ok(next) = GetWindow(at, GW_HWNDNEXT) {
+            if next == lower {
+                return true;
+            }
+            at = next;
+        }
+    }
+    false
 }
 
 /// What must hold of a born window at every look.
@@ -251,13 +269,15 @@ fn the_windows_are_owned_and_never_activated() {
     look(first, &setting, 0, Some(true));
     let second = next_handle(&receive);
     assert_ne!(first, second, "the same window twice");
+    // Where the owner stands against the test's own window, before the tooltip's turns.
+    let order_before = (is_above(mine, stand_in), is_above(stand_in, mine));
 
     // The tooltip's window is hidden until its first turn; then what the exe last said holds. A
     // line comes a moment after what it tells of, and the next turn is 300 ms away, so a state is
     // held to for 200 ms after the line that says it was read, and not asserted after that.
     let mut tooltip_visible = Some(false);
     let mut said_at = Instant::now();
-    let (mut shown, mut hidden, mut painted) = (0, 0, 0);
+    let (mut shown, mut hidden, mut painted, mut checked) = (0, 0, 0, 0);
     let mut looks = 0;
     pump(Duration::from_millis(2500), || {
         while let Ok(line) = receive.try_recv() {
@@ -280,9 +300,11 @@ fn the_windows_are_owned_and_never_activated() {
         if holds_foreground
             && tooltip_visible == Some(true)
             && said_at.elapsed() > Duration::from_millis(120)
-            && painted < shown
+            && checked < shown
         {
-            painted = shown;
+            // Every show is checked: a turn that is missed is not made up for by a later one.
+            checked = shown;
+            painted += 1;
             assert_eq!(
                 // A COLORREF is 0x00BBGGRR: the ground is #F1F2F7.
                 pixel_inside(second),
@@ -303,10 +325,13 @@ fn the_windows_are_owned_and_never_activated() {
         "the tooltip was painted {painted} of 3 times"
     );
     // After the three turns the stand-in for the pill still has its owner (looked at above, at
-    // every look), and the owner was not raised along with the tooltip: it is no topmost window.
-    // SAFETY: reads from a window that is alive.
-    let owner_style = unsafe { GetWindowLongPtrW(stand_in, GWL_EXSTYLE) } as u32;
-    assert_eq!(owner_style & WS_EX_TOPMOST.0, 0, "the owner was raised");
+    // every look), and the owner was not moved in the z-order along with the tooltip: it stands
+    // against the test's own window as it did before.
+    assert_eq!(
+        (is_above(mine, stand_in), is_above(stand_in, mine)),
+        order_before,
+        "the owner moved in the z-order"
+    );
 
     // The exe's windows are owned by a window of this thread, so it keeps pumping while it waits.
     let mut status = None;

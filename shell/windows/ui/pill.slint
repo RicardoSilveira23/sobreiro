@@ -331,10 +331,10 @@ export component Pill inherits Window {
             if event.kind == PointerEventKind.down {
                 root.pressed();
             }
-            // As 1.1: a click is the button coming up with the pointer still on the pill.
-            // The pointer is not asked where it is: after a menu's own loop the toolkit may not
-            // know it is on the pill, and the button went down on this area to come up here.
-            if event.kind == PointerEventKind.up {
+            // As 1.1: a click is the button coming up with the pointer still on the pill. Where
+            // it is comes from the area's bounds, not from `has-hover`: after a menu's own loop
+            // the toolkit may not know the pointer is on the pill.
+            if event.kind == PointerEventKind.up && self.mouse-x >= 0px && self.mouse-x < self.width && self.mouse-y >= 0px && self.mouse-y < self.height {
                 if event.button == PointerEventButton.left {
                     root.left-clicked();
                 } else if event.button == PointerEventButton.right {

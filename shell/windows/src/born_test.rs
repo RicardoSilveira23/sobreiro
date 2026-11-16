@@ -26,9 +26,7 @@ const TURN: Duration = Duration::from_millis(300);
 const TURNS: u32 = 3;
 /// Where the tooltip is shown, in pixels: no taskbar here, so any place on the screen.
 const AT: (i32, i32) = (500, 500);
-const WORDS: &str = "Session 15%
-Weekly 45%
-as of 11:59 AM";
+const WORDS: &str = "Session 15%\nWeekly 45%\nas of 11:59 AM";
 
 pub fn run(owner: Option<&str>) -> ExitCode {
     let Some(owner) = owner.and_then(|owner| owner.parse::<isize>().ok()) else {

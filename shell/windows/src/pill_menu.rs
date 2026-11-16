@@ -80,7 +80,9 @@ mod tests {
     use std::path::PathBuf;
 
     fn folder(name: &str) -> PathBuf {
-        let folder = std::env::temp_dir().join(format!("sobreiro-pill-menu-{name}"));
+        // One folder for each process, so two runs of the tests never share one.
+        let folder =
+            std::env::temp_dir().join(format!("sobreiro-pill-menu-{}-{name}", std::process::id()));
         let _ = std::fs::remove_dir_all(&folder);
         let _ = std::fs::create_dir_all(&folder);
         folder
