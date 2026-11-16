@@ -1,0 +1,10 @@
+{
+  "session": {
+    "resets_at": 1790010000,
+    "threshold": 95
+  },
+  "weekly": {
+    "resets_at": 1790500000,
+    "threshold": 80
+  }
+}
