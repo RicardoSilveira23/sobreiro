@@ -1,12 +1,14 @@
 //! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar with live figures;
 //! the arguments say its version, draw the specimen of its fonts and the pill's pictures, run the
-//! born test, and bring the bridge in the data folder up to date. The flyout and the tray icons
-//! come next.
+//! born test, bring the bridge in the data folder up to date, and run Connect or Disconnect alone.
+//! The flyout and the tray icons come next.
 #![windows_subsystem = "windows"]
 
+mod app_host;
 mod born_test;
 mod carried_bridge;
 mod clock;
+mod connect_flow;
 mod diagnostics;
 mod flyout;
 mod icon_pictures;
@@ -38,7 +40,7 @@ fn main() -> ExitCode {
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {
         carried_bridge::start();
-        return pill_host::run();
+        return app_host::run();
     };
     match first.to_str() {
         Some("--version") => {
@@ -50,6 +52,9 @@ fn main() -> ExitCode {
         Some("--born") => born_test::run(args.next().as_deref().and_then(|arg| arg.to_str())),
         // Hidden: what the exe test launches.
         Some("--refresh-bridge") => carried_bridge::refresh_now(),
+        // Hidden: the Connect and Disconnect flow alone, for a live run before the menu calls it.
+        Some("--connect") => connect_flow::run_now(true),
+        Some("--disconnect") => connect_flow::run_now(false),
         Some("--pill-pictures") => pictures::run(args.next()),
         Some("--icon-pictures") => icon_pictures::run(args.next()),
         Some("--flyout-pictures") => flyout::pictures::run(args.next()),

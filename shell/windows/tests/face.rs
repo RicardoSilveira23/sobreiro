@@ -29,26 +29,28 @@ const THEMES: [(&str, bool); 2] = [("light", true), ("dark", false)];
 const COLOURS: [&str; 2] = ["purple", "accent"];
 const SCALES: [(&str, f32); 3] = [("1", 1.0), ("1.5", 1.5), ("2", 2.0)];
 
-/// The pill's size in DIPs for the states that 1.1 has stills of (`media/stills/pill/*@1x.png`,
-/// "Calm" readings: 15% and 45%, Copilot at 17% resetting on 1 Dec): Claude's block alone is
-/// 99 x 38, both blocks 167 x 38, Copilot's alone 72 x 36 (the @2x stills are exactly twice that).
-/// Claude's two lines are 15 DIPs tall each, Copilot's 15 and 13, with 4 of padding above and below.
-///
-/// The heights are the same. Each figure is set in a box as wide as the widest of 00% to 99%, which
-/// is wider than 1.1's figure for 15%, 45% and 17%, so each block is wider by the box's extra. The
-/// extras come from the font's advances, not from these pictures: in Unbounded Bold 11, `00%` is
-/// 34.58 DIPs and `45%` 32.58 (Claude's extra, 2.0), `17%` 28.2 (Copilot's extra, 6.4).
-///
-/// The toolkit rounds each text's width up to a whole DIP (the label and the box), and 1.1's own
-/// line is about 1 DIP narrower than its advances add up to, so a block comes out up to
-/// `TOOLKIT_SLACK` DIPs wider than that, and never narrower. Measured at 100%: Claude's block 103
-/// against 101, both blocks 178 against 175.4, Copilot's alone 79 against 78.4.
-const FRESH: (f32, f32) = (99.0, 38.0);
-const BOTH: (f32, f32) = (167.0, 38.0);
-const COPILOT_ONLY: (f32, f32) = (72.0, 36.0);
-const CLAUDE_BOX_EXTRA: f32 = 2.0;
-const COPILOT_BOX_EXTRA: f32 = 6.4;
-const TOOLKIT_SLACK: f32 = 1.5;
+/// The pill's width in pixels in each state at 100%, 150% and 200%, from 1.1's own layout at those
+/// scales (`--pill-pictures` of the 1.x app). 1.1 sets a line as one text and rounds its width once
+/// to the nearest device pixel, so a figure is as wide as its digits and a block as wide as its
+/// widest line; the widths do not scale linearly, hence the three.
+const WIDTHS: [(&str, [usize; 3]); 11] = [
+    ("fresh", [99, 149, 199]),
+    ("amber", [99, 148, 198]),
+    ("red", [100, 150, 200]),
+    ("stale", [179, 270, 359]),
+    ("no-reading", [75, 112, 150]),
+    ("copilot-on", [167, 252, 335]),
+    ("copilot-only", [72, 109, 144]),
+    ("digits-11", [96, 145, 193]),
+    ("digits-88", [101, 151, 202]),
+    ("levels", [96, 145, 193]),
+    ("stale-claude", [105, 158, 211]),
+];
+/// The pill's height in pixels at 100%, 150% and 200%: with Claude's block, and with Copilot's alone.
+/// Claude's two lines are 15 DIPs tall each at 100%, Copilot's 15 and 13, with 4 of padding above
+/// and below (at another scale a line is the font's line height rounded to whole pixels, as 1.1's
+/// layout rounding gives: 22 and 20 px at 150%, 29 and 27 px at 200%).
+const HEIGHTS: [(usize, usize); 3] = [(38, 36), (56, 54), (74, 72)];
 
 /// A stopped fill is the ink at alpha 0x80, drawn over the track (the ink at 0x26), as 1.1 draws it:
 /// 0x80 + 0x26 * (1 - 0x80 / 255) = 147.
@@ -187,37 +189,27 @@ fn it_writes_every_state_in_both_themes_both_colours_and_three_scales() {
 
 #[test]
 fn each_picture_is_the_size_of_1_1s_pill_at_that_scale() {
-    let sizes = [
-        ("fresh", FRESH, CLAUDE_BOX_EXTRA, 1.0),
-        ("amber", FRESH, CLAUDE_BOX_EXTRA, 1.0),
-        ("red", FRESH, CLAUDE_BOX_EXTRA, 1.0),
-        (
-            "copilot-on",
-            BOTH,
-            CLAUDE_BOX_EXTRA + COPILOT_BOX_EXTRA,
-            2.0,
-        ),
-        ("copilot-only", COPILOT_ONLY, COPILOT_BOX_EXTRA, 1.0),
-    ];
-    for (state, (width, height), extra, blocks) in sizes {
+    for (state, widths) in WIDTHS {
         for (theme, _) in THEMES {
             for colour in COLOURS {
-                for (label, scale) in SCALES {
+                for (at, (label, _)) in SCALES.into_iter().enumerate() {
+                    let height = if state == "copilot-only" {
+                        HEIGHTS[at].1
+                    } else {
+                        HEIGHTS[at].0
+                    };
                     let picture = picture(state, theme, colour, label);
-                    let want = |dips: f32| (dips * scale).round() as isize;
                     let name = name(state, theme, colour, label);
-                    let least = want(width + extra) - 1;
-                    let most = want(width + extra + blocks * TOOLKIT_SLACK) + 1;
                     assert!(
-                        (least..=most).contains(&(picture.width as isize)),
-                        "{name} is {} wide, 1.1's plus the box is {least}..={most}",
-                        picture.width
+                        picture.width.abs_diff(widths[at]) <= 1,
+                        "{name} is {} wide, 1.1's is {}",
+                        picture.width,
+                        widths[at]
                     );
-                    assert!(
-                        (picture.height as isize - want(height)).abs() <= 1,
-                        "{name} is {} tall, 1.1's is {}",
-                        picture.height,
-                        want(height)
+                    assert_eq!(
+                        picture.height, height,
+                        "{name} is {} tall, 1.1's is {height}",
+                        picture.height
                     );
                 }
             }
@@ -225,13 +217,57 @@ fn each_picture_is_the_size_of_1_1s_pill_at_that_scale() {
     }
 }
 
+#[test]
+fn a_label_and_its_figure_share_a_baseline_at_every_scale() {
+    // "5h" and "15%" have no descenders, so the bottom row of ink in each is the baseline (the
+    // label is the first 10 DIPs of ink in the line, the figure the 18 DIPs before 6 DIPs of the
+    // text's end, which lies 42 DIPs from the right edge). The rows are the same as 1.1's.
+    let bottom = |picture: &Picture, columns: (usize, usize), rows: (usize, usize)| {
+        (rows.0..rows.1)
+            .rev()
+            .find(|&y| (columns.0..columns.1).any(|x| picture.pixel(x, y)[3] > 110))
+            .unwrap()
+    };
+    // The rows of 1.1's two lines at each scale, and the baseline of each.
+    let lines = [
+        [((0, 19), 15), ((19, 38), 30)],
+        [((0, 28), 22), ((28, 56), 44)],
+        [((0, 37), 30), ((37, 74), 59)],
+    ];
+    for (theme, _) in THEMES {
+        for (at, (label, scale)) in SCALES.into_iter().enumerate() {
+            let picture = picture("fresh", theme, "purple", label);
+            let end = picture.width - (42.0 * scale) as usize;
+            for (rows, baseline) in lines[at] {
+                let start = (0..end)
+                    .find(|&x| (rows.0..rows.1).any(|y| picture.pixel(x, y)[3] > 110))
+                    .unwrap();
+                let label_columns = (start, start + (10.0 * scale) as usize);
+                let figure_columns = (end - (24.0 * scale) as usize, end - (6.0 * scale) as usize);
+                let (a, b) = (
+                    bottom(&picture, label_columns, rows),
+                    bottom(&picture, figure_columns, rows),
+                );
+                assert_eq!(
+                    a, b,
+                    "{theme} {label}x: the label ends on row {a}, the figure on {b}"
+                );
+                assert_eq!(
+                    a, baseline,
+                    "{theme} {label}x: 1.1's baseline is row {baseline}"
+                );
+            }
+        }
+    }
+}
+
 /// The ring canvas of a Claude-only picture: its left and top in pixels, and its size, at a scale.
-/// The canvas is the last 26 DIPs before 8 of padding, and starts 6 DIPs down (4 of padding, 2 to
-/// centre it in the 30 DIPs of text).
+/// The canvas is the last 26 DIPs before 8 of padding, centred between the 4 DIPs of padding above
+/// and below (6 DIPs down at 100%; 8.5 px at 150%, where the two lines are 44 px and the rings 39).
 fn canvas(picture: &Picture, scale: f32) -> (f32, f32, f32) {
     (
         picture.width as f32 - (8.0 + 26.0) * scale,
-        6.0 * scale,
+        (picture.height as f32 - 26.0 * scale) / 2.0,
         26.0 * scale,
     )
 }
@@ -442,9 +478,9 @@ fn the_bar_fill_has_a_round_bottom_end() {
     // 1.1's bottom row at 100% is 29, 199, 255, 211, 41 across the five columns: the corners are
     // nearly clear. The toolkit's own clip would leave all five at 255.
     for (theme, _) in THEMES {
-        for (label, scale) in [("1", 1.0), ("2", 2.0)] {
+        // The bar's bottom row in 1.1's pictures: 31 at 100%, 62 at 200% (its pill is 74 tall).
+        for (label, scale, row) in [("1", 1.0, 31), ("2", 2.0, 62)] {
             let picture = picture("copilot-on", theme, "purple", label);
-            let row = (32.0 * scale) as usize - 1;
             let from = picture.width - (14.0 * scale) as usize;
             let alphas: Vec<u8> = (from..picture.width)
                 .map(|x| picture.pixel(x, row)[3])
@@ -512,31 +548,72 @@ fn the_ground_is_nearly_clear_and_the_corners_are_round() {
 }
 
 #[test]
-fn a_line_with_11_percent_and_one_with_88_percent_leave_everything_from_the_percent_sign_on_in_one_column()
+fn a_line_with_11_percent_and_one_with_88_percent_end_in_one_column_and_the_pills_differ_by_their_figures()
  {
-    // Each figure ends at the box's right edge, so only the digits differ. At 200%, the weekly line is the 30 DIPs of text's second 15: rows 19 to 34 DIPs. Its text
-    // ends 42 DIPs before the right edge (8 of padding, the rings' 26, 8 between).
+    // Each line is right-aligned in its column, so the percent sign is in the same columns whatever
+    // the digits are, and the pill is as wide as its figures. At 200%, the weekly line is the second
+    // of two 29 px lines under 8 px of padding: rows 37 to 66. Its text ends 42 DIPs before the
+    // right edge (8 of padding, the rings' 26, 8 between).
     let scale = 2.0;
     let profile = |state: &str| {
         let picture = picture(state, "light", "purple", "2");
-        let rows = (19.0 * scale) as usize..(34.0 * scale) as usize;
-        let columns = 0..picture.width - (42.0 * scale) as usize;
-        let ink: Vec<bool> = columns
+        let rows = 37..66;
+        let end = picture.width - (42.0 * scale) as usize;
+        let ink: Vec<bool> = (0..end)
             .map(|x| rows.clone().any(|y| picture.pixel(x, y)[3] > 64))
             .collect();
         (picture.width, ink)
     };
     let (width_11, ink_11) = profile("digits-11");
     let (width_88, ink_88) = profile("digits-88");
-    assert_eq!(width_11, width_88, "the pills are one width");
-    let first = |ink: &[bool]| ink.iter().position(|&on| on).unwrap();
+    assert!(
+        width_11 < width_88,
+        "11% is narrower than 88%: {width_11} and {width_88}"
+    );
     let last = |ink: &[bool]| ink.iter().rposition(|&on| on).unwrap();
-    assert_eq!(first(&ink_11), first(&ink_88), "the label moves");
-    assert_eq!(last(&ink_11), last(&ink_88), "the line's end moves");
+    assert_eq!(last(&ink_11), ink_11.len() - 1, "the line's end moves");
+    assert_eq!(last(&ink_88), ink_88.len() - 1, "the line's end moves");
     // The percent sign is the last 10 DIPs of ink: the same columns in both.
     let sign = (10.0 * scale) as usize;
-    let tail = |ink: &[bool]| ink[last(ink) + 1 - sign..=last(ink)].to_vec();
+    let tail = |ink: &[bool]| ink[ink.len() - sign..].to_vec();
     assert_eq!(tail(&ink_11), tail(&ink_88), "the percent sign moves");
     // And the figure is not empty: it has ink between the label and the sign.
     assert!(ink_11.iter().filter(|&&on| on).count() > sign);
+}
+
+#[test]
+fn the_rings_lie_on_whole_pixels_whatever_the_figures_say() {
+    // The text column is rounded once to a device pixel, so the rings' canvas (the last 26 DIPs
+    // before 8 of padding) starts on a whole pixel: on the middle row the outer track is then as
+    // strong in its leftmost column as in its rightmost. A canvas half a pixel off leaves one end
+    // at about half. In these states the outer fill stops short of 3 o'clock, so both ends are track.
+    for state in [
+        "fresh",
+        "stale-claude",
+        "digits-11",
+        "digits-88",
+        "levels",
+        "no-reading",
+    ] {
+        for (label, scale) in SCALES {
+            let picture = picture(state, "dark", "purple", label);
+            let size = (26.0 * scale) as usize;
+            let left = picture.width - (8.0 * scale) as usize - size;
+            let row = picture.height / 2;
+            let (first, last) = (
+                picture.pixel(left, row)[3],
+                picture.pixel(left + size - 1, row)[3],
+            );
+            assert!(first > 16, "{state} {label}x: no ring at column {left}");
+            assert!(
+                first.abs_diff(last) <= 4,
+                "{state} {label}x: the track is {first} at its left end and {last} at its right"
+            );
+            let gap = (4.0 * scale) as usize;
+            assert!(
+                (left - gap..left).all(|x| picture.pixel(x, row)[3] < 64),
+                "{state} {label}x: ink just before the rings"
+            );
+        }
+    }
 }

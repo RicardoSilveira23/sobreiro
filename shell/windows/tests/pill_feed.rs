@@ -14,8 +14,8 @@ mod pill_feed;
 mod theme;
 
 use chrono::{DateTime, TimeDelta, Utc};
-use pill_feed::{Feed, Run, Service, Shown, Surroundings, config_for_display};
-use sobreiro_core::colours::BarColourOption;
+use pill_feed::{Feed, Run, Service, Shown, Snapshot, Surroundings, config_for_display};
+use sobreiro_core::colours::{BarColourOption, TaskbarColours};
 use sobreiro_core::config::{AppConfig, ShowOption};
 use sobreiro_core::connect::ConnectionState;
 use sobreiro_core::copilot::copilot_poll::CopilotPollResult;
@@ -161,20 +161,27 @@ static CLOCK: LazyLock<ClockFormat> = LazyLock::new(|| ClockFormat {
     pm: "PM".to_string(),
 });
 
-fn around(zone: &Zone, show: ShowOption, credentials: bool) -> Surroundings<'_> {
+fn around(show: ShowOption, credentials: bool) -> Surroundings {
     Surroundings {
-        show,
-        zone,
-        clock: &CLOCK,
+        config: AppConfig {
+            show,
+            ..AppConfig::default()
+        },
+        colours: TaskbarColours::for_taskbar(false, false, BarColourOption::Purple, None),
+        zone: Zone::utc(),
+        clock: CLOCK.clone(),
         credentials_file_exists: credentials,
     }
 }
 
-fn shown(feed: &Feed, show: ShowOption, credentials: bool) -> Option<Shown> {
-    let zone = Zone::utc();
-    feed.shown(now(), &around(&zone, show, credentials), || {
+fn snapshot(feed: &Feed, show: ShowOption, credentials: bool) -> Snapshot {
+    feed.snapshot(now(), around(show, credentials), || {
         ConnectionState::NotConnected
     })
+}
+
+fn shown(feed: &Feed, show: ShowOption, credentials: bool) -> Option<Shown> {
+    snapshot(feed, show, credentials).pill
 }
 
 fn model(feed: &Feed, show: ShowOption, credentials: bool) -> Option<PillModel> {
@@ -271,13 +278,11 @@ fn a_connected_status_line_counts_as_claude_on_this_pc() {
         Fake::new(providers::CLAUDE, Vec::new()),
         Fake::new(providers::COPILOT, copilot_limits(TimeDelta::minutes(1))),
     );
-    let zone = Zone::utc();
     let pill = feed
-        .shown(
-            now(),
-            &around(&zone, ShowOption::TrayAndPill, false),
-            || ConnectionState::Connected,
-        )
+        .snapshot(now(), around(ShowOption::TrayAndPill, false), || {
+            ConnectionState::Connected
+        })
+        .pill
         .unwrap()
         .model;
     assert!(pill.show_claude);
@@ -292,9 +297,8 @@ fn the_connection_is_read_only_when_claude_has_no_limits() {
         ),
         Fake::new(providers::COPILOT, Vec::new()),
     );
-    let zone = Zone::utc();
     let asked = Cell::new(false);
-    let _ = feed.shown(now(), &around(&zone, ShowOption::TrayAndPill, true), || {
+    let _ = feed.snapshot(now(), around(ShowOption::TrayAndPill, true), || {
         asked.set(true);
         ConnectionState::NotConnected
     });
@@ -312,6 +316,58 @@ fn the_show_setting_hides_the_pill() {
     );
     assert!(model(&feed, ShowOption::TrayOnly, true).is_none());
     assert!(model(&feed, ShowOption::TrayAndPill, true).is_some());
+}
+
+#[test]
+fn with_the_pill_off_the_snapshot_still_holds_the_limits() {
+    let feed = settled(
+        Fake::new(
+            providers::CLAUDE,
+            claude_limits(15.0, TimeDelta::minutes(1)),
+        ),
+        Fake::new(providers::COPILOT, copilot_limits(TimeDelta::minutes(1))),
+    );
+    let off = snapshot(&feed, ShowOption::TrayOnly, true);
+    assert!(off.pill.is_none());
+    assert_eq!(off.claude, claude_limits(15.0, TimeDelta::minutes(1)));
+    assert_eq!(off.copilot, copilot_limits(TimeDelta::minutes(1)));
+    assert!(off.show_claude);
+    // The same figures as with the pill on.
+    let on = snapshot(&feed, ShowOption::TrayAndPill, true);
+    assert!(on.pill.is_some());
+    assert_eq!(on.claude, off.claude);
+    assert_eq!(on.copilot, off.copilot);
+    assert_eq!(on.show_claude, off.show_claude);
+
+    // Copilot alone when Claude is not on this PC, also with the pill off.
+    let feed = settled(
+        Fake::new(providers::CLAUDE, Vec::new()),
+        Fake::new(providers::COPILOT, copilot_limits(TimeDelta::minutes(1))),
+    );
+    let off = snapshot(&feed, ShowOption::TrayOnly, false);
+    assert!(off.pill.is_none());
+    assert!(off.claude.is_empty());
+    assert_eq!(off.copilot.len(), 1);
+    assert!(!off.show_claude);
+}
+
+#[test]
+fn the_snapshot_carries_what_it_was_given() {
+    let feed = settled(
+        Fake::new(providers::CLAUDE, Vec::new()),
+        Fake::new(providers::COPILOT, Vec::new()),
+    );
+    let mut given = around(ShowOption::TrayOnly, true);
+    given.config.bar_colour = BarColourOption::Accent;
+    given.colours = TaskbarColours::for_taskbar(true, false, BarColourOption::Accent, None);
+    let colours = given.colours;
+    let config = given.config.clone();
+    let snapshot = feed.snapshot(now(), given, || ConnectionState::NotConnected);
+    assert_eq!(snapshot.now, now());
+    assert_eq!(snapshot.config, config);
+    assert_eq!(snapshot.colours, colours);
+    assert_eq!(snapshot.zone, Zone::utc());
+    assert_eq!(snapshot.clock, *CLOCK);
 }
 
 #[test]
