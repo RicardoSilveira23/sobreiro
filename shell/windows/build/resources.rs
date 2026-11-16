@@ -102,13 +102,14 @@ fn entry(
         push_u16(res, ordinal);
     }
     push_u32(res, 0); // data version
-    // MOVEABLE and PURE; icons are DISCARDABLE too, as `rc` writes them.
+    // MOVEABLE and PURE; icons are DISCARDABLE too, as `rc` writes them. The leading empty
+    // entry has no flags, so its 32 bytes are the ones every `.res` file starts with.
     push_u16(
         res,
-        if kind == RT_ICON || kind == RT_GROUP_ICON {
-            0x1030
-        } else {
-            0x0030
+        match kind {
+            0 => 0,
+            RT_ICON | RT_GROUP_ICON => 0x1030,
+            _ => 0x0030,
         },
     );
     push_u16(res, language);
