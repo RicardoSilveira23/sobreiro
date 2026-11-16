@@ -133,7 +133,7 @@ function stepWords(c) {
   );
 }
 const rustWords = (c) =>
-  c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 below." : "2.0, rewritten in Rust, is set against 1.1 here once it is released.";
+  c.charted.length ? "2.0 rewrites the shell in Rust, and is set against 1.1 here." : "2.0, rewritten in Rust, is set against 1.1 here once it is released.";
 const MEASURED = "Measured the same way on one PC, after 10 minutes left alone.";
 const KEY = "Each bar starts at zero; shorter is lighter.";
 // A multiple cut for the card: the number large, its word after it.
@@ -161,10 +161,13 @@ export function pageSection(c) {
   return [
     OPEN,
     `  <section class="cmp" aria-labelledby="cmp">`,
+    `    <div class="tell">`,
     `    <h2 id="cmp">How heavy each release is</h2>`,
     ...(c.step ? [`    <p class="lead">${esc(stepWords(c))}</p>`] : []),
     `    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`,
-    ...(charts.length ? [`    <p class="key2">${KEY}</p>`, `    <div class="charts">`, ...charts, `    </div>`] : []),
+    ...(charts.length ? [`    <p class="key2">${KEY}</p>`] : []),
+    `    </div>`,
+    ...(charts.length ? [`    <div class="charts">`, ...charts, `    </div>`] : []),
     `    <div class="gets">${buttons}<a class="how" href="${REPO}/blob/main/docs/baseline.md">How it is measured</a></div>`,
     `  </section>`,
     `  ${CLOSE}`,

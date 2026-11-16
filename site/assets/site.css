@@ -110,7 +110,8 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 /* How heavy each release is: one small bar chart per figure, generated from docs/baseline.md */
 .cmp { display: grid; gap: 16px; padding-top: 14px; border-top: 2px solid var(--v); }
 .cmp h2 { margin-bottom: 0; }
-.cmp .lead { font-size: 14.5px; color: var(--soft); }
+.cmp .lead { font-size: 14.5px; color: var(--soft); max-width: 62ch; }
+.tell { display: grid; gap: 16px; align-content: start; }
 .key2 { font-size: 13px; color: var(--soft); }
 .charts { display: grid; gap: 12px; }
 .m { display: grid; gap: 6px; align-content: start; padding: 14px 16px 16px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); cursor: default; }
@@ -128,7 +129,12 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 @media (min-width: 600px) { .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .gets { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
 .how { display: inline-grid; place-content: center; min-height: 44px; color: var(--vt); font-size: 14.5px; }
-@media (min-width: 1000px) { .charts { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1000px) {
+  .cmp { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: auto 1fr; grid-template-areas: "tell charts" "gets charts"; column-gap: 56px; }
+  .cmp .tell { grid-area: tell; }
+  .cmp .charts { grid-area: charts; }
+  .cmp .gets { grid-area: gets; align-self: end; }
+}
 
 /* Footer */
 .foot { font-size: 13px; color: var(--soft); display: flex; flex-wrap: wrap; gap: 0 20px; align-items: center; }

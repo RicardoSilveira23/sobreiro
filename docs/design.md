@@ -102,7 +102,7 @@ the table differ: no figure is typed on the page.
 | 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
 | 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured |
 | Caption | "Each bar starts at zero; shorter is lighter." |
-| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×" then "less"), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px, four from 1000 px. |
+| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×" then "less"), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the downloads level with the cards' foot. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, and "How it is measured" |
 
 - The multiple is the headline and the bars are its proof: linear, from zero, each a share of
