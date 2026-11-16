@@ -7,6 +7,7 @@
 mod born_test;
 mod carried_bridge;
 mod clock;
+mod connect_flow;
 mod diagnostics;
 mod icon_pictures;
 mod pictures;
@@ -44,6 +45,9 @@ fn main() -> ExitCode {
         Some("--born") => born_test::run(args.next().as_deref().and_then(|arg| arg.to_str())),
         // Hidden: what the exe test launches.
         Some("--refresh-bridge") => carried_bridge::refresh_now(),
+        // Hidden: the Connect and Disconnect flow alone, for a live run before the menu calls it.
+        Some("--connect") => connect_flow::run_now(true),
+        Some("--disconnect") => connect_flow::run_now(false),
         Some("--pill-pictures") => pictures::run(args.next()),
         Some("--icon-pictures") => icon_pictures::run(args.next()),
         _ => ExitCode::from(2),
