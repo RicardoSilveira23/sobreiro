@@ -84,12 +84,14 @@ global M {
 // A text whose baseline lies `baseline` below the top of its parent. The toolkit lays a line out
 // at the font's natural height, ascent plus descent (Inter's hhea ascent is 1984 of 2048 units,
 // Unbounded's 995 of 1000), with the baseline at the ascent, so the top is the baseline less it.
-// Each use of it, and of `Block`, sets `accessible-role: none`: the item that holds a text says
-// what it says, and a role set on the component's root does not reach its uses in this toolkit.
+// The item that holds a text says what it says, so it, and `Block`, are silent: `accessible-role:
+// none` is set on the root and again on each use, since in this toolkit a role set on the root
+// does not reach a use, and a use's role leaves the root with the text role every text gets.
 component Placed inherits Text {
     in property <length> baseline;
     x: 0px;
     y: self.baseline - self.font-metrics.ascent;
+    accessible-role: none;
 }
 
 // Text in Inter 14 that wraps at the row's width, its lines 1.45 of the size apart as 1.1's are.
@@ -105,6 +107,7 @@ component Block inherits Text {
     x: 0px;
     width: self.wrap-width;
     wrap: word-wrap;
+    accessible-role: none;
     font-family: "Inter";
     font-size: 14px;
     line-height-factor: 1.45 / 1.2100586;
