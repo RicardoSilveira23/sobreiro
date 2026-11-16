@@ -34,6 +34,11 @@ const OFF_SCREEN: i32 = -32000;
 const FIND_POLL: Duration = Duration::from_millis(15);
 /// How many times an open waits for `born` to finish another window, at one try every `FIND_POLL`.
 const BORN_TRIES: u32 = 100;
+/// How many times a show waits for the window to take the target monitor's scale, at one try
+/// every `FIND_POLL`, before it is placed anyway.
+const SCALE_TRIES: u32 = 20;
+/// How many times a refused activation is tried again, at one try every `FIND_POLL`.
+const FOCUS_RETRIES: u32 = 3;
 /// How long a window may be on its way before it is given up.
 const GIVE_UP: Duration = Duration::from_secs(2);
 /// How often an open flyout looks for a change of DPI or size.
@@ -51,6 +56,9 @@ struct Seen {
     dpi: u32,
     width: u32,
     height: u32,
+    /// The size the card wants in pixels at the window's DPI; it moves when the card's own height
+    /// does.
+    wanted: (i32, i32),
 }
 
 #[derive(Default)]
@@ -155,7 +163,7 @@ impl Flyout {
             }
             self.made_at = Some(Instant::now());
         }
-        self.present();
+        self.present(SCALE_TRIES);
     }
 
     fn create(&mut self) -> Result<(), String> {
@@ -171,17 +179,28 @@ impl Flyout {
         Ok(())
     }
 
-    /// Shows the window once the toolkit has made it; looks again shortly until then.
-    fn present(&mut self) {
+    /// Shows the window once the toolkit has made it; looks again shortly until then. A window
+    /// that is not shown is first moved, hidden, to its place until it has the target monitor's
+    /// scale (a window shown at another scale is drawn once at the wrong size), as the tooltip is.
+    fn present(&mut self, scale_tries: u32) {
+        if !self.toggle.is_open() {
+            return;
+        }
         if self.window.is_none() {
             self.window = born::focusable_window();
+            if self.window.is_some() {
+                // Hidden through the toolkit, so the first open shows like every later one.
+                self.hide();
+            }
         }
         let Some(window) = self.window else {
             let late = self.made_at.is_none_or(|at| at.elapsed() >= GIVE_UP);
             if late {
                 self.abandon();
             } else {
-                Timer::single_shot(FIND_POLL, || with_flyout(|flyout| flyout.start(0)));
+                Timer::single_shot(FIND_POLL, || {
+                    with_flyout(|flyout| flyout.present(SCALE_TRIES))
+                });
             }
             return;
         };
@@ -189,31 +208,65 @@ impl Flyout {
             self.abandon();
             return;
         }
-        if let Some(component) = &self.component {
-            component.set_data(sample());
-        }
-        self.place(window);
-        if let Some(component) = &self.component {
-            if !component.window().is_visible() {
-                let _ = component.show();
+        let Some(target) = self.target() else {
+            self.close();
+            return;
+        };
+        let Some(component) = &self.component else {
+            return;
+        };
+        component.set_data(sample());
+        if !component.window().is_visible() {
+            if scale_tries > 0 && taskbar::dpi_of(window) != target.dpi {
+                taskbar::move_hidden(window, target.left, target.top);
+                Timer::single_shot(FIND_POLL, move || {
+                    with_flyout(move |flyout| flyout.present(scale_tries - 1));
+                });
+                return;
             }
-            born::activate(window);
-            component.invoke_take_focus();
+            self.place(window);
+            let shown = self.component.as_ref().is_some_and(|c| c.show().is_ok());
+            if !shown {
+                self.close();
+                return;
+            }
+        } else {
+            self.place(window);
+        }
+        if let Some(component) = &self.component {
             component.window().request_redraw();
         }
         self.watch
             .start(TimerMode::Repeated, WATCH, || with_flyout(Flyout::check));
+        self.focus(FOCUS_RETRIES);
     }
 
-    /// Sizes the window for the monitor under the point and moves it to its place.
-    fn place(&mut self, window: isize) {
-        let Some(component) = &self.component else {
+    /// Gives the window the focus. Windows may refuse; it is tried again a few times, and then the
+    /// flyout closes, so it is never left open, unfocused and deaf to Esc and to focus loss.
+    fn focus(&mut self, retries: u32) {
+        let Some(window) = self.window.filter(|_| self.toggle.is_open()) else {
             return;
         };
+        if let Some(component) = &self.component {
+            component.invoke_take_focus();
+        }
+        if born::activate(window) {
+            return;
+        }
+        if retries == 0 {
+            self.close();
+            return;
+        }
+        Timer::single_shot(FIND_POLL, move || {
+            with_flyout(move |flyout| flyout.focus(retries - 1));
+        });
+    }
+
+    /// Where the window goes and at what size, for the monitor under the point.
+    fn target(&self) -> Option<Target> {
+        let component = self.component.as_ref()?;
         let (x, y) = self.point;
-        let Some(screen) = monitor::at_point(x, y) else {
-            return;
-        };
+        let screen = monitor::at_point(x, y)?;
         let width = pixels_at(component.get_card_width(), screen.dpi);
         let height = pixels_at(component.get_card_height(), screen.dpi);
         let (left, top) = place(
@@ -225,10 +278,31 @@ impl Flyout {
             height,
             margin_at(screen.dpi),
         );
-        let target = component.window();
-        target.set_size(PhysicalSize::new(width.max(1) as u32, height.max(1) as u32));
-        target.set_position(PhysicalPosition::new(left, top));
-        self.seen = Some(observe(window, target));
+        Some(Target {
+            dpi: screen.dpi,
+            width,
+            height,
+            left,
+            top,
+        })
+    }
+
+    /// Sizes the window for the monitor under the point and moves it to its place.
+    fn place(&mut self, window: isize) {
+        let Some(target) = self.target() else {
+            self.close();
+            return;
+        };
+        let Some(component) = &self.component else {
+            return;
+        };
+        let handle = component.window();
+        handle.set_size(PhysicalSize::new(
+            target.width.max(1) as u32,
+            target.height.max(1) as u32,
+        ));
+        handle.set_position(PhysicalPosition::new(target.left, target.top));
+        self.seen = Some(observe(window, component));
     }
 
     /// Places the window again when its DPI or pixel size is not what was seen after the last
@@ -241,7 +315,7 @@ impl Flyout {
         let Some(component) = &self.component else {
             return;
         };
-        let now = observe(window, component.window());
+        let now = observe(window, component);
         if now.dpi != 0 && Some(now) != self.seen {
             self.place(window);
         }
@@ -263,8 +337,8 @@ impl Flyout {
 
     /// Lets the window go: it did not come in time, or is gone.
     fn abandon(&mut self) {
-        if self.window.is_none() && born::is_pending() {
-            born::cancel_pending();
+        if self.window.is_none() {
+            born::cancel_pending_focusable();
         }
         self.hide();
         self.component = None;
@@ -275,21 +349,40 @@ impl Flyout {
     }
 }
 
-fn observe(window: isize, target: &slint::Window) -> Seen {
-    let size = target.size();
+/// Where the window goes, and at what size, in pixels.
+struct Target {
+    dpi: u32,
+    width: i32,
+    height: i32,
+    left: i32,
+    top: i32,
+}
+
+fn observe(window: isize, component: &FlyoutWindow) -> Seen {
+    let size = component.window().size();
+    let dpi = taskbar::dpi_of(window);
     Seen {
-        dpi: taskbar::dpi_of(window),
+        dpi,
         width: size.width,
         height: size.height,
+        wanted: (
+            pixels_at(component.get_card_width(), dpi),
+            pixels_at(component.get_card_height(), dpi),
+        ),
     }
 }
 
 /// Told by `born`, inside the window's procedure, that a focusable window lost the activation.
-/// Hiding the window deactivates it synchronously, so the work is left to a later turn.
+/// Hiding the window deactivates it synchronously, so the work is left to a later turn. By then
+/// the flyout may have the focus again (hidden on its first open, then shown and focused in the
+/// same turn): a loss that no longer holds closes nothing.
 fn deactivated(window: isize) {
     Timer::single_shot(Duration::ZERO, move || {
         with_flyout(move |flyout| {
-            if flyout.window == Some(window) && flyout.toggle.focus_lost(Instant::now()) {
+            if flyout.window == Some(window)
+                && !born::is_foreground(window)
+                && flyout.toggle.focus_lost(Instant::now())
+            {
                 flyout.hide();
             }
         });

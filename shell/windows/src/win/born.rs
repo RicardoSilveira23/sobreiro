@@ -31,10 +31,10 @@ use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::WindowsAndMessaging::{
     CBT_CREATEWNDW, CallNextHookEx, CallWindowProcW, DefWindowProcW, GW_OWNER, GWL_EXSTYLE,
-    GWLP_HWNDPARENT, GWLP_WNDPROC, GetWindow, GetWindowLongPtrW, HHOOK, IsWindow, STYLESTRUCT,
-    SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW, SetWindowsHookExW,
-    UnhookWindowsHookEx, WH_CBT, WINDOWPOS, WM_ACTIVATE, WM_MOUSEACTIVATE, WM_NCDESTROY,
-    WM_SHOWWINDOW, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WNDPROC, WS_EX_APPWINDOW,
+    GWLP_HWNDPARENT, GWLP_WNDPROC, GetForegroundWindow, GetWindow, GetWindowLongPtrW, HHOOK,
+    IsWindow, STYLESTRUCT, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW,
+    SetWindowsHookExW, UnhookWindowsHookEx, WH_CBT, WINDOWPOS, WM_ACTIVATE, WM_MOUSEACTIVATE,
+    WM_NCDESTROY, WM_SHOWWINDOW, WM_STYLECHANGING, WM_WINDOWPOSCHANGING, WNDPROC, WS_EX_APPWINDOW,
     WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
 };
 
@@ -68,7 +68,8 @@ struct Taken {
 }
 
 thread_local! {
-    /// The owner for the next top-level window, once `arm` has been called and until it is taken.
+    /// What the next top-level window is to be made as (its owner, and whether it may be activated),
+    /// once `arm` has been called and until it is taken.
     static PENDING: Cell<Option<Pending>> = const { Cell::new(None) };
     /// The hook's handle, 0 while there is none.
     static HOOK: Cell<isize> = const { Cell::new(0) };
@@ -138,10 +139,21 @@ pub fn on_deactivated(handler: fn(isize)) {
 }
 
 /// Brings `window` to the foreground and gives it the focus. Allowed when the process was the one
-/// the user just clicked; Windows may refuse otherwise.
-pub fn activate(window: isize) {
-    // SAFETY: asks Windows about a handle; any number is allowed.
-    let _ = unsafe { SetForegroundWindow(HWND(window as *mut c_void)) };
+/// the user just clicked; Windows may refuse otherwise. True when the window is the foreground
+/// window afterwards.
+pub fn activate(window: isize) -> bool {
+    let handle = HWND(window as *mut c_void);
+    // SAFETY: brings a window of this process to the front; any handle is allowed and a bad one
+    // fails.
+    let _ = unsafe { SetForegroundWindow(handle) };
+    is_foreground(window)
+}
+
+/// Whether `window` is the foreground window.
+pub fn is_foreground(window: isize) -> bool {
+    // SAFETY: takes no arguments.
+    let front = unsafe { GetForegroundWindow() };
+    front.0 as isize == window
 }
 
 /// Whether `handle` is a window that exists.
@@ -179,10 +191,20 @@ pub fn is_pending() -> bool {
     pending().is_some()
 }
 
-/// Gives up on the window still pending, if any, so `show` can be called again. For a toolkit
-/// window that is dropped before the toolkit made it.
+/// Gives up on the window still pending, if it is of the owned, never-activated kind (`show`), so
+/// `show` can be called again. For a toolkit window that is dropped before the toolkit made it. A
+/// pending focusable window is left alone: it is cancelled with `cancel_pending_focusable`.
 pub fn cancel_pending() {
-    disarm();
+    if pending().is_some_and(|p| !p.focusable) {
+        disarm();
+    }
+}
+
+/// Like `cancel_pending`, for a pending window of the focusable kind (`show_focusable`) only.
+pub fn cancel_pending_focusable() {
+    if pending().is_some_and(|p| p.focusable) {
+        disarm();
+    }
 }
 
 /// Takes back an `arm` that no window answered, and the hook if nothing else needs it.
@@ -275,7 +297,9 @@ fn subclass(window: HWND) {
     let _ = PENDING.try_with(|cell| cell.set(None));
     if request.focusable {
         // A tool window before it is ever visible, so no button flashes in the taskbar.
-        // SAFETY: `window` is ours, just created by this thread.
+        // SAFETY: `window` is ours, just created by this thread. The write sends WM_STYLECHANGING
+        // through the toolkit's procedure before its WM_NCCREATE, which passes it to the default
+        // procedure.
         unsafe {
             let style = GetWindowLongPtrW(window, GWL_EXSTYLE) as u32;
             SetWindowLongPtrW(window, GWL_EXSTYLE, keep_style(style, true) as isize);
