@@ -191,8 +191,11 @@ fn render(
     window.draw_if_needed(|renderer| {
         renderer.render(&mut [PremultipliedRgbaColor::default()], 1);
     });
-    let width = (picture.get_pill_width() * scale).ceil() as u32;
-    let height = (picture.get_pill_height() * scale).ceil() as u32;
+    // Rounded up, less a hair: a whole number of pixels, such as 56 at 1.5, divided into units and
+    // multiplied back in f32 can come out just over, and would grow a pixel.
+    let pixels = |units: f32| (units * scale - 0.001).ceil() as u32;
+    let width = pixels(picture.get_pill_width());
+    let height = pixels(picture.get_pill_height());
     window.set_size(PhysicalSize::new(width, height));
     let mut buffer = vec![PremultipliedRgbaColor::default(); (width * height) as usize];
     window.window().request_redraw();

@@ -243,7 +243,8 @@ fn on_broadcast(broadcast: Broadcast) {
 /// The pill's size in pixels at `dpi`, from its size in units: rounded up, so no edge is cut.
 fn size_at(width_units: f32, height_units: f32, dpi: u32) -> (i32, i32) {
     let scale = f64::from(dpi) / 96.0;
-    let pixels = |units: f32| (f64::from(units) * scale).ceil() as i32;
+    // Less a hair: a whole number of pixels (56 at 150%) held as f32 units can come out just over.
+    let pixels = |units: f32| (f64::from(units) * scale - 0.001).ceil() as i32;
     (pixels(width_units), pixels(height_units))
 }
 
