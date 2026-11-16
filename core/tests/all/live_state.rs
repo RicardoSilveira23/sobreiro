@@ -46,6 +46,6 @@ fn off_and_ok_have_none() {
 fn the_about_line_is_fixed() {
     assert_eq!(
         live_usage_message::ABOUT_LINE,
-        "It asks Anthropic for your usage every 5 minutes with Claude Code's sign-in, and makes no other network calls."
+        "It asks Anthropic and GitHub for your usage every 5 minutes, with the sign-ins Claude Code and GitHub already have, and makes no other network calls."
     );
 }
