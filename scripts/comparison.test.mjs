@@ -10,8 +10,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const md = readFileSync(join(root, "docs/baseline.md"), "utf8").replace(/\r/g, "");
 const page = readFileSync(join(root, "site/index.html"), "utf8").replace(/\r/g, "");
 
-// A stand-in 2.0.0 row: the spike's figures, used only to build the page as it will be.
-const ROW_20 = "| 2.0.0 | 2026-12-01 | 7 MB | 29 MB | 1.7 s | 0.06 s | 0.06 s | 9.3 MB | 2.2 MB | 9 ms |";
+// A made-up 2.0.0 row, only for building the page as it will look: not 2.0's figures, which come
+// from its release row. The date is far off so it can never pass for a measured one.
+const ROW_20 = "| 2.0.0 | 2099-01-01 | 7 MB | 29 MB | 1.7 s | 0.06 s | 0.06 s | 9.3 MB | 2.2 MB | 9 ms |";
 const without20 = md.replace(/^\| 2\.0\.0 \|.*\n/m, "");
 const with20 = without20.replace(/^(\| 1\.1\.0 \| \d{4}-.*\n)/m, `$1${ROW_20}\n`);
 
