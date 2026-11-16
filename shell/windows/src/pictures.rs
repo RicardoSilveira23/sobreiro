@@ -33,8 +33,7 @@ impl Platform for InMemory {
 /// One state of the pill, by the name its pictures carry. `digits-11` and `digits-88` differ in
 /// one figure only: the test of the figure box compares them.
 pub fn states() -> Vec<(&'static str, PillModel)> {
-    let mut both = claude(15, 45, false);
-    both.copilot = Some(copilot(17, false));
+    let both = both_services();
     let mut only = claude(15, 45, false);
     only.show_claude = false;
     only.copilot = Some(copilot(17, false));
@@ -63,6 +62,13 @@ pub fn states() -> Vec<(&'static str, PillModel)> {
         // Claude's block alone, stopped: its rings are where the other Claude-only states have them.
         ("stale-claude", claude(15, 45, true)),
     ]
+}
+
+/// Both services, fresh and green: the `copilot-on` state.
+pub fn both_services() -> PillModel {
+    let mut both = claude(15, 45, false);
+    both.copilot = Some(copilot(17, false));
+    both
 }
 
 /// The themes (the taskbar's, so "light" has dark ink) and bar colours the pictures come in.

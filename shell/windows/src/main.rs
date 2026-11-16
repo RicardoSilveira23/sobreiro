@@ -1,10 +1,12 @@
-//! Sobreiro's Windows shell. So far it is only the build: an exe that says its version and draws
-//! the specimen of its fonts. The pill, the flyout and the tray icons come next.
+//! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar, with a fixed sample
+//! model for now; the arguments say its version, draw the specimen of its fonts and the pill's
+//! pictures, and run the born test. The flyout and the tray icons come next.
 #![windows_subsystem = "windows"]
 
 mod born_test;
 mod pictures;
 mod pill_face;
+mod pill_host;
 mod specimen;
 mod win;
 
@@ -20,7 +22,10 @@ mod ui {
 fn main() -> ExitCode {
     // Arguments are compared as they come: one that is not Unicode matches nothing.
     let mut args = std::env::args_os().skip(1);
-    match args.next().as_deref().and_then(|arg| arg.to_str()) {
+    let Some(first) = args.next() else {
+        return pill_host::run();
+    };
+    match first.to_str() {
         Some("--version") => {
             println!("Sobreiro {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
@@ -29,7 +34,6 @@ fn main() -> ExitCode {
         // Hidden: what the born test launches.
         Some("--born") => born_test::run(args.next().as_deref().and_then(|arg| arg.to_str())),
         Some("--pill-pictures") => pictures::run(args.next()),
-        // Nothing to show yet.
         _ => ExitCode::from(2),
     }
 }

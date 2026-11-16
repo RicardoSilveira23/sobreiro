@@ -119,6 +119,18 @@ fn arm(owner: isize) -> Result<(), String> {
     Ok(())
 }
 
+/// Whether a window shown with `show` has not been created yet, so the next top-level window
+/// this thread makes would be taken for it.
+pub fn is_pending() -> bool {
+    pending().is_some()
+}
+
+/// Gives up on the window still pending, if any, so `show` can be called again. For a toolkit
+/// window that is dropped before the toolkit made it.
+pub fn cancel_pending() {
+    disarm();
+}
+
 /// Takes back an `arm` that no window answered, and the hook if nothing else needs it.
 fn disarm() {
     let _ = PENDING.try_with(|cell| cell.set(None));
