@@ -13,8 +13,11 @@ use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 use windows::Win32::Foundation::{HWND, RECT};
-use windows::Win32::Graphics::Gdi::{COLOR_INFOBK, GetDC, GetPixel, GetSysColor, ReleaseDC};
+use windows::Win32::Graphics::Gdi::{GetDC, GetPixel, ReleaseDC};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows::Win32::UI::HiDpi::{
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
+};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, SetFocus, VK_MENU, keybd_event,
 };
@@ -212,6 +215,10 @@ fn look(born: HWND, setting: &Setting, looks: u32, visible: Option<bool>) {
 /// it when it is taken, then shows and hides it three times, and tells the test as it goes.
 #[test]
 fn the_windows_are_owned_and_never_activated() {
+    // Aware of the display's scale, so the rectangles and the screen's pixels the test reads are
+    // the physical ones the exe (which is aware) places its windows by.
+    // SAFETY: sets this process's awareness, before it makes a window; a refusal is ignored.
+    let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let mine = make_window(true, 100);
     let stand_in = make_window(false, 300);
     pump(Duration::from_millis(200), || false);
@@ -269,18 +276,17 @@ fn the_windows_are_owned_and_never_activated() {
             }
         }
         // Some time after a show the tooltip must be painted: the screen at its corner is its
-        // ground, the system's tooltip colour, and not what is behind it. Once for each show.
+        // ground, 1.1's tooltip colour, and not what is behind it. Once for each show.
         if holds_foreground
             && tooltip_visible == Some(true)
             && said_at.elapsed() > Duration::from_millis(120)
             && painted < shown
         {
             painted = shown;
-            // SAFETY: asks Windows for one of its colours.
-            let ground = unsafe { GetSysColor(COLOR_INFOBK) };
             assert_eq!(
+                // A COLORREF is 0x00BBGGRR: the ground is #F1F2F7.
                 pixel_inside(second),
-                ground,
+                0x00F7_F2F1,
                 "the tooltip is shown but not painted (turn {shown})"
             );
         }

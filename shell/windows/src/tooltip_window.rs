@@ -10,7 +10,6 @@
 //! The toolkit makes the window a turn of the event loop after it is shown, and `born` lists it
 //! then; the caller looks for it with `find` until it is there.
 use crate::ui::Tooltip;
-use crate::win::system_colours;
 use crate::win::{born, taskbar};
 use slint::{Color, ComponentHandle, LogicalSize, PhysicalPosition, SharedString};
 use sobreiro_core::colours::Rgb;
@@ -18,11 +17,22 @@ use std::time::{Duration, Instant};
 
 /// Where a new tooltip's window is made, off every screen.
 const OFF_SCREEN: i32 = -32000;
-/// The edge of 1.1's tooltip, WPF's own.
+/// The colours of 1.1's tooltip, WPF's own, as measured on the screen. They are the same in the
+/// light and the dark theme.
+const GROUND: Rgb = Rgb {
+    r: 0xF1,
+    g: 0xF2,
+    b: 0xF7,
+};
 const EDGE: Rgb = Rgb {
     r: 0x76,
     g: 0x76,
     b: 0x76,
+};
+const INK: Rgb = Rgb {
+    r: 0x57,
+    g: 0x57,
+    b: 0x57,
 };
 /// How long a window may be on its way before it is given up.
 const GIVE_UP: Duration = Duration::from_secs(2);
@@ -45,9 +55,8 @@ impl TooltipWindow {
     /// An error says it could not be made, or that `born` is busy with another window.
     pub fn create(owner: isize) -> Result<TooltipWindow, String> {
         let component = Tooltip::new().map_err(|error| error.to_string())?;
-        let (ground, ink) = system_colours::tooltip();
-        component.set_ground(colour(ground));
-        component.set_ink(colour(ink));
+        component.set_ground(colour(GROUND));
+        component.set_ink(colour(INK));
         component.set_edge_colour(colour(EDGE));
         component
             .window()

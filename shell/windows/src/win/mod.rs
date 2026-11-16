@@ -8,5 +8,4 @@ pub mod locale;
 pub mod menu;
 pub mod probe;
 pub mod registry;
-pub mod system_colours;
 pub mod taskbar;
