@@ -922,6 +922,44 @@ Esc and focus loss, a theme, accent or menu change redrawing the open card, a fe
 card opens on an old reading, the footer after Connect, keyboard and screen reader, and the
 toasts.
 
+#### The text at 1.1's weight, after #99
+
+Measured on 2026-11-16 for [#99](https://github.com/RicardoSilveira23/sobreiro/issues/99), on
+the same pictures in the purple bar colour (the text is the same with the accent): 18 states,
+three styles, both themes, three scales. Each text of the card is drawn a second time at a
+fraction k of its alpha, as the pill's are; the factors come from the same interpolation. The
+figures (Unbounded) and every Inter text have factors of their own, per scale.
+
+| Factor k | 100% | 150% | 200% |
+| --- | --- | --- | --- |
+| Inter texts | 0.45 | 0.66 | 0.53 |
+| Figures | 0.52 | 0.96 | 0.18 |
+
+The card is opaque, so a text's ink is measured as its distance from what lies under it:
+`Sobreiro.exe --flyout-pictures <folder> --shapes` draws the card with every text hidden, and
+the ink of a picture is the summed RGB distance from that picture, over the pixels whose 3×3
+neighbourhood there is one flat colour (a shape's edges are left out). 1.1's pictures are
+measured against 2.0's shapes, which lie on the same pixels; in flat shapes 1.1 and 2.0 differ
+by too little to change a ratio in the third digit.
+
+| Text ink, 2.0 / 1.1 | 100% | 150% | 200% |
+| --- | --- | --- | --- |
+| Before, all pictures | 0.910 | 0.907 | 0.954 |
+| After, all pictures | 0.994 | 0.996 | 1.000 |
+| After, per picture | 0.984 to 1.012 | 0.990 to 1.006 | 0.992 to 1.008 |
+
+- The figures' factors were picked so the figures alone match 1.1's (their own line of a
+  bar row), then the Inter factor so the whole card does. At 150% the figures (22 DIPs, 33
+  px) lose nothing to the renderer's whole-pixel cut, while the Inter sizes do (15 DIPs drawn at
+  22 px, 13 at 19). Every second pass is at its text's own size and
+  place. Drawing the 150% Inter texts at the next whole pixel, as the pill draws its figures,
+  would change the width of every line and where long lines wrap, so it is not done.
+- Sizes are unchanged: every picture is still 1.1's size, and the placement tests pass as
+  they were.
+- The `flyout_face` test checks each picture within 3% and each style and theme's sum over
+  the states within 2%, at each scale.
+- Between 100%, 150% and 200% the factors are interpolated; 125% and 175% were not measured.
+
 ## Notes on each point
 
 ### Idle memory, exe size and start time

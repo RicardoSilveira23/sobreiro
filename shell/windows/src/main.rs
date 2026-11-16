@@ -90,7 +90,7 @@ fn main() -> ExitCode {
         Some("--disconnect") => connect_flow::run_now(false),
         Some("--pill-pictures") => pictures::run(args.next()),
         Some("--icon-pictures") => icon_pictures::run(args.next()),
-        Some("--flyout-pictures") => flyout::pictures::run(args.next()),
+        Some("--flyout-pictures") => flyout::pictures::run(args.next(), args),
         _ => ExitCode::from(2),
     }
 }

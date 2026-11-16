@@ -5,6 +5,7 @@
 import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
 import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
 import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+import { SecondPass } from "second-pass.slint";
 
 // A label and its figure as text ("45%", or a dash); `star` adds "*" after the figure of a block
 // whose numbers have stopped.
@@ -71,25 +72,12 @@ global Metrics {
     out property <float> figure-pass-150: 0.5;
     out property <float> figure-pass-200: 0.38;
 
-    // A second pass's factor at a scale, from its factors at 100%, 150% and 200%: linear between
-    // them, the end ones outside.
-    pure function between(scale: float, at-100: float, at-150: float, at-200: float) -> float {
-        if scale <= 1 {
-            return at-100;
-        } else if scale <= 1.5 {
-            return at-100 + (at-150 - at-100) * (scale - 1) / 0.5;
-        } else if scale <= 2 {
-            return at-150 + (at-200 - at-150) * (scale - 1.5) / 0.5;
-        }
-        return at-200;
-    }
-
     public pure function label-pass(scale: float) -> float {
-        return between(scale, label-pass-100, label-pass-150, label-pass-200);
+        return SecondPass.between(scale, label-pass-100, label-pass-150, label-pass-200);
     }
 
     public pure function figure-pass(scale: float) -> float {
-        return between(scale, figure-pass-100, figure-pass-150, figure-pass-200);
+        return SecondPass.between(scale, figure-pass-100, figure-pass-150, figure-pass-200);
     }
 }
 

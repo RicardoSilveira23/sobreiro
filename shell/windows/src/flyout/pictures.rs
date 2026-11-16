@@ -1,10 +1,11 @@
-//! `--flyout-pictures <folder>`: draws the flyout's card in every state, theme, bar colour and
+//! `--flyout-pictures <folder> [--shapes]`: draws the flyout's card in every state, theme, bar colour and
 //! scale into memory, with the software renderer and no window, and writes each as a PNG with a
 //! transparent ground outside the card's rounded border. Nothing else is read or written: no
-//! tray icon, no network, no registry, no `config.json`.
+//! tray icon, no network, no registry, no `config.json`. With `--shapes` the card is drawn with no
+//! text, under the same names, for measuring what is not text.
 use super::face::flyout_data;
 use super::states::states;
-use crate::ui::FlyoutPicture;
+use crate::ui::{FlyoutPass, FlyoutPicture};
 use slint::platform::software_renderer::{
     MinimalSoftwareWindow, PremultipliedRgbaColor, RepaintBufferType,
 };
@@ -56,12 +57,20 @@ pub fn file_name(state: &str, style: &str, theme: &str, colour: &str, scale: f32
     format!("flyout-{state}-{style}-{theme}-{colour}-{scale}x.png")
 }
 
-pub fn run(folder: Option<std::ffi::OsString>) -> ExitCode {
+pub fn run(
+    folder: Option<std::ffi::OsString>,
+    mut rest: impl Iterator<Item = std::ffi::OsString>,
+) -> ExitCode {
     let Some(folder) = folder.filter(|folder| !folder.is_empty()) else {
         eprintln!("--flyout-pictures needs a folder to write to.");
         return ExitCode::from(2);
     };
-    match draw_all(Path::new(&folder)) {
+    let shapes = match rest.next() {
+        None => false,
+        Some(arg) if arg == "--shapes" && rest.next().is_none() => true,
+        Some(_) => return ExitCode::from(2),
+    };
+    match draw_all(Path::new(&folder), shapes) {
         Ok(count) => {
             println!("{count} pictures");
             ExitCode::SUCCESS
@@ -73,11 +82,14 @@ pub fn run(folder: Option<std::ffi::OsString>) -> ExitCode {
     }
 }
 
-fn draw_all(folder: &Path) -> Result<usize, String> {
+fn draw_all(folder: &Path, shapes: bool) -> Result<usize, String> {
     std::fs::create_dir_all(folder).map_err(|e| e.to_string())?;
     let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
     slint::platform::set_platform(Box::new(InMemory(window.clone()))).map_err(|e| e.to_string())?;
     let picture = FlyoutPicture::new().map_err(|e| e.to_string())?;
+    if shapes {
+        picture.global::<FlyoutPass>().set_text_drawn(false);
+    }
     picture.show().map_err(|e| e.to_string())?;
 
     let mut count = 0;

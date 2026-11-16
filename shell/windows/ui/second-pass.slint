@@ -1,0 +1,15 @@
+// What the pill and the flyout's card share to draw a text a second time at a partial alpha.
+export global SecondPass {
+    // A second pass's factor at a scale, from its factors at 100%, 150% and 200%: linear between
+    // them, the end ones outside.
+    public pure function between(scale: float, at-100: float, at-150: float, at-200: float) -> float {
+        if scale <= 1 {
+            return at-100;
+        } else if scale <= 1.5 {
+            return at-100 + (at-150 - at-100) * (scale - 1) / 0.5;
+        } else if scale <= 2 {
+            return at-150 + (at-200 - at-150) * (scale - 1.5) / 0.5;
+        }
+        return at-200;
+    }
+}
