@@ -62,14 +62,13 @@ global Metrics {
     // thin glyph has more partly covered pixels and gains more from a second pass than a bold one,
     // so the labels, `*` and reset date (Inter) and the figures (Unbounded Bold) have factors of
     // their own, picked so the text column's summed alpha matches 1.1's in every state (see the
-    // `face` test). The renderer also cuts a glyph's size to whole pixels (11 DIPs at 150% is drawn
-    // at 16 px, laid out at 16.5): a figure's second pass is drawn at the next whole pixel, 17,
-    // which puts back the ink the cut takes and leaves no stronger row under the baseline.
+    // `face` test). A second pass is drawn at the same size and place as its text: one at another
+    // size leaves a ghost of the glyph's edges.
     out property <float> label-pass-100: 0.26;
     out property <float> label-pass-150: 0.35;
     out property <float> label-pass-200: 0.18;
     out property <float> figure-pass-100: 0.82;
-    out property <float> figure-pass-150: 0.65;
+    out property <float> figure-pass-150: 0.5;
     out property <float> figure-pass-200: 0.38;
 
     // A second pass's factor at a scale, from its factors at 100%, 150% and 200%: linear between
@@ -215,29 +214,30 @@ component Line inherits Rectangle {
         accessible-role: none;
     }
 
+    // The renderer cuts a glyph's size down to whole pixels: 11 DIPs at 150% would be drawn at
+    // 16 px where 1.1 draws 16.5, with less ink. The figure is drawn at the next whole pixel, 17
+    // (the same size at 100% and 200%), and ends where the line's layout, at 11 DIPs, ends.
     figure := Text {
         text: root.line.figure;
         font-family: "Unbounded";
         font-weight: 700;
-        font-size: Metrics.figure-size;
+        font-size: ceil(Metrics.figure-size / 1phx) * 1phx;
         color: root.ink;
-        x: root.figure-x;
+        x: root.figure-x + figure-m.preferred-width / Metrics.measure-scale * (1 - self.font-size / Metrics.figure-size);
         y: root.baseline - self.font-metrics.ascent;
         height: self.preferred-height;
         accessible-role: none;
     }
 
-    // At the figure's size rounded up to whole pixels (the same size at 100% and 200%), ending
-    // where the figure ends, on its baseline.
     Text {
         text: root.line.figure;
         font-family: "Unbounded";
         font-weight: 700;
-        font-size: ceil(Metrics.figure-size / 1phx) * 1phx;
+        font-size: figure.font-size;
         color: root.figure-twin;
-        x: root.figure-x + figure.preferred-width - self.preferred-width;
-        y: root.baseline - self.font-metrics.ascent;
-        height: self.preferred-height;
+        x: figure.x;
+        y: figure.y;
+        height: figure.height;
         accessible-role: none;
     }
 

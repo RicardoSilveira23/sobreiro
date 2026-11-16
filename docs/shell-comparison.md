@@ -846,16 +846,16 @@ Not compared, as before: the ground under the pointer, and 1.1 on a live display
 #### The text at 1.1's weight, after #93
 
 Measured on 2026-11-16 for [#93](https://github.com/RicardoSilveira23/sobreiro/issues/93), on
-the same pictures. Each text of the pill is now drawn a second time at a fraction k of its
-alpha, so a pixel's alpha a becomes a + k·a(1 − a). A thin glyph has more partly covered pixels
-and gains more than a bold one, so the Inter texts (labels, `*`, reset date) and the figures
-have factors of their own, per scale. The figures' second pass at 150% is drawn at 17 px, the
-size the renderer cuts to 16, which puts back the ink the cut takes.
+the same pictures. Each text of the pill is now drawn a second time, at the same size and
+place, at a fraction k of its alpha, so a pixel's alpha a becomes a + k·a(1 − a). A thin glyph
+has more partly covered pixels and gains more than a bold one, so the Inter texts (labels, `*`,
+reset date) and the figures have factors of their own, per scale. At 150% the figures are drawn
+at 17 px, where the renderer would cut 1.1's 16.5 to 16; they end where the line's layout ends.
 
 | Factor k | 100% | 150% | 200% |
 | --- | --- | --- | --- |
 | Labels, `*`, reset date | 0.26 | 0.35 | 0.18 |
-| Figures | 0.82 | 0.65 | 0.38 |
+| Figures | 0.82 | 0.5 | 0.38 |
 
 Summed alpha of the text column, 2.0 / 1.1, the same in both themes (the nine states with one
 block; the column is everything before the rings or the bar):
@@ -863,16 +863,17 @@ block; the column is everything before the rings or the bar):
 | | 100% | 150% | 200% |
 | --- | --- | --- | --- |
 | Before | 0.878 | 0.854 | 0.959 |
-| After | 0.999 | 1.002 | 0.995 |
-| After, per state | 0.983 to 1.017 | 0.996 to 1.018 | 0.990 to 1.012 |
+| After | 0.999 | 0.998 | 0.995 |
+| After, per state | 0.983 to 1.017 | 0.993 to 1.014 | 0.990 to 1.012 |
 
-- Sizes are unchanged: all 132 pictures are still 1.1's size.
+- Sizes are unchanged: all 132 pictures are still 1.1's size, and the layout is 1.1's. At 150%
+  the digits are about 3% larger than 1.1's, where before they were 3% smaller.
 - The `face` test checks each state within 3% and the column within 2%, at each scale and in
   both themes.
-- One factor for all texts, as first tried, got the column to 1.00 / 0.99 / 1.00 but left the
-  dash of a block with no reading 11% heavier than 1.1's at 150%. Drawing the figures' second
-  pass twice over at 150%, in place of the larger size, darkened a faint row under the figures'
-  baseline that 1.1 does not have.
+- Tried and dropped: one factor for all texts left the dash of a block with no reading 11%
+  heavier than 1.1's at 150%. A second pass at 17 px over 16 px figures matched the ink but read
+  as blurred, a ghost of the edges, on screen. Two full extra passes at 16 px darkened a faint
+  row under the figures' baseline. One full extra pass at 16 px stays 5% light.
 - That row is there without the fix too (alpha 40, 59 and 87 at 100%, 150% and 200%, where
   1.1 has none) and every second pass strengthens it; the figures' factor at 200% is held where
   it stays under the baseline test's threshold.
