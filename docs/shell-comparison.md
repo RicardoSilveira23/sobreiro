@@ -846,16 +846,16 @@ Not compared, as before: the ground under the pointer, and 1.1 on a live display
 #### The text at 1.1's weight, after #93
 
 Measured on 2026-11-16 for [#93](https://github.com/RicardoSilveira23/sobreiro/issues/93), on
-the same pictures. Each text of the pill is now drawn a second time at a fraction k of its
-alpha, so a pixel's alpha a becomes a + k·a(1 − a). A thin glyph has more partly covered pixels
-and gains more than a bold one, so the Inter texts (labels, `*`, reset date) and the figures
-have factors of their own, per scale. The figures' second pass at 150% is drawn at 17 px, the
-size the renderer cuts to 16, which puts back the ink the cut takes.
+the same pictures. Each text of the pill is now drawn a second time, at the same size and
+place, at a fraction k of its alpha, so a pixel's alpha a becomes a + k·a(1 − a). A thin glyph
+has more partly covered pixels and gains more than a bold one, so the Inter texts (labels, `*`,
+reset date) and the figures have factors of their own, per scale. At 150% the figures are drawn
+at 17 px, where the renderer would cut 1.1's 16.5 to 16; they end where the line's layout ends.
 
 | Factor k | 100% | 150% | 200% |
 | --- | --- | --- | --- |
 | Labels, `*`, reset date | 0.26 | 0.35 | 0.18 |
-| Figures | 0.82 | 0.65 | 0.38 |
+| Figures | 0.82 | 0.5 | 0.38 |
 
 Summed alpha of the text column, 2.0 / 1.1, the same in both themes (the nine states with one
 block; the column is everything before the rings or the bar):
@@ -863,16 +863,17 @@ block; the column is everything before the rings or the bar):
 | | 100% | 150% | 200% |
 | --- | --- | --- | --- |
 | Before | 0.878 | 0.854 | 0.959 |
-| After | 0.999 | 1.002 | 0.995 |
-| After, per state | 0.983 to 1.017 | 0.996 to 1.018 | 0.990 to 1.012 |
+| After | 0.999 | 0.998 | 0.995 |
+| After, per state | 0.983 to 1.017 | 0.993 to 1.014 | 0.990 to 1.012 |
 
-- Sizes are unchanged: all 132 pictures are still 1.1's size.
+- Sizes are unchanged: all 132 pictures are still 1.1's size, and the layout is 1.1's. At 150%
+  the digits are about 3% larger than 1.1's, where before they were 3% smaller.
 - The `face` test checks each state within 3% and the column within 2%, at each scale and in
   both themes.
-- One factor for all texts, as first tried, got the column to 1.00 / 0.99 / 1.00 but left the
-  dash of a block with no reading 11% heavier than 1.1's at 150%. Drawing the figures' second
-  pass twice over at 150%, in place of the larger size, darkened a faint row under the figures'
-  baseline that 1.1 does not have.
+- Tried and dropped: one factor for all texts left the dash of a block with no reading 11%
+  heavier than 1.1's at 150%. A second pass at 17 px over 16 px figures matched the ink but read
+  as blurred, a ghost of the edges, on screen. Two full extra passes at 16 px darkened a faint
+  row under the figures' baseline. One full extra pass at 16 px stays 5% light.
 - That row is there without the fix too (alpha 40, 59 and 87 at 100%, 150% and 200%, where
   1.1 has none) and every second pass strengthens it; the figures' factor at 200% is held where
   it stays under the baseline test's threshold.
@@ -920,6 +921,44 @@ here, since they need the running app: opening from the pill and each tray icon,
 Esc and focus loss, a theme, accent or menu change redrawing the open card, a fetch when the
 card opens on an old reading, the footer after Connect, keyboard and screen reader, and the
 toasts.
+
+#### The text at 1.1's weight, after #99
+
+Measured on 2026-11-16 for [#99](https://github.com/RicardoSilveira23/sobreiro/issues/99), on
+the same pictures in the purple bar colour (the text is the same with the accent): 18 states,
+three styles, both themes, three scales. Each text of the card is drawn a second time at a
+fraction k of its alpha, as the pill's are; the factors come from the same interpolation. The
+figures (Unbounded) and every Inter text have factors of their own, per scale.
+
+| Factor k | 100% | 150% | 200% |
+| --- | --- | --- | --- |
+| Inter texts | 0.45 | 0.66 | 0.53 |
+| Figures | 0.52 | 0.96 | 0.18 |
+
+The card is opaque, so a text's ink is measured as its distance from what lies under it:
+`Sobreiro.exe --flyout-pictures <folder> --shapes` draws the card with every text hidden, and
+the ink of a picture is the summed RGB distance from that picture, over the pixels whose 3×3
+neighbourhood there is one flat colour (a shape's edges are left out). 1.1's pictures are
+measured against 2.0's shapes, which lie on the same pixels; in flat shapes 1.1 and 2.0 differ
+by too little to change a ratio in the third digit.
+
+| Text ink, 2.0 / 1.1 | 100% | 150% | 200% |
+| --- | --- | --- | --- |
+| Before, all pictures | 0.910 | 0.907 | 0.954 |
+| After, all pictures | 0.994 | 0.996 | 1.000 |
+| After, per picture | 0.984 to 1.012 | 0.990 to 1.006 | 0.992 to 1.008 |
+
+- The figures' factors were picked so the figures alone match 1.1's (their own line of a
+  bar row), then the Inter factor so the whole card does. At 150% the figures (22 DIPs, 33
+  px) lose nothing to the renderer's whole-pixel cut, while the Inter sizes do (15 DIPs drawn at
+  22 px, 13 at 19). Every second pass is at its text's own size and
+  place. Drawing the 150% Inter texts at the next whole pixel, as the pill draws its figures,
+  would change the width of every line and where long lines wrap, so it is not done.
+- Sizes are unchanged: every picture is still 1.1's size, and the placement tests pass as
+  they were.
+- The `flyout_face` test checks each picture within 3% and each style and theme's sum over
+  the states within 2%, at each scale.
+- Between 100%, 150% and 200% the factors are interpolated; 125% and 175% were not measured.
 
 ## Notes on each point
 

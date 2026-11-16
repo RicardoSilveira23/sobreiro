@@ -5,6 +5,7 @@
 import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
 import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
 import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+import { SecondPass } from "second-pass.slint";
 
 // A label and its figure as text ("45%", or a dash); `star` adds "*" after the figure of a block
 // whose numbers have stopped.
@@ -62,35 +63,21 @@ global Metrics {
     // thin glyph has more partly covered pixels and gains more from a second pass than a bold one,
     // so the labels, `*` and reset date (Inter) and the figures (Unbounded Bold) have factors of
     // their own, picked so the text column's summed alpha matches 1.1's in every state (see the
-    // `face` test). The renderer also cuts a glyph's size to whole pixels (11 DIPs at 150% is drawn
-    // at 16 px, laid out at 16.5): a figure's second pass is drawn at the next whole pixel, 17,
-    // which puts back the ink the cut takes and leaves no stronger row under the baseline.
+    // `face` test). A second pass is drawn at the same size and place as its text: one at another
+    // size leaves a ghost of the glyph's edges.
     out property <float> label-pass-100: 0.26;
     out property <float> label-pass-150: 0.35;
     out property <float> label-pass-200: 0.18;
     out property <float> figure-pass-100: 0.82;
-    out property <float> figure-pass-150: 0.65;
+    out property <float> figure-pass-150: 0.5;
     out property <float> figure-pass-200: 0.38;
 
-    // A second pass's factor at a scale, from its factors at 100%, 150% and 200%: linear between
-    // them, the end ones outside.
-    pure function between(scale: float, at-100: float, at-150: float, at-200: float) -> float {
-        if scale <= 1 {
-            return at-100;
-        } else if scale <= 1.5 {
-            return at-100 + (at-150 - at-100) * (scale - 1) / 0.5;
-        } else if scale <= 2 {
-            return at-150 + (at-200 - at-150) * (scale - 1.5) / 0.5;
-        }
-        return at-200;
-    }
-
     public pure function label-pass(scale: float) -> float {
-        return between(scale, label-pass-100, label-pass-150, label-pass-200);
+        return SecondPass.between(scale, label-pass-100, label-pass-150, label-pass-200);
     }
 
     public pure function figure-pass(scale: float) -> float {
-        return between(scale, figure-pass-100, figure-pass-150, figure-pass-200);
+        return SecondPass.between(scale, figure-pass-100, figure-pass-150, figure-pass-200);
     }
 }
 
@@ -215,29 +202,30 @@ component Line inherits Rectangle {
         accessible-role: none;
     }
 
+    // The renderer cuts a glyph's size down to whole pixels: 11 DIPs at 150% would be drawn at
+    // 16 px where 1.1 draws 16.5, with less ink. The figure is drawn at the next whole pixel, 17
+    // (the same size at 100% and 200%), and ends where the line's layout, at 11 DIPs, ends.
     figure := Text {
         text: root.line.figure;
         font-family: "Unbounded";
         font-weight: 700;
-        font-size: Metrics.figure-size;
+        font-size: ceil(Metrics.figure-size / 1phx) * 1phx;
         color: root.ink;
-        x: root.figure-x;
+        x: root.figure-x + figure-m.preferred-width / Metrics.measure-scale * (1 - self.font-size / Metrics.figure-size);
         y: root.baseline - self.font-metrics.ascent;
         height: self.preferred-height;
         accessible-role: none;
     }
 
-    // At the figure's size rounded up to whole pixels (the same size at 100% and 200%), ending
-    // where the figure ends, on its baseline.
     Text {
         text: root.line.figure;
         font-family: "Unbounded";
         font-weight: 700;
-        font-size: ceil(Metrics.figure-size / 1phx) * 1phx;
+        font-size: figure.font-size;
         color: root.figure-twin;
-        x: root.figure-x + figure.preferred-width - self.preferred-width;
-        y: root.baseline - self.font-metrics.ascent;
-        height: self.preferred-height;
+        x: figure.x;
+        y: figure.y;
+        height: figure.height;
         accessible-role: none;
     }
 

@@ -11,6 +11,7 @@ import "../fonts/InterTabular-Regular.ttf";
 import "../fonts/InterTabular-Medium.ttf";
 import "../fonts/UnboundedTabular-Bold.ttf";
 import { BatteryGlyph, ThermometerGlyph } from "flyout-glyphs.slint";
+import { SecondPass } from "second-pass.slint";
 
 // One limit: the label and figure, the meter, the badge and the words under it. An empty string
 // leaves a line out.
@@ -81,6 +82,32 @@ global M {
     out property <length> column-gap: 12px;
 }
 
+// The card's texts drawn a second time, as the pill's are (see `Metrics` in pill.slint): the second
+// pass has the text's alpha times a factor k that depends on the window's scale, so a pixel's alpha
+// a becomes a + k * a * (1 - a). The figures (Unbounded) and every other text (every Inter face)
+// have factors of their own at 100%, 150% and 200%: the figures' picked so their own ink matches
+// 1.1's, the text's so then the whole card's does, in every state, style and theme (see the
+// `flyout_face` test). Without the second pass the card's text had 0.91, 0.91 and 0.95 of 1.1's ink.
+// `text-drawn` off hides every text, for a picture of the card's shapes alone, which the test
+// measures the text against: nothing is laid out differently, since a hidden text keeps its size.
+export global FlyoutPass {
+    in property <bool> text-drawn: true;
+    in property <float> text-100: 0.45;
+    in property <float> text-150: 0.66;
+    in property <float> text-200: 0.53;
+    in property <float> figure-100: 0.52;
+    in property <float> figure-150: 0.96;
+    in property <float> figure-200: 0.18;
+
+    public pure function text(scale: float) -> float {
+        return SecondPass.between(scale, text-100, text-150, text-200);
+    }
+
+    public pure function figure(scale: float) -> float {
+        return SecondPass.between(scale, figure-100, figure-150, figure-200);
+    }
+}
+
 // A text whose baseline lies `baseline` below the top of its parent. The toolkit lays a line out
 // at the font's natural height, ascent plus descent (Inter's hhea ascent is 1984 of 2048 units,
 // Unbounded's 995 of 1000), with the baseline at the ascent, so the top is the baseline less it.
@@ -89,9 +116,28 @@ global M {
 // does not reach a use, and a use's role leaves the root with the text role every text gets.
 component Placed inherits Text {
     in property <length> baseline;
+    // The second pass's factor: the figure's for Unbounded, the text's for Inter.
+    in property <float> pass: self.font-family == "Unbounded Tabular" ? FlyoutPass.figure(1px / 1phx) : FlyoutPass.text(1px / 1phx);
     x: 0px;
     y: self.baseline - self.font-metrics.ascent;
     accessible-role: none;
+    visible: FlyoutPass.text-drawn;
+
+    Text {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        font-family: root.font-family;
+        font-size: root.font-size;
+        font-weight: root.font-weight;
+        horizontal-alignment: root.horizontal-alignment;
+        vertical-alignment: root.vertical-alignment;
+        wrap: root.wrap;
+        color: root.color.transparentize(1 - root.pass);
+        accessible-role: none;
+    }
 }
 
 // Text in Inter 14 that wraps at the row's width, its lines 1.45 of the size apart as 1.1's are.
@@ -103,6 +149,8 @@ component Placed inherits Text {
 component Block inherits Text {
     in property <length> baseline;
     in property <length> wrap-width: M.inner;
+    // The second pass's factor, as `Placed`'s.
+    in property <float> pass: self.font-family == "Unbounded Tabular" ? FlyoutPass.figure(1px / 1phx) : FlyoutPass.text(1px / 1phx);
     out property <length> block-height: Math.round(Math.round(self.preferred-height / 20.3px) * 20.3) * 1px;
     x: 0px;
     width: self.wrap-width;
@@ -112,6 +160,24 @@ component Block inherits Text {
     font-size: 14px;
     line-height-factor: 1.45 / 1.2100586;
     y: self.baseline - self.font-metrics.ascent - (20.3px - (self.font-metrics.ascent - self.font-metrics.descent)) / 2;
+    visible: FlyoutPass.text-drawn;
+
+    Text {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        font-family: root.font-family;
+        font-size: root.font-size;
+        font-weight: root.font-weight;
+        horizontal-alignment: root.horizontal-alignment;
+        vertical-alignment: root.vertical-alignment;
+        wrap: root.wrap;
+        line-height-factor: root.line-height-factor;
+        color: root.color.transparentize(1 - root.pass);
+        accessible-role: none;
+    }
 }
 
 // A heading in Inter 15 over a hairline: the line is 34 under the top, so the block is 35 tall.
@@ -344,7 +410,7 @@ component GlyphColumn inherits Rectangle {
     // the glyph's 104.
     full := Placed {
         accessible-role: none;
-        visible: root.thermometer;
+        visible: root.thermometer && FlyoutPass.text-drawn;
         text: "100%";
         font-family: "Inter";
         font-size: 11px;
@@ -355,7 +421,7 @@ component GlyphColumn inherits Rectangle {
 
     Placed {
         accessible-role: none;
-        visible: root.thermometer;
+        visible: root.thermometer && FlyoutPass.text-drawn;
         text: "0%";
         font-family: "Inter";
         font-size: 11px;
