@@ -960,6 +960,45 @@ by too little to change a ratio in the third digit.
   the states within 2%, at each scale.
 - Between 100%, 150% and 200% the factors are interpolated; 125% and 175% were not measured.
 
+### B, for 2.0: the manual, line by line
+
+Walked on 2026-11-16 for [#10](https://github.com/RicardoSilveira23/sobreiro/issues/10): every
+line of `site/manual/index.html` outside the details panel (the panel's were walked above),
+against the Rust code and its tests, with 1.1's C# where the manual is silent. In short: every
+line holds in 2.0's code; one line described 1.1's log and is rewritten; one test was missing.
+
+| Manual section | What holds, and the tests that show it |
+| --- | --- |
+| Install | One file with the bridge and fonts inside (`exe.rs`: `the_fonts_are_inside_the_exe`, `the_bridge_is_inside_the_exe`); a second start opens the details and exits, one copy per data folder (`one_copy_runs_per_data_folder`); 1.x's mutex and event names (`one_copy.rs`: `the_names_are_1x`); Start with Windows writes and removes only its own Run value (`auto_start.rs`). |
+| Connect | Menu items per state (`pill_menu.rs`: `the_full_order_holds_in_each_state`); the confirmation, the backup's name, `statusLine` only, the done message (`connect_message.rs`, `connection.rs`, `connect_flow.rs`); the copy refreshed or put back at start (`bridge_refresh.rs`, `exe.rs`: `the_start_writes_the_bridge_and_then_finds_it_current`); the chained command and the default line (`bridge_runner.rs`, `status_line_text.rs`); Disconnect, by app and by hand, and the refusals (`connection.rs`, `connect_flow.rs`). |
+| What it shows | Which services show (`limit_list.rs`: `claude_shows_when_on_pc_or_when_nothing_else_shows`; `tray_icons.rs`: `decides_each_combination`); rings and their colours (`rings_model.rs`, `usage_level.rs`); both tooltips word for word (`tooltip_text.rs`); the pill's blocks, placement and hiding (`pill_model.rs`, `pill_placement.rs`, `full_screen.rs`); stale figures (`pill_stale.rs`, `pill_face.rs`); menu labels and saving (`pill_menu.rs`, `app_config.rs`); toasts at 80% and 95% (`alert_policy.rs`, `alerts.rs`). |
+| Live usage | Every 5 minutes, on opening an old reading, at start (`live_schedule.rs`); pauses on an expired or refused sign-in (`live_schedule.rs`, `claude_credentials.rs`); back-off 5, 10, 20, 30 minutes or Retry-After (`live_schedule.rs`); merging with the status line (`usage_merge.rs`, `claude_provider.rs`); Copilot's cache, then live (`copilot_provider.rs`). |
+| What it reads and sends | The sign-in order and the Credential Manager rule (`copilot_poll.rs`, `copilot_cli_credential.rs`, `copilot_token.rs`, `gh_cli.rs`); tokens never logged (`copilot_provider.rs`, `http.rs`); two addresses, no redirects, no cookies (`http.rs`); the data folder and its files (`app_paths.rs`); the log, its roll at 256 KB and its lines (`diagnostics_log.rs`, `log_entry.rs`, `main.rs`). |
+| Uninstall, known limits | Disconnect leaves the bridge's copy (`connect_flow.rs`, added here); a passed reset reads zero (`limit_list.rs`); the higher % within a period stays (`usage_merge.rs`); the pill at the bottom of the primary taskbar only (`pill_placement.rs`). |
+
+What differed:
+
+- **The log's error line** said errors are kept by type name and stack trace, as 1.1 does. 2.0
+  writes a fixed name for a failed start and, for a crash, the file and line it happened at,
+  with no stack. The manual now says that.
+- **Disconnect leaves the bridge's copy** held in the code with no test; the Disconnect test
+  now checks the copy is still there.
+
+Small points that are not wrong but read more simply in the manual than the code is:
+
+- An accent that does not read against the panel is tried a shade lighter or darker before the
+  bars fall back to purple.
+- The Too early after a weekend reset lasts until 5% of the weekdays' time has passed, about
+  06:00 on Monday.
+- Within one reset period and the same spend cap, two spend readings are compared in dollars.
+- The status line's object is written with `type` and `command` first; every other key of
+  `settings.json` keeps its bytes.
+
+Not checked here, since they need the running app: the tray icons' clicks, the pill beside them
+(full screen, auto-hide, Explorer restart, a scale change), the menu's boxes and Explorer, the
+About box, the toasts, a sign-out and the upgrade over 1.1. They are on one list for the release,
+with #43's and #45's.
+
 ## Notes on each point
 
 ### Idle memory, exe size and start time
