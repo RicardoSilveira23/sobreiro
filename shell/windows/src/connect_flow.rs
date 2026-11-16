@@ -100,16 +100,16 @@ fn state_of(settings: &Path, own_bridge: Option<&Path>) -> ConnectionState {
     }
 }
 
-/// Runs one flow on a thread of its own, then calls `then`. None, and nothing done, when a flow
-/// is already open or the thread cannot start.
+/// Runs one flow on a thread of its own, then calls `then` on that thread, once the next flow may
+/// start; a caller that needs the UI's thread hands over to it from there. None, and nothing done,
+/// when a flow is already open or the thread cannot start.
 pub fn start(connect: bool, then: impl FnOnce() + Send + 'static) -> Option<JoinHandle<()>> {
     let guard = OPEN.take()?;
     std::thread::Builder::new()
         .name("connect-flow".into())
         .spawn(move || {
-            // The guard is let go when the flow ends, also if it panics.
-            let _guard = guard;
             run_on_this_thread(connect);
+            drop(guard);
             then();
         })
         .ok()
@@ -471,6 +471,46 @@ mod tests {
         let calls = boxes.calls();
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0].0, "ask");
+    }
+
+    /// Boxes whose Yes comes after another program rewrote `settings.json`.
+    struct ChangedMeanwhile<'a> {
+        inner: Fake,
+        settings: &'a Path,
+    }
+
+    impl Boxes for ChangedMeanwhile<'_> {
+        fn ask(&self, title: &str, text: &str) -> bool {
+            fs::write(self.settings, "{}\n").unwrap();
+            self.inner.ask(title, text)
+        }
+        fn tell(&self, title: &str, text: &str) {
+            self.inner.tell(title, text);
+        }
+        fn error(&self, text: &str) {
+            self.inner.error(text);
+        }
+    }
+
+    #[test]
+    fn a_settings_json_changed_while_the_box_was_open_is_left_alone() {
+        let sandbox = Sandbox::new("changed");
+        let files = sandbox.files(true);
+        fs::write(&files.settings, OLD).unwrap();
+        let boxes = ChangedMeanwhile {
+            inner: Fake::new(true),
+            settings: &files.settings,
+        };
+        let open: Opener<'_> = &opener;
+        run(true, &files, Some(open), &boxes, when(1));
+
+        assert_eq!(text(&files.settings), "{}\n");
+        assert!(!files.config.exists());
+        assert!(sandbox.backups().is_empty());
+        let calls = boxes.inner.calls();
+        assert_eq!(calls.len(), 2, "{calls:?}");
+        assert_eq!(calls[1].0, "error");
+        assert_eq!(calls[1].2, ConnectError::Changed.to_string());
     }
 
     #[test]

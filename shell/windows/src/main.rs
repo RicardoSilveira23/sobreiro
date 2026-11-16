@@ -1,7 +1,7 @@
 //! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar with live figures;
 //! the arguments say its version, draw the specimen of its fonts and the pill's pictures, run the
-//! born test, and bring the bridge in the data folder up to date. The flyout and the tray icons
-//! come next.
+//! born test, bring the bridge in the data folder up to date, and run Connect or Disconnect alone.
+//! The flyout and the tray icons come next.
 #![windows_subsystem = "windows"]
 
 mod born_test;
