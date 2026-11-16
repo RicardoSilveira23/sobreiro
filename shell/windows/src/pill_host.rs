@@ -218,8 +218,22 @@ fn open_menu(tries: u32, refusals: u32) {
 /// Flips Start with Windows, reading the value afresh, and says so in a box when it cannot.
 fn toggle_auto_start() {
     if let Err(reason) = auto_start::toggle() {
-        menu::error_box(&format!("Couldn't change Start with Windows.\n\n{reason}"));
+        error_box(
+            format!("Couldn't change Start with Windows.\n\n{reason}"),
+            MENU_TRIES,
+        );
     }
+}
+
+/// Shows an error box once `born` waits for no window: the box is a top-level window this
+/// thread makes, which `born` would take for the one it waits for. After the last try it shows
+/// anyway.
+fn error_box(text: String, tries: u32) {
+    if born::is_pending() && tries > 0 {
+        Timer::single_shot(FIND_POLL, move || error_box(text, tries - 1));
+        return;
+    }
+    menu::error_box(&text);
 }
 
 fn on_win_event(event: WinEvent) {

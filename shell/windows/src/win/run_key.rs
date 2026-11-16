@@ -117,10 +117,14 @@ pub fn delete_value(key: &str, name: &str) -> Result<(), String> {
     }
 }
 
-/// Deletes `key` with everything under it, for the tests' scratch keys.
+/// Deletes `key` with everything under it, for the tests' scratch keys. Any other key is left
+/// alone.
 #[cfg(test)]
 pub fn delete_key(key: &str) {
     use windows::Win32::System::Registry::{RegDeleteKeyW, RegDeleteTreeW};
+    if !key.starts_with(r"Software\SobreiroTest-") {
+        return;
+    }
     let key = HSTRING::from(key);
     // SAFETY: plain calls with a string that is alive for them.
     unsafe {

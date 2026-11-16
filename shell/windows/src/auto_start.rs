@@ -46,7 +46,11 @@ pub fn toggle() -> Result<(), String> {
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
     use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    /// Tells apart the scratch keys of tests that run at once in this process.
+    static NEXT: AtomicU32 = AtomicU32::new(0);
 
     /// A scratch key under HKCU\Software, deleted whole when the guard drops, even after a failed
     /// assert.
@@ -58,8 +62,9 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .map(|d| d.as_nanos())
                 .unwrap_or(0);
+            let number = NEXT.fetch_add(1, Ordering::Relaxed);
             Scratch(format!(
-                r"Software\SobreiroTest-{}-{nanos}",
+                r"Software\SobreiroTest-{}-{nanos}-{number}",
                 std::process::id()
             ))
         }
