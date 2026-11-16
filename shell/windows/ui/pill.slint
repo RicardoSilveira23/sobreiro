@@ -54,16 +54,16 @@ global Metrics {
     out property <length> bar-height: 26px;
     out property <length> pad-x: 8px;
     out property <length> pad-y: 4px;
-    // The space after a label. Inter's space at 12 is 3.38; a whole 3 keeps what follows on whole
-    // pixels at 100%, so the rings' arcs and tracks fall on the same pixels.
-    out property <length> label-space: 3px;
+    // How much larger than its real size a text is measured at: see `Measure`.
+    out property <float> measure-scale: 100;
 }
 
-// Measures a figure; never drawn.
-component Digit inherits Text {
-    font-family: "Unbounded";
-    font-weight: 700;
-    font-size: Metrics.figure-size;
+// Measures a text at `measure-scale` times its size; never drawn. The toolkit rounds a text's
+// preferred width up to a whole unit, which at 100 times costs a hundredth of one: divide the
+// width by `Metrics.measure-scale` for the natural width.
+component Measure inherits Text {
+    in property <length> unit-size;
+    font-size: root.unit-size * Metrics.measure-scale;
     visible: false;
     // Not for a screen reader: it is only measured.
     accessible-role: none;
@@ -129,64 +129,115 @@ component Ring inherits Rectangle {
     }
 }
 
-// A label, a figure right-aligned in a box, and "*" when the figure is a last reading, on one
-// baseline: the largest ascent of the three, from the top of the line, as WPF sets runs in a block.
-component Line inherits HorizontalLayout {
+// A label, a space, a figure and "*" when the figure is a last reading, right-aligned in a column
+// and each at its natural width, on one baseline: the largest ascent of the three, from the top of
+// the line, as WPF sets runs in a block. WPF sets a line as one text, so its width is the sum of
+// the advances; `natural` is that sum, and the column the block rounds once.
+component Line inherits Rectangle {
     in property <FaceLine> line;
     in property <color> ink;
-    // As wide as the widest figure from 00% to 99%: the figure ends at the same place whatever it
-    // says, so the percent sign and what follows it stay put. A wider figure (100%) widens it.
-    in property <length> box;
+    // The width of the block's text column: its widest line, rounded to a device pixel.
+    in property <length> column;
     in property <length> line-height;
-    alignment: end;
+    out property <length> natural: (label-m.preferred-width + space-m.preferred-width + figure-m.preferred-width + (root.line.star ? star-m.preferred-width : 0px)) / Metrics.measure-scale;
+    width: root.column;
     height: root.line-height;
 
     private property <length> baseline: round(max(label.font-metrics.ascent, figure.font-metrics.ascent) / 1phx) * 1phx;
+    private property <length> star-width: root.line.star ? star-m.preferred-width / Metrics.measure-scale : 0px;
+    private property <length> figure-x: root.column - root.star-width - figure-m.preferred-width / Metrics.measure-scale;
+    private property <length> label-x: root.figure-x - space-m.preferred-width / Metrics.measure-scale - label-m.preferred-width / Metrics.measure-scale;
 
+    label-m := Measure { text: root.line.label; font-family: "Inter"; unit-size: Metrics.label-size; }
+    space-m := Measure { text: " "; font-family: "Inter"; unit-size: Metrics.label-size; }
+    figure-m := Measure { text: root.line.figure; font-family: "Unbounded"; font-weight: 700; unit-size: Metrics.figure-size; }
+    star-m := Measure { text: "*"; font-family: "Inter"; unit-size: Metrics.label-size; }
+
+    label := Text {
+        text: root.line.label;
+        font-family: "Inter";
+        font-size: Metrics.label-size;
+        color: root.ink;
+        x: root.label-x;
+        y: root.baseline - self.font-metrics.ascent;
+        height: self.preferred-height;
+        accessible-role: none;
+    }
+
+    figure := Text {
+        text: root.line.figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: Metrics.figure-size;
+        color: root.ink;
+        x: root.figure-x;
+        y: root.baseline - self.font-metrics.ascent;
+        height: self.preferred-height;
+        accessible-role: none;
+    }
+
+    if root.line.star: Text {
+        text: "*";
+        font-family: "Inter";
+        font-size: Metrics.label-size;
+        color: root.ink;
+        x: root.column - root.star-width;
+        y: root.baseline - self.font-metrics.ascent;
+        height: self.preferred-height;
+        accessible-role: none;
+    }
+}
+
+// Claude's two lines in one text column: the widest line's natural width, rounded once to the
+// nearest device pixel as WPF's layout rounds a text's width, so the rings after it lie on whole
+// pixels.
+component ClaudeText inherits VerticalLayout {
+    in property <FaceLine> session;
+    in property <FaceLine> weekly;
+    in property <color> ink;
+    in property <length> line-height;
+    private property <length> column: round(max(first.natural, second.natural) / 1phx) * 1phx;
+    alignment: center;
+
+    first := Line { line: root.session; ink: root.ink; column: root.column; line-height: root.line-height; }
+    second := Line { line: root.weekly; ink: root.ink; column: root.column; line-height: root.line-height; }
+}
+
+// Copilot's credits line and the reset date under it, right-aligned in one column rounded as
+// Claude's is.
+component CopilotText inherits VerticalLayout {
+    in property <FaceLine> credits;
+    in property <string> reset-date;
+    in property <color> ink;
+    in property <color> secondary;
+    in property <length> line-height;
+    in property <length> reset-height;
+    private property <length> column: round(max(first.natural, reset-m.preferred-width / Metrics.measure-scale) / 1phx) * 1phx;
+    alignment: center;
+    spacing: 0px;
+
+    // Out of the layout's sizing: a measurer is 100 times as wide as the text.
     Rectangle {
-        width: label.preferred-width;
-        label := Text {
-            text: root.line.label;
+        width: 0px;
+        height: 0px;
+        reset-m := Measure {
+            text: root.reset-date;
             font-family: "Inter";
-            font-size: Metrics.label-size;
-            color: root.ink;
-            y: root.baseline - self.font-metrics.ascent;
-            height: self.preferred-height;
-            accessible-role: none;
+            unit-size: Metrics.reset-size;
         }
     }
 
-    Rectangle {
-        width: Metrics.label-space;
-    }
-
-    Rectangle {
-        width: max(root.box, figure.preferred-width);
-        figure := Text {
-            text: root.line.figure;
-            font-family: "Unbounded";
-            font-weight: 700;
-            font-size: Metrics.figure-size;
-            color: root.ink;
-            horizontal-alignment: right;
-            width: parent.width;
-            y: root.baseline - self.font-metrics.ascent;
-            height: self.preferred-height;
-            accessible-role: none;
-        }
-    }
-
-    if root.line.star: Rectangle {
-        width: star.preferred-width;
-        star := Text {
-            text: "*";
-            font-family: "Inter";
-            font-size: Metrics.label-size;
-            color: root.ink;
-            y: root.baseline - self.font-metrics.ascent;
-            height: self.preferred-height;
-            accessible-role: none;
-        }
+    first := Line { line: root.credits; ink: root.ink; column: root.column; line-height: root.line-height; }
+    Text {
+        text: root.reset-date;
+        font-family: "Inter";
+        font-size: Metrics.reset-size;
+        color: root.secondary;
+        horizontal-alignment: right;
+        vertical-alignment: top;
+        accessible-role: none;
+        width: root.column;
+        height: root.reset-height;
     }
 }
 
@@ -199,10 +250,6 @@ export component PillFace inherits Rectangle {
     height: root.face-height;
     border-radius: 4px;
     background: root.data.hovered ? root.data.ground-hover : root.data.ground;
-
-    // The widest two-digit figure of the figures' font, measured here and never typed in. Two
-    // digits of one kind are the widest sum of advances, and the percent sign is part of it.
-    private property <length> box: max(max(max(p0.preferred-width, p1.preferred-width), max(p2.preferred-width, p3.preferred-width)), max(max(p4.preferred-width, p5.preferred-width), max(max(p6.preferred-width, p7.preferred-width), max(p8.preferred-width, p9.preferred-width))));
 
     // A line is the font's line height rounded to whole device pixels at the window's scale, as WPF
     // sets one: Inter 12 is 14.52 DIPs (15, 22, 29 px at 100%, 150%, 200%), Inter 11 is 13.31
@@ -224,17 +271,6 @@ export component PillFace inherits Rectangle {
         accessible-role: none;
     }
 
-    p0 := Digit { text: "00%"; }
-    p1 := Digit { text: "11%"; }
-    p2 := Digit { text: "22%"; }
-    p3 := Digit { text: "33%"; }
-    p4 := Digit { text: "44%"; }
-    p5 := Digit { text: "55%"; }
-    p6 := Digit { text: "66%"; }
-    p7 := Digit { text: "77%"; }
-    p8 := Digit { text: "88%"; }
-    p9 := Digit { text: "99%"; }
-
     row := HorizontalLayout {
         padding-left: Metrics.pad-x;
         padding-right: Metrics.pad-x;
@@ -244,10 +280,11 @@ export component PillFace inherits Rectangle {
 
         if root.data.show-claude: HorizontalLayout {
             spacing: Metrics.text-to-rings;
-            VerticalLayout {
-                alignment: center;
-                Line { line: root.data.session; ink: root.data.ink; box: root.box; line-height: root.line-height; }
-                Line { line: root.data.weekly; ink: root.data.ink; box: root.box; line-height: root.line-height; }
+            ClaudeText {
+                session: root.data.session;
+                weekly: root.data.weekly;
+                ink: root.data.ink;
+                line-height: root.line-height;
             }
             VerticalLayout {
                 alignment: center;
@@ -274,19 +311,13 @@ export component PillFace inherits Rectangle {
         if root.data.show-copilot: HorizontalLayout {
             spacing: Metrics.text-to-rings;
             padding-left: root.data.show-claude ? Metrics.block-gap : 0px;
-            VerticalLayout {
-                alignment: center;
-                Line { line: root.data.copilot; ink: root.data.ink; box: root.box; line-height: root.line-height; }
-                Text {
-                    text: root.data.reset-date;
-                    font-family: "Inter";
-                    font-size: Metrics.reset-size;
-                    color: root.data.secondary;
-                    horizontal-alignment: right;
-                    vertical-alignment: top;
-                    accessible-role: none;
-                    height: root.reset-height;
-                }
+            CopilotText {
+                credits: root.data.copilot;
+                reset-date: root.data.reset-date;
+                ink: root.data.ink;
+                secondary: root.data.secondary;
+                line-height: root.line-height;
+                reset-height: root.reset-height;
             }
             VerticalLayout {
                 alignment: center;
