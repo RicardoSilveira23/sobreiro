@@ -8,15 +8,19 @@ mod born_test;
 mod carried_bridge;
 mod clock;
 mod diagnostics;
+mod flyout;
 mod icon_pictures;
 mod licences;
 mod pictures;
 mod pill_face;
 mod pill_feed;
 mod pill_host;
+mod pill_menu;
 mod providers;
 mod specimen;
 mod theme;
+mod tooltip;
+mod tooltip_window;
 mod win;
 
 use std::process::ExitCode;
@@ -48,6 +52,7 @@ fn main() -> ExitCode {
         Some("--refresh-bridge") => carried_bridge::refresh_now(),
         Some("--pill-pictures") => pictures::run(args.next()),
         Some("--icon-pictures") => icon_pictures::run(args.next()),
+        Some("--flyout-pictures") => flyout::pictures::run(args.next()),
         _ => ExitCode::from(2),
     }
 }

@@ -14,13 +14,14 @@ mod pill_feed;
 mod theme;
 
 use chrono::{DateTime, TimeDelta, Utc};
-use pill_feed::{Feed, Run, Service, Surroundings, config_for_display};
+use pill_feed::{Feed, Run, Service, Shown, Surroundings, config_for_display};
 use sobreiro_core::colours::BarColourOption;
 use sobreiro_core::config::{AppConfig, ShowOption};
 use sobreiro_core::connect::ConnectionState;
 use sobreiro_core::copilot::copilot_poll::CopilotPollResult;
 use sobreiro_core::copilot::copilot_provider::CopilotProvider;
 use sobreiro_core::copilot::{CopilotReading, CopilotSource};
+use sobreiro_core::display::ClockFormat;
 use sobreiro_core::display::pill_model::PillModel;
 use sobreiro_core::display::zone::Zone;
 use sobreiro_core::limits::{Limit, LimitKind, providers};
@@ -32,8 +33,8 @@ use sobreiro_core::polling::{Provider, ProviderPoll, ProviderState};
 use sobreiro_core::usage::{LimitWindow, RateLimits};
 use std::cell::Cell;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, LazyLock};
 use theme::Theme;
 
 fn now() -> DateTime<Utc> {
@@ -153,19 +154,31 @@ fn answer(feed: &mut Feed, runs: Vec<Run>) -> Vec<Option<String>> {
         .collect()
 }
 
+/// A 12-hour clock, as the US writes it.
+static CLOCK: LazyLock<ClockFormat> = LazyLock::new(|| ClockFormat {
+    pattern: "h:mm tt".to_string(),
+    am: "AM".to_string(),
+    pm: "PM".to_string(),
+});
+
 fn around(zone: &Zone, show: ShowOption, credentials: bool) -> Surroundings<'_> {
     Surroundings {
         show,
         zone,
+        clock: &CLOCK,
         credentials_file_exists: credentials,
     }
 }
 
-fn model(feed: &Feed, show: ShowOption, credentials: bool) -> Option<PillModel> {
+fn shown(feed: &Feed, show: ShowOption, credentials: bool) -> Option<Shown> {
     let zone = Zone::utc();
-    feed.model(now(), &around(&zone, show, credentials), || {
+    feed.shown(now(), &around(&zone, show, credentials), || {
         ConnectionState::NotConnected
     })
+}
+
+fn model(feed: &Feed, show: ShowOption, credentials: bool) -> Option<PillModel> {
+    shown(feed, show, credentials).map(|shown| shown.model)
 }
 
 #[test]
@@ -260,12 +273,13 @@ fn a_connected_status_line_counts_as_claude_on_this_pc() {
     );
     let zone = Zone::utc();
     let pill = feed
-        .model(
+        .shown(
             now(),
             &around(&zone, ShowOption::TrayAndPill, false),
             || ConnectionState::Connected,
         )
-        .unwrap();
+        .unwrap()
+        .model;
     assert!(pill.show_claude);
 }
 
@@ -280,7 +294,7 @@ fn the_connection_is_read_only_when_claude_has_no_limits() {
     );
     let zone = Zone::utc();
     let asked = Cell::new(false);
-    let _ = feed.model(now(), &around(&zone, ShowOption::TrayAndPill, true), || {
+    let _ = feed.shown(now(), &around(&zone, ShowOption::TrayAndPill, true), || {
         asked.set(true);
         ConnectionState::NotConnected
     });
@@ -330,6 +344,52 @@ fn a_poll_under_way_is_not_started_again() {
     assert_eq!(started.len(), 2);
     assert!(feed.tick(now()).is_empty());
     answer(&mut feed, started);
+}
+
+#[test]
+fn the_tooltip_is_core_s_text_for_each_service_shown() {
+    let feed = settled(
+        Fake::new(
+            providers::CLAUDE,
+            claude_limits(15.0, TimeDelta::minutes(1)),
+        ),
+        Fake::new(providers::COPILOT, copilot_limits(TimeDelta::minutes(1))),
+    );
+    // Both: Claude's lines, then Copilot's, one under the other, as 1.1 joins them.
+    let both = shown(&feed, ShowOption::TrayAndPill, true).unwrap().tooltip;
+    let lines: Vec<&str> = both.lines().collect();
+    assert_eq!(
+        lines,
+        [
+            "Session 15% · resets 2:00 PM",
+            "Weekly 45% · resets 2:00 PM",
+            "as of 11:59 AM",
+            "AI credits 17% · resets Tue 1 Dec 12:00 PM",
+            "as of 11:59 AM",
+        ]
+    );
+    // Copilot alone, as when Claude is not on this PC: only its lines.
+    let feed = settled(
+        Fake::new(providers::CLAUDE, Vec::new()),
+        Fake::new(providers::COPILOT, copilot_limits(TimeDelta::minutes(1))),
+    );
+    let alone = shown(&feed, ShowOption::TrayAndPill, false)
+        .unwrap()
+        .tooltip;
+    assert_eq!(
+        alone,
+        "AI credits 17% · resets Tue 1 Dec 12:00 PM\nas of 11:59 AM"
+    );
+}
+
+#[test]
+fn the_tooltip_with_no_reading_says_so() {
+    let feed = settled(
+        Fake::new(providers::CLAUDE, Vec::new()),
+        Fake::new(providers::COPILOT, Vec::new()),
+    );
+    let tooltip = shown(&feed, ShowOption::TrayAndPill, true).unwrap().tooltip;
+    assert_eq!(tooltip, "Sobreiro · no data yet");
 }
 
 /// A folder of the test's own, empty.

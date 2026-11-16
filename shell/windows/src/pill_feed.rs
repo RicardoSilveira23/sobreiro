@@ -7,9 +7,11 @@
 use chrono::{DateTime, Utc};
 use sobreiro_core::config::{AppConfig, ShowOption};
 use sobreiro_core::connect::ConnectionState;
+use sobreiro_core::display::ClockFormat;
 use sobreiro_core::display::pill_model::PillModel;
+use sobreiro_core::display::tooltip_text;
 use sobreiro_core::display::zone::Zone;
-use sobreiro_core::limits::{Limit, limit_list};
+use sobreiro_core::limits::{Limit, LimitKind, limit_list};
 use sobreiro_core::polling::Provider;
 use sobreiro_core::polling::provider_poller::{Finished, PollRun, ProviderPoller};
 use std::path::Path;
@@ -41,8 +43,16 @@ pub struct Handled {
 pub struct Surroundings<'a> {
     pub show: ShowOption,
     pub zone: &'a Zone,
+    /// How the user writes a time of day, for the tooltip.
+    pub clock: &'a ClockFormat,
     /// Claude Code's sign-in file is on this PC.
     pub credentials_file_exists: bool,
+}
+
+/// What the pill shows: the model it draws and the text of its tooltip.
+pub struct Shown {
+    pub model: PillModel,
+    pub tooltip: String,
 }
 
 /// The two pollers and the last line told for each.
@@ -94,15 +104,15 @@ impl Feed {
         }
     }
 
-    /// The model the pill draws at `now`, as 1.1's `UpdatePill` makes it: `None` when the
-    /// settings keep the pill off. `connection` is asked only when Claude has no limits, as in
+    /// What the pill shows at `now`, as 1.1's `UpdatePill` makes it: the model it draws and the
+    /// tooltip's text, or `None` when the settings keep the pill off. `connection` is asked only when Claude has no limits, as in
     /// 1.1: with limits Claude is on this PC and its settings need not be read.
-    pub fn model(
+    pub fn shown(
         &self,
         now: DateTime<Utc>,
         around: &Surroundings<'_>,
         connection: impl FnOnce() -> ConnectionState,
-    ) -> Option<PillModel> {
+    ) -> Option<Shown> {
         if around.show != ShowOption::TrayAndPill {
             return None;
         }
@@ -121,7 +131,7 @@ impl Feed {
         } else {
             copilot
         };
-        Some(PillModel::from_states(
+        let model = PillModel::from_states(
             &shown,
             around.zone,
             show_claude,
@@ -130,8 +140,36 @@ impl Feed {
             self.copilot.state(),
             misses(&self.copilot),
             now,
-        ))
+        );
+        let tooltip = tooltip(&shown, show_claude, now, around);
+        Some(Shown { model, tooltip })
     }
+}
+
+/// The tooltip's text as 1.1 puts it together: Claude's lines when Claude is shown, then
+/// Copilot's when there are credits, one under the other.
+fn tooltip(
+    shown: &[Limit],
+    show_claude: bool,
+    now: DateTime<Utc>,
+    around: &Surroundings<'_>,
+) -> String {
+    let mut parts = Vec::new();
+    if show_claude {
+        parts.push(tooltip_text::render(shown, now, around.zone, around.clock));
+    }
+    if let Some(credits) = shown.iter().find(|limit| limit.kind == LimitKind::Credits) {
+        parts.push(tooltip_text::render_copilot(
+            credits,
+            now,
+            around.zone,
+            around.clock,
+        ));
+    }
+    parts.join(
+        "
+",
+    )
 }
 
 fn runs(claude: Option<PollRun>, copilot: Option<PollRun>) -> Vec<Run> {
