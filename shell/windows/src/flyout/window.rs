@@ -434,7 +434,7 @@ pub fn close() {
 
 /// A select on a tray icon, with its anchor point in physical pixels: closes the flyout when it is
 /// open, else opens it at the point, unless the click only closed it on focus loss or repeats the
-/// last one (see `Toggle::tray_click`). Decided and done in one step.
+/// select that opened it (see `Toggle::tray_click`). Decided and done in one step.
 pub fn on_tray_click(x: i32, y: i32) {
     with_flyout(
         move |flyout| match flyout.toggle.tray_click(Instant::now()) {
