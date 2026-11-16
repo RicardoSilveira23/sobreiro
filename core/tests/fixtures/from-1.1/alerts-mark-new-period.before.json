@@ -1,0 +1,10 @@
+{
+  "session": {
+    "resets_at": 1790010000,
+    "threshold": 95
+  },
+  "spend": {
+    "resets_at": null,
+    "threshold": 80
+  }
+}

@@ -3,8 +3,9 @@
 //!
 //! A C# `[Theory]` with rows became one test that walks the same rows.
 //!
-//! Two files have no C# test file behind them: `csharp_files.rs` holds what the C# itself
-//! wrote to the disk, for the Rust to write the same, and `http.rs` runs the real HTTP sender
+//! Three files have no C# test file behind them: `csharp_files.rs` holds what the C# itself
+//! wrote to the disk, for the Rust to write the same, `from_1_1.rs` reads and changes the data
+//! files that 1.1.0 wrote (`fixtures/from-1.1/`), and `http.rs` runs the real HTTP sender
 //! against a server on this PC.
 //!
 //! Tests named `..._as_the_csharp_did` walk rows that the C# of 1.x wrote out itself, run on
@@ -49,6 +50,7 @@ mod duration;
 mod elsewhere_connection;
 mod flyout_model;
 mod flyout_placement;
+mod from_1_1;
 mod full_screen;
 mod gh_cli;
 mod glyph_fill;

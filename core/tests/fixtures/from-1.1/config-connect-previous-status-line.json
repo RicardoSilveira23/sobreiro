@@ -1,0 +1,8 @@
+{
+  "chained_command": "node status.js",
+  "previous_status_line": { "type": "command", "command": "node status.js", "padding": 1 },
+  "style": "bars",
+  "bar_colour": "purple",
+  "show": "trayandpill",
+  "pace": "everyday"
+}
