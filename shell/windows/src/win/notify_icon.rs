@@ -99,7 +99,8 @@ fn notify(message: NOTIFY_ICON_MESSAGE, data: &NOTIFYICONDATAW) -> bool {
 
 /// Adds the icon. A failure can be a timeout of the shell with the icon added all the same, so a
 /// modify is tried after it: either one working counts. Then the icon is moved to version 4
-/// messages.
+/// messages; one left on the older messages would not answer its clicks, so it is removed and
+/// the add counts as failed.
 pub fn add(window: isize, id: u32, icon: &TrayIcon, tip: &str) -> bool {
     let data = data(window, id, icon, tip);
     if !notify(NIM_ADD, &data) && !notify(NIM_MODIFY, &data) {
@@ -111,8 +112,10 @@ pub fn add(window: isize, id: u32, icon: &TrayIcon, tip: &str) -> bool {
         },
         ..data
     };
-    // A refusal leaves the icon on the older messages; nothing more to do.
-    notify(NIM_SETVERSION, &version);
+    if !notify(NIM_SETVERSION, &version) {
+        delete(window, id);
+        return false;
+    }
     true
 }
 

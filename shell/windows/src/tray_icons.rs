@@ -119,9 +119,12 @@ impl Slot {
         let taken = if self.added {
             candidate.map(|made| {
                 let changed = notify_icon::modify(window, self.id, &made.icon, &made.tip);
-                // Refused, the new picture is dropped and the last good one stays.
+                // Refused, the new picture is dropped and the last good one stays. The icon may
+                // be gone, so the next redraw adds it again (an add falls back to a modify).
                 if changed {
                     self.current = Some(made);
+                } else {
+                    self.added = false;
                 }
                 changed
             })
@@ -156,14 +159,20 @@ struct Tray {
     copilot: Slot,
 }
 
-fn with_tray(step: impl FnOnce(&mut Tray)) {
-    let _ = TRAY.try_with(|cell| {
-        if let Ok(mut tray) = cell.try_borrow_mut()
-            && let Some(tray) = tray.as_mut()
-        {
-            step(tray);
+/// Runs `step` on the icons now, or a turn of the event loop later if they are busy.
+fn with_tray(step: impl FnOnce(&mut Tray) + 'static) {
+    let busy = TRAY.try_with(|cell| match cell.try_borrow_mut() {
+        Ok(mut tray) => {
+            if let Some(tray) = tray.as_mut() {
+                step(tray);
+            }
+            None
         }
+        Err(_) => Some(step),
     });
+    if let Ok(Some(step)) = busy {
+        Timer::single_shot(Duration::ZERO, move || with_tray(step));
+    }
 }
 
 /// Starts the icons on the message window. Without one nothing is added.
@@ -183,7 +192,7 @@ pub fn start(messages: Option<isize>, diagnostics: Arc<Diagnostics>) {
 /// Draws the icons from the snapshot, in 1.1's order: Copilot's picture, which icons are shown,
 /// Claude's picture, then the shell's icons.
 pub fn show(snapshot: Rc<Snapshot>) {
-    with_tray(|tray| tray.show(&snapshot));
+    with_tray(move |tray| tray.show(&snapshot));
 }
 
 /// Explorer made a new taskbar, and the icons are gone from it: the next redraw adds them again.

@@ -6,9 +6,9 @@
 //! Each redraw makes one snapshot (`pill_feed::Snapshot`) and hands it to each part in turn: for
 //! now the pill (`pill_host`, which keeps the taskbar work) and the tray icons (`tray_icons`); the
 //! flyout and the toasts come next. The snapshot is made whatever Show says, so a part that is
-//! not the pill has the figures also when the pill is off. A part takes the snapshot on its own and handles
-//! its own failures, keeping what it last drew, so one part's failure never stops the next, as
-//! 1.1's `Guard` does. (A panic is not caught: the release build aborts on one.)
+//! not the pill has the figures also when the pill is off. A part takes the snapshot on its own
+//! and handles its own failures, keeping what it last drew, so one part's failure never stops the
+//! next, as 1.1's `Guard` does. (A panic is not caught: the release build aborts on one.)
 //!
 //! Redraws come at the start, every 30 seconds, when a poll answers, when Copilot's cache is
 //! read early, after the menu changes the bar colour, and when Windows says a setting, a display
