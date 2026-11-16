@@ -37,5 +37,9 @@ jobs:
           $tag = $env:GITHUB_REF_NAME
           $ghArgs = @($tag, $exe, '--generate-notes', '--title', "Sobreiro $($tag.Substring(1))")
           if ($tag.Contains('-')) { $ghArgs += '--prerelease' }
+          # A 1.x release takes "Latest" only from another 1.x release, never from 2.0 or later.
+          $latest = gh release view --repo $env:GITHUB_REPOSITORY --json tagName --jq .tagName
+          if ($LASTEXITCODE -ne 0) { throw "gh release view failed" }
+          if (-not "$latest".StartsWith('v1.')) { $ghArgs += '--latest=false' }
           gh release create @ghArgs
           if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
