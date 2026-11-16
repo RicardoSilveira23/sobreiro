@@ -11,16 +11,18 @@ use std::path::Path;
 const PURPLE: u32 = 1;
 const ACCENT: u32 = 2;
 const QUIT: u32 = 3;
+const AUTO_START: u32 = 4;
 
 /// What a choice in the menu asks for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Command {
     SetBarColour(BarColourOption),
+    ToggleAutoStart,
     Quit,
 }
 
-/// The menu, with the bar colour in use checked.
-pub fn entries(current: BarColourOption) -> Vec<Entry> {
+/// The menu, with the bar colour in use checked and Start with Windows checked when it is on.
+pub fn entries(current: BarColourOption, auto_start: bool) -> Vec<Entry> {
     let colour = |id: u32, text: &str, option: BarColourOption| Item {
         id,
         text: text.to_string(),
@@ -34,6 +36,13 @@ pub fn entries(current: BarColourOption) -> Vec<Entry> {
                 colour(ACCENT, "Windows accent", BarColourOption::Accent),
             ],
         },
+        Entry::Separator,
+        Entry::Item(Item {
+            id: AUTO_START,
+            text: "Start with Windows".to_string(),
+            checked: auto_start,
+        }),
+        Entry::Separator,
         Entry::Item(Item {
             id: QUIT,
             text: "Quit".to_string(),
@@ -47,6 +56,7 @@ pub fn command(id: u32) -> Option<Command> {
     match id {
         PURPLE => Some(Command::SetBarColour(BarColourOption::Purple)),
         ACCENT => Some(Command::SetBarColour(BarColourOption::Accent)),
+        AUTO_START => Some(Command::ToggleAutoStart),
         QUIT => Some(Command::Quit),
         _ => None,
     }
@@ -89,9 +99,11 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_has_bar_colour_with_two_choices_and_quit() {
-        let accent = entries(BarColourOption::Accent);
-        assert_eq!(accent.len(), 2);
+    fn the_menu_has_bar_colour_start_with_windows_and_quit_between_lines() {
+        let accent = entries(BarColourOption::Accent, false);
+        assert_eq!(accent.len(), 5);
+        assert_eq!(accent[1], Entry::Separator);
+        assert_eq!(accent[3], Entry::Separator);
         match &accent[0] {
             Entry::Submenu { text, items } => {
                 assert_eq!(text, "Bar colour");
@@ -103,11 +115,15 @@ mod tests {
             }
             other => panic!("not the submenu: {other:?}"),
         }
-        match &accent[1] {
+        match &accent[2] {
+            Entry::Item(item) => assert_eq!(item.text, "Start with Windows"),
+            other => panic!("not Start with Windows: {other:?}"),
+        }
+        match &accent[4] {
             Entry::Item(item) => assert_eq!(item.text, "Quit"),
             other => panic!("not Quit: {other:?}"),
         }
-        let purple = entries(BarColourOption::Purple);
+        let purple = entries(BarColourOption::Purple, false);
         match &purple[0] {
             Entry::Submenu { items, .. } => {
                 let checks: Vec<_> = items.iter().map(|item| item.checked).collect();
@@ -120,13 +136,14 @@ mod tests {
     #[test]
     fn every_id_in_the_menu_is_a_command_and_none_is_zero() {
         let mut ids = Vec::new();
-        for entry in entries(BarColourOption::Purple) {
+        for entry in entries(BarColourOption::Purple, false) {
             match entry {
+                Entry::Separator => {}
                 Entry::Item(item) => ids.push(item.id),
                 Entry::Submenu { items, .. } => ids.extend(items.iter().map(|item| item.id)),
             }
         }
-        assert_eq!(ids.len(), 3);
+        assert_eq!(ids.len(), 4);
         assert!(ids.iter().all(|id| *id != 0 && command(*id).is_some()));
         assert_eq!(
             command(PURPLE),
@@ -136,9 +153,20 @@ mod tests {
             command(ACCENT),
             Some(Command::SetBarColour(BarColourOption::Accent))
         );
+        assert_eq!(command(AUTO_START), Some(Command::ToggleAutoStart));
         assert_eq!(command(QUIT), Some(Command::Quit));
         assert_eq!(command(0), None);
         assert_eq!(command(99), None);
+    }
+
+    #[test]
+    fn the_start_with_windows_check_follows_the_flag() {
+        let checked = |on: bool| match &entries(BarColourOption::Purple, on)[2] {
+            Entry::Item(item) => item.checked,
+            other => panic!("not an item: {other:?}"),
+        };
+        assert!(checked(true));
+        assert!(!checked(false));
     }
 
     #[test]

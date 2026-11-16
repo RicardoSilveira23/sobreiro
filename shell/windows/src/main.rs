@@ -5,6 +5,7 @@
 #![windows_subsystem = "windows"]
 
 mod app_host;
+mod auto_start;
 mod born_test;
 mod carried_bridge;
 mod clock;

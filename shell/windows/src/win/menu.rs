@@ -10,9 +10,10 @@
 use std::ffi::c_void;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, HMENU, IsWindow, MF_CHECKED, MF_POPUP,
-    MF_STRING, MF_UNCHECKED, PostMessageW, SetForegroundWindow, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
-    TPM_NONOTIFY, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_NULL,
+    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, HMENU, IsWindow, MB_ICONERROR, MB_OK,
+    MF_CHECKED, MF_POPUP, MF_SEPARATOR, MF_STRING, MF_UNCHECKED, MessageBoxW, PostMessageW,
+    SetForegroundWindow, TPM_BOTTOMALIGN, TPM_LEFTALIGN, TPM_NONOTIFY, TPM_RETURNCMD,
+    TPM_RIGHTBUTTON, TrackPopupMenu, WM_NULL,
 };
 use windows::core::HSTRING;
 
@@ -33,6 +34,8 @@ pub enum Entry {
         text: String,
         items: Vec<Item>,
     },
+    /// A line between groups.
+    Separator,
 }
 
 /// Opens the menu at the pointer, bottom left corner on it, and waits until it closes. Gives the
@@ -80,6 +83,8 @@ fn build(entries: &[Entry]) -> Option<HMENU> {
     for entry in entries {
         let added = match entry {
             Entry::Item(item) => append(menu, item),
+            // SAFETY: `menu` is a menu of ours; a separator has no id or text.
+            Entry::Separator => unsafe { AppendMenuW(menu, MF_SEPARATOR, 0, None) }.is_ok(),
             Entry::Submenu { text, items } => {
                 // SAFETY: makes an empty menu.
                 let Ok(sub) = (unsafe { CreatePopupMenu() }) else {
@@ -132,4 +137,18 @@ fn append(menu: HMENU, item: &Item) -> bool {
         )
     }
     .is_ok()
+}
+
+/// Shows an error in a native box titled "Sobreiro" and waits for it to be closed. It runs its
+/// own loop, so it is called with no borrow held.
+pub fn error_box(text: &str) {
+    // SAFETY: the strings are copied for the call; no owner window.
+    unsafe {
+        MessageBoxW(
+            None,
+            &HSTRING::from(text),
+            &HSTRING::from("Sobreiro"),
+            MB_OK | MB_ICONERROR,
+        );
+    }
 }
