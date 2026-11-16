@@ -184,6 +184,11 @@ enum MenuRequest {
     Never,
 }
 
+/// Opens the menu at the pointer: the tray icons' right click opens the same one.
+pub fn open_menu_at_pointer() {
+    Timer::single_shot(Duration::ZERO, || open_menu(MENU_TRIES, MENU_REFUSALS));
+}
+
 /// Opens the pill's menu at the pointer. The tracker is asked for what the menu needs and let go
 /// before the menu opens: `TrackPopupMenu` runs its own loop until the menu closes, and the
 /// tracker's other work (win events, timers) would pile up behind a borrow held that long. The

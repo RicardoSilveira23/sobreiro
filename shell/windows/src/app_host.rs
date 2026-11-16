@@ -4,11 +4,11 @@
 //! and the broadcasts of the message window.
 //!
 //! Each redraw makes one snapshot (`pill_feed::Snapshot`) and hands it to each part in turn: for
-//! now the pill (`pill_host`, which keeps the taskbar work); the tray icons, the flyout and the
-//! toasts come next. The snapshot is made whatever Show says, so a part that is not the pill
-//! has the figures also when the pill is off. A part takes the snapshot on its own and handles
-//! its own failures, keeping what it last drew, so one part's failure never stops the next, as
-//! 1.1's `Guard` does. (A panic is not caught: the release build aborts on one.)
+//! now the pill (`pill_host`, which keeps the taskbar work) and the tray icons (`tray_icons`); the
+//! flyout and the toasts come next. The snapshot is made whatever Show says, so a part that is
+//! not the pill has the figures also when the pill is off. A part takes the snapshot on its own
+//! and handles its own failures, keeping what it last drew, so one part's failure never stops the
+//! next, as 1.1's `Guard` does. (A panic is not caught: the release build aborts on one.)
 //!
 //! Redraws come at the start, every 30 seconds, when a poll answers, when Copilot's cache is
 //! read early, after the menu changes the bar colour, and when Windows says a setting, a display
@@ -22,6 +22,7 @@ use crate::diagnostics::Diagnostics;
 use crate::pill_feed::{self, Feed, Run, Service, Snapshot, Surroundings};
 use crate::pill_host;
 use crate::providers::{self, Locations};
+use crate::tray_icons;
 use crate::win::local_zone::local_zone;
 use crate::win::taskbar::{self, Broadcast, MessageWindow};
 use crate::win::{locale, registry};
@@ -54,10 +55,14 @@ pub fn run() -> ExitCode {
     taskbar::become_dpi_aware();
     // Made before the first pill: while `born` has a window pending it takes the next top-level
     // window this thread makes.
-    let messages = MessageWindow::create(on_broadcast);
+    let messages = MessageWindow::create(on_broadcast, tray_icons::on_event);
     if messages.is_none() {
         diagnostics.say("the message window could not be made");
     }
+    tray_icons::start(
+        messages.as_ref().map(MessageWindow::handle),
+        diagnostics.clone(),
+    );
     let setup = pill_host::Setup {
         messages: messages.as_ref().map(MessageWindow::handle),
         diagnostics: diagnostics.clone(),
@@ -89,9 +94,11 @@ pub fn run() -> ExitCode {
     Timer::single_shot(Duration::ZERO, || with_host(Host::start_polls));
     // Runs until asked to quit: the pill's window can be destroyed under it (Explorer restarts).
     let ended = slint::run_event_loop_until_quit();
-    // The pill and its hooks go first, then this host with the message window the pill's menu was
-    // owned by, here on the UI thread, before the thread's values are torn down.
+    // The pill and its hooks go first, then the tray icons, then this host with the message window
+    // the icons and the pill's menu belong to, here on the UI thread, before the thread's values
+    // are torn down.
     pill_host::stop();
+    tray_icons::stop();
     let host = HOST
         .try_with(|cell| cell.try_borrow_mut().map(|mut host| host.take()))
         .ok()
@@ -138,9 +145,15 @@ fn on_broadcast(broadcast: Broadcast) {
         ) {
             pill_host::on_broadcast(broadcast);
         }
+        if broadcast == Broadcast::TaskbarCreated {
+            tray_icons::on_taskbar_created();
+        }
         if matches!(
             broadcast,
-            Broadcast::SettingChanged | Broadcast::DisplayChanged | Broadcast::TimeChanged
+            Broadcast::TaskbarCreated
+                | Broadcast::SettingChanged
+                | Broadcast::DisplayChanged
+                | Broadcast::TimeChanged
         ) {
             redraw();
         }
@@ -252,7 +265,7 @@ impl Host {
             connection::state(&text, bridge.as_deref())
         }));
         // Each part takes the snapshot on its own and answers for its own failures.
-        let parts: [fn(Rc<Snapshot>); 1] = [pill_host::show];
+        let parts: [fn(Rc<Snapshot>); 2] = [pill_host::show, tray_icons::show];
         for part in parts {
             part(snapshot.clone());
         }

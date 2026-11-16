@@ -296,16 +296,8 @@ pub fn draw(
 }
 
 /// A tray icon: an `HICON` that is destroyed on drop.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the tray icons use it from #49")
-)]
 pub struct TrayIcon(HICON);
 
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the tray icons use it from #49")
-)]
 impl TrayIcon {
     pub fn handle(&self) -> HICON {
         self.0
@@ -321,10 +313,6 @@ impl Drop for TrayIcon {
 }
 
 /// The icon of the rings at `size` pixels square, made from the same bitmap as `draw`'s.
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "the tray icons use it from #49")
-)]
 pub fn icon(
     model: &RingsModel,
     colours: &TaskbarColours,
