@@ -27,7 +27,7 @@ fn colour(rgb: Rgb, alpha: u8) -> Color {
     Color::from_argb_u8(alpha, rgb.r, rgb.g, rgb.b)
 }
 
-/// The label and the figure as text; the .slint file sets the figure in a box of one width.
+/// The label and the figure as text; the .slint file sets each at its natural width.
 fn face_line(line: &PillLine) -> FaceLine {
     FaceLine {
         label: SharedString::from(line.label),
