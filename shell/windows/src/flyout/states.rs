@@ -5,6 +5,7 @@ use sobreiro_core::display::flyout_model::{FlyoutModel, FlyoutOptions};
 use sobreiro_core::display::{ClockFormat, Zone};
 use sobreiro_core::limits::providers::{CLAUDE, COPILOT};
 use sobreiro_core::limits::{Limit, LimitKind};
+use sobreiro_core::polling::ProviderState;
 
 /// Monday 16 November 2026, 20:00 UTC.
 const NOW: i64 = 1_794_859_200;
@@ -67,7 +68,8 @@ fn weekly(percent: f64, resets_in: TimeDelta) -> Limit {
     )
 }
 
-/// The AI credits: 17% of 15,000, resetting in 20 days and 10 hours.
+/// The AI credits at a percent of a budget of 15,000 in a 30 day month, with the figures for the
+/// detail line.
 fn credits(percent: f64, resets_in: TimeDelta) -> Limit {
     let mut credits = limit(
         LimitKind::Credits,
@@ -108,8 +110,16 @@ fn model(limits: &[Limit], show_claude: bool, note: Option<&str>) -> FlyoutModel
         copilot_note: note.map(str::to_string),
         ..FlyoutOptions::default()
     };
-    FlyoutModel::from(limits, now(), &Zone::utc(), &clock(), &options)
+    built(limits, &options)
 }
+
+fn built(limits: &[Limit], options: &FlyoutOptions) -> FlyoutModel {
+    FlyoutModel::from(limits, now(), &Zone::utc(), &clock(), options)
+}
+
+/// Core's longest sentences: Live usage's when Anthropic's answer is not understood, which the
+/// footer takes after its age, and Copilot's likewise as the note.
+const LONG_NOTE: &str = "GitHub's usage address refused, or answered in a way this Sobreiro doesn't understand. If it lasts, look for a newer Sobreiro.";
 
 /// Claude's card with the session limit as given, the weekly one on track.
 fn badge(percent: f64, resets_in: TimeDelta) -> FlyoutModel {
@@ -131,6 +141,11 @@ pub fn states() -> Vec<(&'static str, FlyoutModel)> {
     both.push(copilot.clone());
     let mut with_spend = calm();
     with_spend.push(spend());
+    // A spend reading that has no reset time: no badge and no resets-in line above the detail.
+    let mut no_reset = spend();
+    no_reset.resets_at = None;
+    let mut spend_alone = calm();
+    spend_alone.push(no_reset);
     vec![
         ("claude-only", model(&calm(), true, None)),
         (
@@ -153,6 +168,21 @@ pub fn states() -> Vec<(&'static str, FlyoutModel)> {
             "far-ends",
             model(&[credits(41.0, TimeDelta::hours(442))], false, None),
         ),
+        (
+            "long-footer",
+            built(
+                &calm(),
+                &FlyoutOptions {
+                    live: ProviderState::BadAnswer,
+                    ..FlyoutOptions::default()
+                },
+            ),
+        ),
+        (
+            "long-note",
+            model(std::slice::from_ref(&copilot), false, Some(LONG_NOTE)),
+        ),
+        ("spend-no-reset", model(&spend_alone, true, None)),
         (
             "copilot-note",
             model(

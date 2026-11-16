@@ -47,7 +47,7 @@ pub fn file_name(state: &str, theme: &str, colour: &str, scale: f32) -> String {
 }
 
 pub fn run(folder: Option<std::ffi::OsString>) -> ExitCode {
-    let Some(folder) = folder else {
+    let Some(folder) = folder.filter(|folder| !folder.is_empty()) else {
         eprintln!("--flyout-pictures needs a folder to write to.");
         return ExitCode::from(2);
     };
@@ -101,12 +101,6 @@ fn render(
         .dispatch_event(WindowEvent::ScaleFactorChanged {
             scale_factor: scale,
         });
-    // The card's height follows what its rows hold, which is known after a first draw.
-    window.set_size(PhysicalSize::new(1, 1));
-    window.window().request_redraw();
-    window.draw_if_needed(|renderer| {
-        renderer.render(&mut [PremultipliedRgbaColor::default()], 1);
-    });
     let width = (picture.get_card_width() * scale).ceil() as u32;
     let height = (picture.get_card_height() * scale).ceil() as u32;
     window.set_size(PhysicalSize::new(width, height));
@@ -154,7 +148,7 @@ mod tests {
     fn the_set_is_every_state_theme_colour_and_scale() {
         assert_eq!(
             states().len() * themes().len() * bar_colours().len() * SCALES.len(),
-            14 * 2 * 2 * 3
+            17 * 2 * 2 * 3
         );
     }
 

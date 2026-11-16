@@ -69,6 +69,24 @@ component Placed inherits Text {
     y: self.baseline - self.font-metrics.ascent;
 }
 
+// Text in Inter 14 that wraps at the row's width, its lines 1.45 of the size apart as 1.1's are.
+// The toolkit has no line height, only a factor of the font's natural height (ascent plus
+// descent, 1.21 of the size for Inter: 1984 + 494 of 2048 units), so the factor is 1.45 over
+// that. The leading it adds is split above and below a line, so the first baseline lies the
+// ascent plus half the leading under the top. `block-height` is the lines' height, 20 for one
+// line, and 1.1's 20.3 for each more.
+component Block inherits Text {
+    in property <length> baseline;
+    out property <length> block-height: Math.round(Math.round(self.preferred-height / 20.3px) * 20.3) * 1px;
+    x: 0px;
+    width: M.inner;
+    wrap: word-wrap;
+    font-family: "Inter";
+    font-size: 14px;
+    line-height-factor: 1.45 / 1.2100586;
+    y: self.baseline - self.font-metrics.ascent - (20.3px - (self.font-metrics.ascent - self.font-metrics.descent)) / 2;
+}
+
 // A heading in Inter 15 over a hairline: the line is 34 under the top, so the block is 35 tall.
 component Heading inherits Rectangle {
     in property <string> text;
@@ -107,10 +125,11 @@ component BarRow inherits Rectangle {
     // The two are wider than the row: the resets-in text goes under the badge.
     private property <bool> wrapped: root.has-badge && root.has-resets && root.badge-width + M.badge-gap + resets-text.preferred-width > M.inner;
     private property <length> lines-bottom: !root.has-badge && !root.has-resets ? 58px : (root.wrapped ? 102px : (root.has-badge ? 79px : 78px));
-    private property <length> detail-top: root.lines-bottom + 4px;
-    private property <length> detail-bottom: root.bar.detail != "" ? root.detail-top + M.line : root.lines-bottom;
+    // The detail is 4 under the badge or the resets-in line, and at their place with neither.
+    private property <length> detail-top: root.lines-bottom + (root.has-badge || root.has-resets ? 4px : 0px);
+    private property <length> detail-bottom: root.bar.detail != "" ? root.detail-top + detail-text.block-height : root.lines-bottom;
     private property <length> note-top: root.detail-bottom + 4px;
-    private property <length> note-bottom: root.bar.note != "" ? root.note-top + M.line : root.detail-bottom;
+    private property <length> note-bottom: root.bar.note != "" ? root.note-top + note-text.block-height : root.detail-bottom;
 
     Placed {
         text: root.bar.label;
@@ -190,18 +209,14 @@ component BarRow inherits Rectangle {
         baseline: root.wrapped ? 98px : 74px;
     }
 
-    Placed {
+    detail-text := Block {
         text: root.bar.detail;
-        font-family: "Inter";
-        font-size: 14px;
         color: root.colours.soft;
         baseline: root.detail-top + 15px;
     }
 
-    Placed {
+    note-text := Block {
         text: root.bar.note;
-        font-family: "Inter";
-        font-size: 14px;
         color: root.colours.soft;
         baseline: root.note-top + 15px;
     }
@@ -217,7 +232,7 @@ component BarRow inherits Rectangle {
 // model says. Heights follow what the rows hold.
 export component FlyoutCard inherits Rectangle {
     in property <FlyoutData> data;
-    out property <length> card-height: root.footer-top + 35px;
+    out property <length> card-height: root.footer-top + footer-text.block-height + 15px;
     width: M.card-width;
     height: root.card-height;
     background: root.data.colours.ground;
@@ -284,12 +299,10 @@ export component FlyoutCard inherits Rectangle {
         colours: root.data.colours;
     }
 
-    Placed {
+    footer-text := Block {
         text: root.data.footer;
         x: M.edge;
         baseline: root.footer-top + 16px;
-        font-family: "Inter";
-        font-size: 14px;
         color: root.data.colours.soft;
     }
 }
