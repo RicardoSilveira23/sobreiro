@@ -817,6 +817,32 @@ What differs:
 Not compared: the ground under the pointer, which is not in the picture set (the same alpha
 and corner radius in both), and 1.1 on a live display at 150% or 200%, which #46 starts with.
 
+#### Again, after #46, #59 and #61
+
+Compared again on 2026-11-16 for [#27](https://github.com/RicardoSilveira23/sobreiro/issues/27), with the three tickets above merged: the same 132 pairs.
+1.1's pictures come from its own `PillView`, laid out at each scale as its per-monitor window
+is; they give the widths in the `face` test's table. In short: the sizes are now 1.1's in every
+picture, shapes and colours match by eye, and the text is still lighter.
+
+- **Sizes: equal in all 132**, after one fix in this round. Before it, `fresh`, `copilot-on`,
+  `stale` and `stale-claude` were 1 pixel wider at 100%. Each text was measured at 100 times its
+  size, and the toolkit rounds a measured width up to a whole unit, so a line of three or four
+  texts could come out up to 0.04 DIP wide: `7d 45%`, 49.486 DIPs, rounded to 50 where 1.1
+  rounds it to 49. The texts are now measured at 1000 times, and the `face` test wants 1.1's
+  widths exactly.
+- **The same by eye:** the rings and the bar, the level colours in both themes and bar
+  colours, a stopped block's `*` and grey fill, the line heights, and where each glyph stands.
+  At 150% the rings and the bar carry 5% less ink, in their anti-aliased edges.
+- **The text is lighter.** Summed alpha of the text column, 2.0 / 1.1: 0.88 at 100%, 0.86 at
+  150%, 0.96 at 200%, the same in both themes. It shows most in the dash of a block with no
+  reading and in the `*`. The toolkit has no setting for it
+  ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)). At 150% the renderer also
+  draws the 11-DIP figures at 16 px where they are laid out at 16.5, so they end up to 2 pixels
+  before 1.1's. Drawing the text at 1.1's weight from the shell: ticket
+  [#93](https://github.com/RicardoSilveira23/sobreiro/issues/93).
+
+Not compared, as before: the ground under the pointer, and 1.1 on a live display.
+
 ### B, for 2.0: the flyout beside 1.1's
 
 Compared on 2026-11-16 for [#43](https://github.com/RicardoSilveira23/sobreiro/issues/43),
