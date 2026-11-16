@@ -66,7 +66,9 @@ fn start_info_marks_the_child_as_inside_a_chain() {
 fn run_passes_stdin_and_returns_stdout_and_exit_code() {
     let Some(bash) = git_bash() else { return };
 
-    let result = chain_runner::run("cat; exit 3", "hello", Some(&bash), DEFAULT_TIMEOUT);
+    // This checks what goes in and out, not the speed: a cold Git Bash on a CI runner can take
+    // longer than the default 5 s to start, so give it room.
+    let result = chain_runner::run("cat; exit 3", "hello", Some(&bash), Duration::from_secs(30));
 
     assert_eq!(
         result,
