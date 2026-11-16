@@ -4,20 +4,27 @@
 // A test fails by panicking, in the helpers below as in the tests themselves.
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use chrono::{DateTime, TimeDelta};
 use sobreiro_core::colours::bar_colour::pick;
 use sobreiro_core::colours::{BarColourOption, NightPalette, Rgb, WINDOWS_BLUE};
+use sobreiro_core::display::flyout_model::{FlyoutModel, FlyoutOptions};
+use sobreiro_core::display::glyph_fill::GlyphFill;
+use sobreiro_core::display::{ClockFormat, Zone};
+use sobreiro_core::limits::{Limit, LimitKind};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
 
 const EXE: &str = env!("CARGO_BIN_EXE_Sobreiro");
 const SCALES: [(&str, f32); 3] = [("1", 1.0), ("1.5", 1.5), ("2", 2.0)];
-const STATES: [&str; 17] = [
+const STYLES: [&str; 3] = ["bars", "battery", "thermometer"];
+const STATES: [&str; 18] = [
     "claude-only",
     "copilot-only",
     "both",
     "with-spend",
     "no-reading",
+    "empty-and-full",
     "badge-on-track",
     "badge-ends",
     "badge-likely-used-up",
@@ -39,6 +46,10 @@ const COLOURS: [&str; 2] = ["purple", "accent"];
 const CLAUDE_ONLY: (u32, u32) = (330, 289);
 const COPILOT_ONLY: (u32, u32) = (330, 219);
 const BOTH: (u32, u32) = (330, 452);
+const BATTERY_CLAUDE_ONLY: (u32, u32) = (330, 277);
+const BATTERY_BOTH: (u32, u32) = (330, 440);
+const THERMOMETER_CLAUDE_ONLY: (u32, u32) = (330, 341);
+const THERMOMETER_BOTH: (u32, u32) = (330, 504);
 
 /// A row of the card is 94 DIPs tall, the first starts at 54 and its meter lies 42 under its top.
 const FIRST_ROW: f32 = 54.0;
@@ -160,8 +171,8 @@ fn decode(path: &Path) -> Picture {
     }
 }
 
-fn name(state: &str, theme: &str, colour: &str, scale: &str) -> String {
-    format!("flyout-{state}-{theme}-{colour}-{scale}x.png")
+fn name(state: &str, style: &str, theme: &str, colour: &str, scale: &str) -> String {
+    format!("flyout-{state}-{style}-{theme}-{colour}-{scale}x.png")
 }
 
 /// Runs a copy of the exe that sits alone in a new folder, with a data folder and a Claude config
@@ -204,23 +215,30 @@ fn pictures() -> &'static Path {
         for state in STATES {
             for (theme, _) in THEMES {
                 for colour in COLOURS {
-                    for (scale, _) in SCALES {
-                        expected.insert(name(state, theme, colour, scale));
+                    for style in STYLES {
+                        for (scale, _) in SCALES {
+                            expected.insert(name(state, style, theme, colour, scale));
+                        }
                     }
                 }
             }
         }
-        assert_eq!(expected.len(), STATES.len() * 2 * 2 * 3);
+        assert_eq!(expected.len(), STATES.len() * 3 * 2 * 2 * 3);
         assert_eq!(
             written, expected,
-            "the run wrote other pictures than states x 2 x 2 x 3"
+            "the run wrote other pictures than states x 3 x 2 x 2 x 3"
         );
         folder.join("pictures")
     })
 }
 
+/// A picture in the Bars style.
 fn picture(state: &str, theme: &str, colour: &str, scale: &str) -> Picture {
-    decode(&pictures().join(name(state, theme, colour, scale)))
+    styled(state, "bars", theme, colour, scale)
+}
+
+fn styled(state: &str, style: &str, theme: &str, colour: &str, scale: &str) -> Picture {
+    decode(&pictures().join(name(state, style, theme, colour, scale)))
 }
 
 fn near(have: [u8; 3], want: Rgb) -> bool {
@@ -383,15 +401,21 @@ fn a_far_ends_badge_puts_the_resets_in_text_on_a_second_line() {
 fn no_ink_lies_right_of_a_row_s_edge() {
     // A row ends 1 + 18 + 292 DIPs in. The border and the rounded corners are left out.
     for state in STATES {
-        for (theme, dark) in THEMES {
-            let ground = NightPalette::for_dark(dark).ground;
-            for (scale, factor) in SCALES {
-                let card = picture(state, theme, "purple", scale);
-                let from = (311.0 * factor).ceil() as usize + 1;
-                let to = card.width - factor.ceil() as usize - 1;
-                let corner = (11.0 * factor) as usize;
-                let stray = card.differs((from, to), (corner, card.height - corner), ground, 8);
-                assert!(!stray, "{state} {theme} {scale}x has ink right of the row");
+        for style in STYLES {
+            for (theme, dark) in THEMES {
+                let ground = NightPalette::for_dark(dark).ground;
+                for (scale, factor) in SCALES {
+                    let card = styled(state, style, theme, "purple", scale);
+                    let from = (311.0 * factor).ceil() as usize + 1;
+                    let to = card.width - factor.ceil() as usize - 1;
+                    let corner = (11.0 * factor) as usize;
+                    let rows = (corner, card.height - corner);
+                    let stray = card.differs((from, to), rows, ground, 8);
+                    assert!(
+                        !stray,
+                        "{state} {style} {theme} {scale}x has ink right of the row"
+                    );
+                }
             }
         }
     }
@@ -469,5 +493,213 @@ fn a_detail_with_no_line_above_it_has_no_gap_above_it() {
         let spend = picture("spend-no-reset", theme, "purple", "1");
         let claude = picture("claude-only", theme, "purple", "1");
         assert_eq!(spend.height, claude.height + 93, "{theme}");
+    }
+}
+
+#[test]
+fn the_battery_and_the_thermometer_are_the_size_of_1_1s_card_at_every_scale() {
+    for (style, sizes) in [
+        ("battery", [BATTERY_CLAUDE_ONLY, BATTERY_BOTH]),
+        ("thermometer", [THERMOMETER_CLAUDE_ONLY, THERMOMETER_BOTH]),
+    ] {
+        for (state, (width, height)) in ["claude-only", "both"].into_iter().zip(sizes) {
+            for (theme, _) in THEMES {
+                for colour in COLOURS {
+                    for (scale, factor) in SCALES {
+                        let card = styled(state, style, theme, colour, scale);
+                        let label = format!("{state} {style} {theme} {colour} {scale}x");
+                        let (w, h) = (width as f32 * factor, height as f32 * factor);
+                        assert!(
+                            (card.width as f32 - w).abs() <= 1.0,
+                            "{label}: {}",
+                            card.width
+                        );
+                        assert!(
+                            (card.height as f32 - h).abs() <= 1.0,
+                            "{label}: {}",
+                            card.height
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The glyphs' fills for a session and a weekly limit read as `states.rs` reads them: Core's
+/// `GlyphFill` of each, as (left cells, soon cells, left percent, soon percent).
+type Fills = [(i32, i32, f64, f64); 2];
+
+fn fills(session: f64, weekly: f64) -> Fills {
+    let now = DateTime::from_timestamp(1_794_859_200, 0).unwrap();
+    let limit = |kind, label, percent, resets_in: TimeDelta, window| {
+        let mut limit = Limit::new(
+            "Claude Code",
+            kind,
+            label,
+            percent,
+            Some(now + resets_in),
+            now - TimeDelta::minutes(1),
+            false,
+        );
+        limit.window = Some(window);
+        limit
+    };
+    let limits = [
+        limit(
+            LimitKind::Session,
+            "Session",
+            session,
+            TimeDelta::minutes(141),
+            TimeDelta::hours(5),
+        ),
+        limit(
+            LimitKind::Weekly,
+            "Weekly",
+            weekly,
+            TimeDelta::hours(74),
+            TimeDelta::days(7),
+        ),
+    ];
+    let clock = ClockFormat {
+        pattern: "h:mm tt".to_string(),
+        am: "AM".to_string(),
+        pm: "PM".to_string(),
+    };
+    let model = FlyoutModel::from(
+        &limits,
+        now,
+        &Zone::utc(),
+        &clock,
+        &FlyoutOptions::default(),
+    );
+    [&model.session, &model.weekly].map(|view| {
+        let fill = GlyphFill::from(view);
+        (
+            fill.left_cells,
+            fill.soon_cells,
+            fill.left_percent,
+            fill.soon_percent,
+        )
+    })
+}
+
+/// A colour at 35% over another: how a faint cell or fill is drawn.
+fn faint(colour: Rgb, over: Rgb) -> Rgb {
+    let mix = |c: u8, o: u8| (f32::from(o) + (f32::from(c) - f32::from(o)) * 0.35).round() as u8;
+    Rgb::new(
+        mix(colour.r, over.r),
+        mix(colour.g, over.g),
+        mix(colour.b, over.b),
+    )
+}
+
+/// The two columns' left edges in DIPs, and the first row's top under the heading and the 16.
+const COLUMNS: [f32; 2] = [19.0, 19.0 + 152.0];
+const GLYPHS_TOP: f32 = FIRST_ROW + 16.0;
+
+#[test]
+fn the_battery_has_the_cells_core_says() {
+    // Used 15% and 45% (claude-only), 0% and 100% (empty-and-full).
+    for (state, used) in [
+        ("claude-only", fills(15.0, 45.0)),
+        ("empty-and-full", fills(0.0, 100.0)),
+    ] {
+        for (theme, dark) in THEMES {
+            let palette = NightPalette::for_dark(dark);
+            for colour in COLOURS {
+                for (scale, factor) in SCALES {
+                    let card = styled(state, "battery", theme, colour, scale);
+                    for (column, (left, soon, _, _)) in COLUMNS.into_iter().zip(used) {
+                        // The bar colour, the warning colour past 70% used, the error colour from 90%.
+                        let lit_colour = if left == 0 {
+                            palette.error
+                        } else {
+                            fill(colour, dark)
+                        };
+                        let (mut lit, mut dim) = (0, 0);
+                        for cell in 0..10 {
+                            let at = card.at(
+                                factor,
+                                column + 15.0 + 11.0 * cell as f32,
+                                GLYPHS_TOP + 20.0,
+                            );
+                            if near(at, lit_colour) {
+                                lit += 1;
+                            } else if near(at, faint(lit_colour, palette.ground)) {
+                                dim += 1;
+                            } else {
+                                assert!(
+                                    near(at, palette.track),
+                                    "cell {cell} {state} {theme} {colour} {scale}x"
+                                );
+                            }
+                        }
+                        let label = format!("{state} {theme} {colour} {scale}x column at {column}");
+                        assert_eq!(lit, left - soon, "lit cells {label}");
+                        assert_eq!(dim, soon, "faint cells {label}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn the_thermometer_has_the_fill_core_says() {
+    for (state, used) in [
+        ("claude-only", fills(15.0, 45.0)),
+        ("empty-and-full", fills(0.0, 100.0)),
+    ] {
+        for (theme, dark) in THEMES {
+            let palette = NightPalette::for_dark(dark);
+            for colour in COLOURS {
+                for (scale, factor) in SCALES {
+                    let card = styled(state, "thermometer", theme, colour, scale);
+                    for (column, (left, soon, left_percent, soon_percent)) in
+                        COLUMNS.into_iter().zip(used)
+                    {
+                        let paint = if left == 0 {
+                            palette.error
+                        } else {
+                            fill(colour, dark)
+                        };
+                        let label = format!("{state} {theme} {colour} {scale}x column at {column}");
+                        // The bulb is centred on the tube: find the paint across the column there.
+                        let bulb = GLYPHS_TOP + 93.0;
+                        let xs: Vec<f32> = (0..140)
+                            .map(|x| column + x as f32)
+                            .filter(|&x| near(card.at(factor, x, bulb), paint))
+                            .collect();
+                        assert!(!xs.is_empty(), "bulb {label}");
+                        let centre = (xs[0] + xs[xs.len() - 1] + 1.0) / 2.0;
+                        let (mut solid, mut dim) = (0, 0);
+                        for row in
+                            (GLYPHS_TOP * factor) as usize..((GLYPHS_TOP + 90.0) * factor) as usize
+                        {
+                            let at = card.pixel((centre * factor) as usize, row);
+                            if near(at, paint) {
+                                solid += 1;
+                            } else if near(at, faint(paint, palette.track)) {
+                                dim += 1;
+                            }
+                        }
+                        // The tube is 80 high from 4 down, and its solid part runs 6 on into the bulb.
+                        let want_solid =
+                            (6.0 + 0.8 * (left_percent - soon_percent)) as f32 * factor;
+                        let want_dim = 0.8 * soon_percent as f32 * factor;
+                        assert!(
+                            (solid as f32 - want_solid).abs() <= 1.0,
+                            "solid {label}: {solid} of {want_solid}"
+                        );
+                        assert!(
+                            (dim as f32 - want_dim).abs() <= 2.0,
+                            "faint {label}: {dim} of {want_dim}"
+                        );
+                        let _ = soon;
+                    }
+                }
+            }
+        }
     }
 }

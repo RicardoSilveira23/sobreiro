@@ -12,6 +12,7 @@ use slint::platform::{Platform, WindowAdapter, WindowEvent};
 use slint::{ComponentHandle, PhysicalSize, PlatformError};
 use sobreiro_core::colours::bar_colour::pick;
 use sobreiro_core::colours::{BarColourOption, NightPalette, WINDOWS_BLUE};
+use sobreiro_core::display::FlyoutStyle;
 use std::path::Path;
 use std::process::ExitCode;
 use std::rc::Rc;
@@ -33,6 +34,15 @@ pub fn themes() -> [(&'static str, bool); 2] {
     [("light", false), ("dark", true)]
 }
 
+/// The styles the pictures come in, by the name they carry.
+pub fn styles() -> [(&'static str, FlyoutStyle); 3] {
+    [
+        ("bars", FlyoutStyle::Bars),
+        ("battery", FlyoutStyle::Battery),
+        ("thermometer", FlyoutStyle::Thermometer),
+    ]
+}
+
 /// The bar colours the pictures come in.
 pub fn bar_colours() -> [(&'static str, BarColourOption); 2] {
     [
@@ -41,9 +51,9 @@ pub fn bar_colours() -> [(&'static str, BarColourOption); 2] {
     ]
 }
 
-/// The name of one picture: `flyout-<state>-<theme>-<colour>-<scale>x.png`.
-pub fn file_name(state: &str, theme: &str, colour: &str, scale: f32) -> String {
-    format!("flyout-{state}-{theme}-{colour}-{scale}x.png")
+/// The name of one picture: `flyout-<state>-<style>-<theme>-<colour>-<scale>x.png`.
+pub fn file_name(state: &str, style: &str, theme: &str, colour: &str, scale: f32) -> String {
+    format!("flyout-{state}-{style}-{theme}-{colour}-{scale}x.png")
 }
 
 pub fn run(folder: Option<std::ffi::OsString>) -> ExitCode {
@@ -72,16 +82,19 @@ fn draw_all(folder: &Path) -> Result<usize, String> {
 
     let mut count = 0;
     for (state, model) in states() {
-        for (theme, dark) in themes() {
-            for (colour, option) in bar_colours() {
-                let accent = (option == BarColourOption::Accent).then_some(&WINDOWS_BLUE);
-                let fill = pick(option, accent, dark).colour;
-                picture.set_data(flyout_data(&model, &NightPalette::for_dark(dark), fill));
-                for scale in SCALES {
-                    let (width, height, pixels) = render(&window, &picture, scale);
-                    let path = folder.join(file_name(state, theme, colour, scale));
-                    write_png(&path, width, height, &pixels)?;
-                    count += 1;
+        for (style_name, style) in styles() {
+            for (theme, dark) in themes() {
+                for (colour, option) in bar_colours() {
+                    let accent = (option == BarColourOption::Accent).then_some(&WINDOWS_BLUE);
+                    let fill = pick(option, accent, dark).colour;
+                    let palette = NightPalette::for_dark(dark);
+                    picture.set_data(flyout_data(&model, style, &palette, fill));
+                    for scale in SCALES {
+                        let (width, height, pixels) = render(&window, &picture, scale);
+                        let name = file_name(state, style_name, theme, colour, scale);
+                        write_png(&folder.join(name), width, height, &pixels)?;
+                        count += 1;
+                    }
                 }
             }
         }
@@ -147,20 +160,20 @@ mod tests {
     #[test]
     fn the_set_is_every_state_theme_colour_and_scale() {
         assert_eq!(
-            states().len() * themes().len() * bar_colours().len() * SCALES.len(),
-            17 * 2 * 2 * 3
+            states().len() * styles().len() * themes().len() * bar_colours().len() * SCALES.len(),
+            18 * 3 * 2 * 2 * 3
         );
     }
 
     #[test]
     fn a_file_is_named_by_what_it_shows() {
         assert_eq!(
-            file_name("both", "dark", "purple", 1.5),
-            "flyout-both-dark-purple-1.5x.png"
+            file_name("both", "battery", "dark", "purple", 1.5),
+            "flyout-both-battery-dark-purple-1.5x.png"
         );
         assert_eq!(
-            file_name("far-ends", "light", "accent", 1.0),
-            "flyout-far-ends-light-accent-1x.png"
+            file_name("far-ends", "bars", "light", "accent", 1.0),
+            "flyout-far-ends-bars-light-accent-1x.png"
         );
     }
 

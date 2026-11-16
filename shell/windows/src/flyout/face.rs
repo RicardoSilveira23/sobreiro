@@ -4,7 +4,9 @@
 use crate::ui::{BarData, CardColours, FlyoutData};
 use slint::{Color, SharedString};
 use sobreiro_core::colours::{NightPalette, Rgb};
+use sobreiro_core::display::FlyoutStyle;
 use sobreiro_core::display::flyout_model::{CopilotSection, FlyoutModel, LimitView};
+use sobreiro_core::display::glyph_fill::GlyphFill;
 use sobreiro_core::limits::providers::COPILOT;
 
 fn colour(rgb: Rgb) -> Color {
@@ -27,7 +29,14 @@ fn fraction(value: f64) -> f32 {
 /// One limit's row. `fill` is the colour of the bars below 70%: the level's own colour is
 /// Core's to pick, from the palette. The tick shows only where the pace ends before the reset.
 fn bar(limit: &LimitView, note: Option<&String>, palette: &NightPalette, fill: Rgb) -> BarData {
+    let glyph = GlyphFill::from(limit);
     let mut data = BarData {
+        has_data: limit.has_data,
+        left_figure: SharedString::from(limit.left_figure.as_str()),
+        left_cells: glyph.left_cells,
+        soon_cells: glyph.soon_cells,
+        left_percent: glyph.left_percent as f32,
+        soon_percent: glyph.soon_percent as f32,
         label: SharedString::from(limit.label),
         figure: SharedString::from(limit.used_figure.as_str()),
         fraction: fraction(limit.used_fraction),
@@ -55,9 +64,20 @@ fn bar(limit: &LimitView, note: Option<&String>, palette: &NightPalette, fill: R
     data
 }
 
-pub fn flyout_data(model: &FlyoutModel, palette: &NightPalette, fill: Rgb) -> FlyoutData {
+/// The card's data. `style` is how session and weekly are drawn; spend and credits stay bars.
+pub fn flyout_data(
+    model: &FlyoutModel,
+    style: FlyoutStyle,
+    palette: &NightPalette,
+    fill: Rgb,
+) -> FlyoutData {
     let row = |limit: &LimitView| bar(limit, None, palette, fill);
     let mut data = FlyoutData {
+        style: match style {
+            FlyoutStyle::Bars => 0,
+            FlyoutStyle::Battery => 1,
+            FlyoutStyle::Thermometer => 2,
+        },
         show_claude: model.show_claude,
         show_spend: model.spend.is_some(),
         show_copilot: model.copilot.is_some(),
@@ -100,7 +120,12 @@ mod tests {
             .unwrap()
             .1;
         let fill = pick(BarColourOption::Purple, None, dark).colour;
-        flyout_data(&model, &NightPalette::for_dark(dark), fill)
+        flyout_data(
+            &model,
+            FlyoutStyle::Bars,
+            &NightPalette::for_dark(dark),
+            fill,
+        )
     }
 
     #[test]
@@ -187,7 +212,7 @@ mod tests {
         assert_eq!(data("claude-only", true).session.fill, purple);
         let accent = pick(BarColourOption::Accent, Some(&WINDOWS_BLUE), true).colour;
         let model = states().into_iter().next().unwrap().1;
-        let blue = flyout_data(&model, &palette, accent);
+        let blue = flyout_data(&model, FlyoutStyle::Bars, &palette, accent);
         assert_eq!(blue.session.fill, colour(accent));
         assert_eq!(
             data("badge-used-up", true).session.fill,
@@ -197,5 +222,36 @@ mod tests {
             data("badge-likely-used-up", true).session.fill,
             colour(palette.error)
         );
+    }
+
+    #[test]
+    fn a_glyph_is_filled_as_core_s_glyph_fill_says() {
+        // 45% used, the pace ending at 80%: 5 cells left of which 4 are the pace's, 55% of which
+        // 35% is.
+        let weekly = data("claude-only", true).weekly;
+        assert_eq!(weekly.left_figure, "55%");
+        assert!(weekly.has_data);
+        assert_eq!((weekly.left_cells, weekly.soon_cells), (5, 4));
+        assert!((weekly.left_percent - 55.0).abs() < 1e-3);
+        assert!((weekly.soon_percent - 35.0).abs() < 0.5);
+        // With no reading nothing is lit and the figure is a dash.
+        let none = data("no-reading", true).session;
+        assert!(!none.has_data);
+        assert_eq!(
+            (none.left_figure.as_str(), none.left_cells, none.soon_cells),
+            ("–", 0, 0)
+        );
+        assert_eq!(none.left_percent, 0.0);
+    }
+
+    #[test]
+    fn the_style_is_what_the_card_is_told() {
+        let model = states().into_iter().next().unwrap().1;
+        let palette = NightPalette::for_dark(true);
+        let fill = palette.purple;
+        let style = |style| flyout_data(&model, style, &palette, fill).style;
+        assert_eq!(style(FlyoutStyle::Bars), 0);
+        assert_eq!(style(FlyoutStyle::Battery), 1);
+        assert_eq!(style(FlyoutStyle::Thermometer), 2);
     }
 }

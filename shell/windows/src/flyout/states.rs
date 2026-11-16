@@ -155,6 +155,18 @@ pub fn states() -> Vec<(&'static str, FlyoutModel)> {
         ("both", model(&both, true, None)),
         ("with-spend", model(&with_spend, true, None)),
         ("no-reading", model(&[], true, None)),
+        // Nothing used and everything used: the battery full and empty, the thermometer too.
+        (
+            "empty-and-full",
+            model(
+                &[
+                    session(0.0, TimeDelta::minutes(141)),
+                    weekly(100.0, TimeDelta::hours(74)),
+                ],
+                true,
+                None,
+            ),
+        ),
         ("badge-on-track", badge(15.0, TimeDelta::minutes(141))),
         ("badge-ends", badge(70.0, two_hours)),
         ("badge-likely-used-up", badge(99.5, two_hours)),
