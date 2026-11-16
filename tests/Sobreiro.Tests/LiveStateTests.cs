@@ -23,6 +23,6 @@ public class LiveStateTests
     [Fact]
     public void The_about_line_is_fixed() =>
         Assert.Equal(
-            "It asks Anthropic for your usage every 5 minutes with Claude Code's sign-in, and makes no other network calls.",
+            "It asks Anthropic and GitHub for your usage every 5 minutes, with the sign-ins Claude Code and GitHub already have, and makes no other network calls.",
             LiveUsageMessage.AboutLine);
 }
