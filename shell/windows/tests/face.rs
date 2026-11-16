@@ -260,6 +260,63 @@ fn a_label_and_its_figure_share_a_baseline_at_every_scale() {
     }
 }
 
+/// The summed alpha of the text column in nine states, in the purple colour, at 100%, 150% and 200%,
+/// from 1.1's own pictures (`--pill-pictures` of the 1.x app), the same in both themes: per pixel
+/// the alpha above the ground's, over the columns before the rings (before the bar for
+/// copilot-only). Before the second pass 2.0 had 0.88, 0.85 and 0.96 of it.
+const INK_1_1: [(&str, [u64; 3]); 9] = [
+    ("fresh", [94_563, 208_935, 345_049]),
+    ("amber", [93_755, 206_407, 340_189]),
+    ("red", [97_497, 214_535, 354_615]),
+    ("no-reading", [27_740, 59_140, 100_088]),
+    ("digits-11", [83_775, 185_449, 307_666]),
+    ("digits-88", [99_812, 220_568, 365_352]),
+    ("levels", [90_784, 199_983, 331_422]),
+    ("stale-claude", [100_174, 220_382, 366_569]),
+    ("copilot-only", [49_448, 109_240, 182_527]),
+];
+
+/// The summed alpha of a picture's text column, as `INK_1_1` measures 1.1's.
+fn text_ink(picture: &Picture, state: &str, scale: f32) -> u64 {
+    let rings = if state == "copilot-only" { 13.0 } else { 34.0 };
+    let end = picture.width - (rings * scale).round() as usize;
+    let ground = picture.pixel((4.0 * scale).floor() as usize, picture.height / 2)[3];
+    let mut sum = 0;
+    for y in 0..picture.height {
+        for x in 0..end {
+            sum += u64::from(picture.pixel(x, y)[3].saturating_sub(ground));
+        }
+    }
+    sum
+}
+
+#[test]
+fn the_text_carries_1_1s_ink_in_every_state_at_every_scale() {
+    // Each state within 3%: the labels and the figures have second passes of their own, so a
+    // thin text (the dash, a label) is held as close as a bold one.
+    for (theme, _) in THEMES {
+        for (at, (label, scale)) in SCALES.into_iter().enumerate() {
+            let (mut have, mut want) = (0, 0);
+            for (state, ink) in INK_1_1 {
+                let sum = text_ink(&picture(state, theme, "purple", label), state, scale);
+                let ratio = sum as f64 / ink[at] as f64;
+                assert!(
+                    (0.97..=1.03).contains(&ratio),
+                    "{state} {theme} {label}x: 2.0's text ink is {ratio:.3} of 1.1's"
+                );
+                have += sum;
+                want += ink[at];
+            }
+            let ratio = have as f64 / want as f64;
+            println!("{theme} {label}x: 2.0's text ink is {ratio:.3} of 1.1's");
+            assert!(
+                (0.98..=1.02).contains(&ratio),
+                "{theme} {label}x: 2.0's text ink is {ratio:.3} of 1.1's"
+            );
+        }
+    }
+}
+
 /// The ring canvas of a Claude-only picture: its left and top in pixels, and its size, at a scale.
 /// The canvas is the last 26 DIPs before 8 of padding, centred between the 4 DIPs of padding above
 /// and below (6 DIPs down at 100%; 8.5 px at 150%, where the two lines are 44 px and the rings 39).

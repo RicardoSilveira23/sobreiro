@@ -1,41 +1,121 @@
 name: Release
 
+# A tag v<version> releases the Rust Sobreiro.exe: one file, the bridge carried inside it, under
+# the same asset name 1.x releases use, so an upgrade is saving the new exe over the old one.
+#
+# A tag runs this file as it is at the tag's own commit. A v1.* tag cut from the branch 1.x
+# therefore runs 1.x's release.yml, which builds the .NET app; this file never sees it.
+#
+# Run by hand, the workflow builds and checks everything and publishes nothing.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
-  release:
+  # Builds with a read-only token: no step that runs the build's code can write to the repo.
+  build:
     runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
     defaults:
       run:
         shell: pwsh
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
+      # The compiler rust-toolchain.toml pins. No cache: a release builds from the source alone.
+      - name: Toolchain
+        run: |
+          rustup toolchain install
+          cargo --version
 
+      # The version has one home, [workspace.package] in Cargo.toml. A tag must be v and exactly
+      # that version.
+      - name: Version
+        id: version
+        run: |
+          $metadata = cargo metadata --no-deps --format-version 1 --locked | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "cargo metadata failed" }
+          $version = ($metadata.packages | Where-Object name -eq 'sobreiro').version
+          if (-not $version) { throw "No version for the package sobreiro in Cargo.toml" }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -cne "v$version") {
+            throw "Tag $env:GITHUB_REF_NAME does not match version $version in Cargo.toml"
+          }
+          "Version $version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      # In the release profile: the tests that take the exe apart see the one that ships. Its hash
+      # is kept so the check below can tell if the build made a different exe.
       - name: Test
-        run: dotnet test -c Release
+        run: |
+          cargo test --release --workspace --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $hash = (Get-FileHash -LiteralPath target/release/Sobreiro.exe -Algorithm SHA256).Hash
+          "TESTED_SHA256=$hash" >> $env:GITHUB_ENV
 
-      - name: Package
-        run: ./scripts/package.ps1 -OutputDir dist -Tag $env:GITHUB_REF_NAME
+      - name: Build
+        run: cargo build --release --locked
+
+      # The exe is the one the tests ran, and its details carry the version from Cargo.toml, so
+      # they match the tag too.
+      - name: Check the exe
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $exe = Get-Item -LiteralPath target/release/Sobreiro.exe
+          $hash = (Get-FileHash -LiteralPath $exe.FullName -Algorithm SHA256).Hash
+          if ($hash -cne $env:TESTED_SHA256) {
+            throw "The build made a different exe from the one the tests ran"
+          }
+          $details = $exe.VersionInfo
+          if ($details.ProductVersion -cne $env:VERSION) {
+            throw "The exe's product version is $($details.ProductVersion), not $env:VERSION"
+          }
+          if ($details.OriginalFilename -cne 'Sobreiro.exe') {
+            throw "The exe's original file name is $($details.OriginalFilename)"
+          }
+          '{0}: {1} bytes, version {2}' -f $exe.Name, $exe.Length, $details.ProductVersion
+          'SHA-256: {0}' -f $hash
+
+      # Handed to the publish job only for a tag, and kept for a day.
+      - if: github.event_name == 'push' && github.ref_type == 'tag'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Sobreiro-release
+          path: target/release/Sobreiro.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  # The only job that can write. It checks out nothing and runs none of the build's code.
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Sobreiro-release
+          path: dist
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          $exe = Join-Path $PWD 'dist\Sobreiro.exe'
-          if (-not (Test-Path -LiteralPath $exe)) { throw "dist\Sobreiro.exe is missing" }
-          $tag = $env:GITHUB_REF_NAME
-          $ghArgs = @($tag, $exe, '--generate-notes', '--title', "Sobreiro $($tag.Substring(1))")
-          if ($tag.Contains('-')) { $ghArgs += '--prerelease' }
-          gh release create @ghArgs
-          if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
+          test -f dist/Sobreiro.exe || { echo "dist/Sobreiro.exe is missing"; exit 1; }
+          prerelease=()
+          case "$VERSION" in *-*) prerelease=(--prerelease) ;; esac
+          gh release create "$TAG" dist/Sobreiro.exe --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --generate-notes --title "Sobreiro $VERSION" "${prerelease[@]}"
