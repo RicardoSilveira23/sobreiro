@@ -1,13 +1,20 @@
 //! The build gives one exe with nothing beside it: the fonts and the C runtime are inside, and it
-//! runs from a folder that holds nothing else.
-// A test fails by panicking, in the helpers below as in the tests themselves.
-#![allow(clippy::unwrap_used)]
+//! runs from a folder that holds nothing else. It has 1.1's icon and version details.
+// A test fails by panicking, in the helpers below as in the tests themselves; the version details
+// and the icon are read with Windows' own calls.
+#![allow(unsafe_code, clippy::unwrap_used)]
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 use sobreiro_core::connect::bridge_command::{command_for, status_line_json};
+use windows::Win32::Storage::FileSystem::{
+    GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW,
+};
+use windows::Win32::UI::Shell::ExtractIconExW;
+use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, HICON};
+use windows::core::{HSTRING, PCWSTR};
 
 const EXE: &str = env!("CARGO_BIN_EXE_Sobreiro");
 const FONTS: [&str; 3] = [
@@ -106,6 +113,154 @@ fn the_fonts_are_inside_the_exe() {
     for name in FONTS {
         let font = std::fs::read(fonts.join(name)).unwrap();
         assert!(contains(&exe, &font), "{name} is not inside the exe");
+    }
+}
+
+#[test]
+fn the_notices_and_licences_are_inside_the_exe() {
+    let exe = std::fs::read(EXE).unwrap();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let files = [
+        "notices.txt",
+        "../../LICENSE",
+        "../../src/Sobreiro/Fonts/OFL-Inter.txt",
+        "../../src/Sobreiro/Fonts/OFL-Unbounded.txt",
+    ];
+    for name in files {
+        let text = std::fs::read_to_string(root.join(name)).unwrap();
+        let text = text.replace("\r\n", "\n");
+        assert!(
+            contains(&exe, text.as_bytes()),
+            "{name} is not inside the exe"
+        );
+    }
+}
+
+/// The exe's version resource, as Windows reads it.
+struct Details {
+    block: Vec<u8>,
+}
+
+impl Details {
+    fn of_the_exe() -> Details {
+        let path = HSTRING::from(EXE);
+        // SAFETY: `path` is a NUL-ended string that outlives the calls, and `block` is as long as
+        // Windows said the resource is.
+        let block = unsafe {
+            let size = GetFileVersionInfoSizeW(&path, None);
+            assert!(size > 0, "the exe has no version details");
+            let mut block = vec![0u8; size as usize];
+            GetFileVersionInfoW(&path, None, size, block.as_mut_ptr().cast()).unwrap();
+            block
+        };
+        Details { block }
+    }
+
+    /// The bytes `VerQueryValueW` finds at `query`. Windows gives a string's length in WORDs
+    /// and a binary value's in bytes, so `text` says which this is.
+    fn query(&self, query: &str, text: bool) -> &[u8] {
+        let query = HSTRING::from(query);
+        let mut found = std::ptr::null_mut();
+        let mut length = 0u32;
+        // SAFETY: `block` is a version resource Windows filled in; on success `found` points
+        // inside it at a value `length` WORDs long for a string and `length` bytes long
+        // otherwise, and the slice is not used after `self` is gone.
+        unsafe {
+            let ok = VerQueryValueW(
+                self.block.as_ptr().cast(),
+                PCWSTR(query.as_ptr()),
+                &mut found,
+                &mut length,
+            );
+            assert!(ok.as_bool(), "the exe has no {query}");
+            let bytes = if text {
+                length as usize * 2
+            } else {
+                length as usize
+            };
+            std::slice::from_raw_parts(found.cast::<u8>(), bytes)
+        }
+    }
+
+    /// A string under the neutral, Unicode table.
+    fn string(&self, name: &str) -> String {
+        let bytes = self.query(&format!(r"\StringFileInfo\000004b0\{name}"), true);
+        let (pairs, _) = bytes.as_chunks::<2>();
+        let units: Vec<u16> = pairs.iter().map(|pair| u16::from_le_bytes(*pair)).collect();
+        String::from_utf16(&units)
+            .unwrap()
+            .trim_end_matches('\0')
+            .to_string()
+    }
+}
+
+#[test]
+fn the_exe_has_the_version_details() {
+    let details = Details::of_the_exe();
+    let major = env!("CARGO_PKG_VERSION_MAJOR");
+    let minor = env!("CARGO_PKG_VERSION_MINOR");
+    let patch = env!("CARGO_PKG_VERSION_PATCH");
+    let file_version = format!("{major}.{minor}.{patch}.0");
+    let expected = [
+        ("CompanyName", "Sobreiro"),
+        ("FileDescription", "Sobreiro"),
+        ("FileVersion", file_version.as_str()),
+        ("InternalName", "Sobreiro"),
+        ("LegalCopyright", "Copyright 2026 Ricardo Silveira"),
+        ("OriginalFilename", "Sobreiro.exe"),
+        ("ProductName", "Sobreiro"),
+        ("ProductVersion", env!("CARGO_PKG_VERSION")),
+    ];
+    for (name, value) in expected {
+        assert_eq!(details.string(name), value, "{name}");
+    }
+
+    // The table Explorer is pointed at: language neutral, Unicode.
+    let translation = details.query(r"\VarFileInfo\Translation", false);
+    assert_eq!(translation, [0x00, 0x00, 0xB0, 0x04], "translation");
+
+    // The fixed numbers: the file's and the product's version, with 0 as the fourth part.
+    let fixed = details.query(r"\", false);
+    let dword = |at: usize| u32::from_le_bytes(fixed[at..at + 4].try_into().unwrap());
+    assert_eq!(dword(0), 0xFEEF_04BD, "signature");
+    let number = |text: &str| text.parse::<u32>().unwrap();
+    let high = (number(major) << 16) | number(minor);
+    let low = number(patch) << 16;
+    assert_eq!((dword(8), dword(12)), (high, low), "file version");
+    assert_eq!((dword(16), dword(20)), (high, low), "product version");
+}
+
+#[test]
+fn the_exe_has_the_icon() {
+    let path = HSTRING::from(EXE);
+    // SAFETY: with an index of -1 and no arrays, this only counts the icon groups.
+    let groups = unsafe { ExtractIconExW(&path, -1, None, None, 0) };
+    assert_eq!(groups, 1, "the exe should have one icon");
+    // The group loads as an icon, its entries pointing at the images.
+    let mut large = HICON::default();
+    // SAFETY: one icon asked for, into one handle that lives on this stack; destroyed below.
+    let loaded = unsafe { ExtractIconExW(&path, 0, Some(&mut large), None, 1) };
+    assert_eq!(loaded, 1, "the exe's icon does not load");
+    assert!(!large.is_invalid(), "the exe's icon does not load");
+    // SAFETY: the handle came from `ExtractIconExW` above and is destroyed once.
+    unsafe { DestroyIcon(large) }.unwrap();
+
+    // Each image of 1.1's icon is inside the exe as it is in the file.
+    let ico = std::fs::read(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/Sobreiro/Assets/sobreiro.ico"),
+    )
+    .unwrap();
+    let exe = std::fs::read(EXE).unwrap();
+    let count = usize::from(u16::from_le_bytes([ico[4], ico[5]]));
+    assert!(count > 0);
+    for index in 0..count {
+        let entry = &ico[6 + 16 * index..][..16];
+        let size = u32::from_le_bytes(entry[8..12].try_into().unwrap()) as usize;
+        let start = u32::from_le_bytes(entry[12..16].try_into().unwrap()) as usize;
+        assert!(
+            contains(&exe, &ico[start..start + size]),
+            "image {index} of the icon is not inside the exe"
+        );
     }
 }
 
