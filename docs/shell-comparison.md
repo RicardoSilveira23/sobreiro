@@ -999,6 +999,32 @@ Not checked here, since they need the running app: the tray icons' clicks, the p
 About box, the toasts, a sign-out and the upgrade over 1.1. They are on one list for the release,
 with #43's and #45's.
 
+### B, for 2.0: the upgrade over 1.1 and the running app
+
+Run on 2026-11-16 for [#45](https://github.com/RicardoSilveira23/sobreiro/issues/45) and
+[#44](https://github.com/RicardoSilveira23/sobreiro/issues/44), on a PC in use: 1.1.1 at the
+path Start with Windows names, connected, with Battery, Windows accent, Weekdays only and Tray
+icon only set from its menu and its tray icon on the taskbar; then 2.0 from CI's
+`Sobreiro-rust-win-x64` artifact on `main` saved over the same `Sobreiro.exe`.
+
+- All seven steps of #45 hold: the settings, `config.json` and `alerts.json` are untouched by
+  either version; the figures show at once; the bridge is replaced by the Rust one at start and
+  carries the next Claude Code response; Disconnect puts back what was there before the first
+  Connect and Connect works again; a second start of 2.0 beside 1.1 opens 1.1's details and
+  exits; back on 1.1, nothing changes either.
+- #44: Claude Code's icon keeps its `NotifyIconSettings` entry (same key, `UID` 1, no GUID,
+  still promoted) through the upgrade, a restart and the way back, with no new entry.
+- Running app: the card opens beside the pill and beside the tray icon; Esc, a second click and
+  focus loss close it; a Style change redraws the open card; opening it on a reading over a
+  minute old fetches at once; screen readers get one line per row; the pill hides under a
+  full-screen window and comes back; the menu's boxes (Connect, Disconnect, About, Start with
+  Windows, Open data folder) behave as 1.1's.
+
+Not covered: a real sign-out (the Run entry's command line was started instead), Copilot's icon
+(`UID` 2, not shown on that PC), an alert already raised in the current period (usage stayed
+under 80%), a status line of one's own before the first Connect, a theme, scale or auto-hide
+switch, an Explorer restart, the footer before the first reading, and toasts.
+
 ## Notes on each point
 
 ### Idle memory, exe size and start time
