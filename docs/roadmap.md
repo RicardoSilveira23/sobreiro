@@ -298,8 +298,8 @@ Settled before Core is ported.
   are inside. The tests take the exe apart to see that, and run a copy alone in an empty
   folder, where it draws a line of text in each font without a window. The bridge, built in
   the same build, is inside it too; the debug build looks for it beside the exe. It has 1.1's
-  icon and version details, the version taken from `Cargo.toml`. 10.4 MB as it stands, with the
-  toolkit, the pill, the bridge and the icon inside.
+  icon and version details, the version taken from `Cargo.toml`. 10.6 MB as it stands, with the
+  toolkit, the pill, the flyout, the bridge and the icon inside.
 - **Versions.** The compiler is pinned in `rust-toolchain.toml` and every library in
   `Cargo.lock`, which CI does not let move. The UI toolkit is pinned to one exact version on
   top of that, because the pill leans on how that version makes a window. Every library the
