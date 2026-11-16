@@ -343,7 +343,9 @@ component GlyphColumn inherits Rectangle {
         visible: root.has-badge;
         x: (M.column - self.width) / 2;
         y: root.g + 62px;
-        width: root.badge-width;
+        // A badge wider than its column is cut at the column's edges, as 1.1 cuts it.
+        width: min(root.badge-width, M.column);
+        clip: true;
         height: 20px;
         border-radius: 10px;
         background: root.bar.badge-fill;

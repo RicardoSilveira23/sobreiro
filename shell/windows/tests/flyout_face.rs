@@ -226,7 +226,7 @@ fn pictures() -> &'static Path {
         assert_eq!(expected.len(), STATES.len() * 3 * 2 * 2 * 3);
         assert_eq!(
             written, expected,
-            "the run wrote other pictures than states x 2 x 2 x 3"
+            "the run wrote other pictures than states x 3 x 2 x 2 x 3"
         );
         folder.join("pictures")
     })
