@@ -99,6 +99,7 @@ Changes that were tried, each beside the release it was tried on, kept or not.
 | 1.0.0, the same spike with GPU rendering | 2026-11-13 | 103 MB | 125 MB | 2.5 s | 0.12 s | 0.11 s | 22.1 MB | 2.2 MB | 8 ms |
 | 1.0.0, shell in Rust with Slint (spike) | 2026-11-14 | 7 MB | 29 MB | 1.7 s | 0.06 s | 0.06 s | 9.3 MB | 2.2 MB | 9 ms |
 | 1.0.0, the Rust spike with GPU rendering | 2026-11-14 | 246 MB | 103 MB | 1.7 s | 0.41 s | 0.23 s | 9.7 MB | 2.2 MB | 8 ms |
+| 2.0.0 before the tag (main at 3a78f95) | 2026-11-16 | 6 MB | 40 MB | 1.8 s | 0.20 s | 0.06 s | 11.6 MB | 0.4 MB | 8 ms |
 
 Notes on an experiment:
 
@@ -270,3 +271,25 @@ Notes on an experiment:
   - The spike's code is not part of this repository. Both rows
     are from the same build. One fix came after them, for a pill that is hidden while its
     figures change; it does not touch a pill that is shown.
+- **2.0.0 before the tag: a check, not the release row.** The exe built as the release workflow
+  builds it (`cargo build --release --locked`) from `main` at 3a78f95, measured with this
+  script before 2.0.0 was tagged, so a miss against 1.0 shows before the release. The Releases
+  row is measured on the exe attached to the release. Compare with 1.0.0 and with the Rust
+  spike, "shell in Rust with Slint" above.
+  - Against 1.0.0: private memory 97 MB to 6 MB, working set 173 MB to 40 MB, 14.9 s to 1.8 s
+    of processor time per idle hour, later starts 0.40 s to 0.06 s (56, 60, 57 and 62 ms), the
+    first start 0.43 s to 0.20 s.
+  - Against the spike: memory, processor time and later starts are the spike's. 1.8 s against
+    1.7 s is one step of the 0.016 s Windows counts in, over the nine measured minutes. Minute
+    by minute: 0.03, 0.03, 0.03, 0.02, 0.01, 0.03, 0.00, 0.03 and 0.08 s.
+  - Private memory was 6.2 to 6.4 MB for five minutes, 7.1 to 7.3 MB in minutes 6 to 8, the
+    minutes after the first usage poll, and 6.3 MB at the end. The working set went from
+    30.5 MB to 39.6 MB in minute 7 and stayed there; the spike's was 29 MB.
+  - The first start, 0.20 s against the spike's 0.06 s, is the first launch of a newly written
+    exe file, not the app's own first start: run again right after, with the same exe on a new
+    data folder, the first start took 57 ms. A downloaded release meets that cost once, on its
+    first launch.
+  - `Sobreiro.exe` is 11.6 MB with the bridge inside, against the spike's 9.3 MB without it. The
+    bridge exe is 0.4 MB, against 1.x's 2.2 MB.
+  - Unlike the spike, this is the whole app: Connect, the alerts, the Copilot poll, the full
+    menu and the log.
