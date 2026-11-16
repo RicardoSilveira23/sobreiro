@@ -271,3 +271,11 @@ test("an allowed name or value must match exactly, not as a prefix", () => {
   assert.deepEqual(one("https://x:gho_abc@github.com", token), []);
   assert.equal(one("https://x:gho_abc@github.com.xyz", token).length, 1);
 });
+
+test("the notices file keeps authors' addresses, but nothing else is let through there", () => {
+  const notices = "shell/windows/notices.txt";
+  assert.deepEqual(one("Copyright Someone <someone@example.org>", notices), []);
+  assert.equal(one("Copyright Someone <someone@example.org>", "docs/a.md").length, 1);
+  assert.equal(one("C:/Users/First/x", notices)[0]?.kind, "user-path");
+  assert.equal(one("0123456789abcdef0123456789abcdef", notices)[0]?.kind, "hex32");
+});

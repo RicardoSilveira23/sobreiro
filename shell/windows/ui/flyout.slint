@@ -5,6 +5,7 @@
 import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
 import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
 import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+import { BatteryGlyph, ThermometerGlyph } from "flyout-glyphs.slint";
 
 // One limit: the label and figure, the meter, the badge and the words under it. An empty string
 // leaves a line out.
@@ -24,6 +25,14 @@ export struct BarData {
     detail: string,
     // The sentence under a Copilot row's figures.
     note: string,
+    // What the Battery and Thermometer styles draw: whether there is a reading, the figure that is
+    // left, the cells left and of those the ones the pace will use, and the same in percent.
+    has-data: bool,
+    left-figure: string,
+    left-cells: int,
+    soon-cells: int,
+    left-percent: float,
+    soon-percent: float,
 }
 
 // The Night palette of the theme.
@@ -47,6 +56,8 @@ export struct FlyoutData {
     credits: BarData,
     footer: string,
     colours: CardColours,
+    // How session and weekly are drawn: 0 for bars, 1 for batteries, 2 for thermometers.
+    style: int,
 }
 
 // DIPs, as 1.1's FlyoutView: a 330 wide card, a 1 border and 18 of padding, so 292 for a row.
@@ -58,6 +69,9 @@ global M {
     out property <length> line: 20px;
     out property <length> badge-pad: 10px;
     out property <length> badge-gap: 8px;
+    // The two columns of the Battery and Thermometer styles: 12 apart, each half of what is left.
+    out property <length> column: 140px;
+    out property <length> column-gap: 12px;
 }
 
 // A text whose baseline lies `baseline` below the top of its parent. The toolkit lays a line out
@@ -77,9 +91,10 @@ component Placed inherits Text {
 // line, and 1.1's 20.3 for each more.
 component Block inherits Text {
     in property <length> baseline;
+    in property <length> wrap-width: M.inner;
     out property <length> block-height: Math.round(Math.round(self.preferred-height / 20.3px) * 20.3) * 1px;
     x: 0px;
-    width: M.inner;
+    width: self.wrap-width;
     wrap: word-wrap;
     font-family: "Inter";
     font-size: 14px;
@@ -228,6 +243,142 @@ component BarRow inherits Rectangle {
     }
 }
 
+// One of the two columns of the Battery and Thermometer styles, each centred in its half of the
+// row. From the top: the glyph, the figure that is left with `left` on one baseline (22 under the
+// glyph), the label (51), the badge (its top 62) and the resets-in text (13 high type, 4 under the
+// badge, its baseline 15 under its top), then the detail 4 under those.
+component GlyphColumn inherits Rectangle {
+    in property <BarData> bar;
+    in property <CardColours> colours;
+    in property <bool> thermometer;
+    out property <length> column-height: root.bar.detail != "" ? root.detail-top + detail-text.block-height : root.lines-bottom;
+    width: M.column;
+    height: root.column-height;
+
+    private property <length> g: root.thermometer ? 104px : 40px;
+    private property <bool> has-badge: root.bar.badge != "";
+    private property <bool> has-resets: root.bar.resets != "";
+    private property <length> badge-width: badge-text.preferred-width + 2 * M.badge-pad;
+    private property <length> resets-top: root.has-badge ? root.g + 86px : root.g + 62px;
+    private property <length> lines-bottom: root.has-resets ? root.resets-top + 19px : (root.has-badge ? root.g + 82px : root.g + 62px);
+    private property <length> detail-top: root.lines-bottom + (root.has-badge || root.has-resets ? 4px : 0px);
+    // The fill is the level's colour, or the track's with no reading.
+    private property <color> fill: root.bar.has-data ? root.bar.fill : root.colours.track;
+    // The thermometer and its scale are centred together, the scale 10 right of the 30 wide glyph.
+    private property <length> thermometer-x: (M.column - (40px + full.preferred-width)) / 2;
+
+    BatteryGlyph {
+        visible: !root.thermometer;
+        x: (M.column - self.width) / 2;
+        y: 0px;
+        left-cells: root.bar.left-cells;
+        soon-cells: root.bar.soon-cells;
+        fill: root.bar.fill;
+        track: root.colours.track;
+        soft: root.colours.soft;
+    }
+
+    ThermometerGlyph {
+        visible: root.thermometer;
+        x: root.thermometer-x;
+        y: 0px;
+        left-percent: root.bar.left-percent;
+        soon-percent: root.bar.soon-percent;
+        fill: root.fill;
+        track: root.colours.track;
+    }
+
+    // The scale: 100% at the top of the tube and 0% at the bottom of its 88 high box, centred on
+    // the glyph's 104.
+    full := Placed {
+        visible: root.thermometer;
+        text: "100%";
+        font-family: "Inter";
+        font-size: 11px;
+        color: root.colours.soft;
+        x: root.thermometer-x + 40px;
+        baseline: 21px;
+    }
+
+    Placed {
+        visible: root.thermometer;
+        text: "0%";
+        font-family: "Inter";
+        font-size: 11px;
+        color: root.colours.soft;
+        x: root.thermometer-x + 40px;
+        baseline: 93px;
+    }
+
+    fig := Placed {
+        text: root.bar.left-figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: 22px;
+        color: root.colours.ink;
+        x: (M.column - (self.width + 4px + unit.width)) / 2;
+        baseline: root.g + 22px;
+    }
+
+    unit := Placed {
+        text: "left";
+        font-family: "Inter";
+        font-size: 14px;
+        color: root.colours.soft;
+        x: fig.x + fig.width + 4px;
+        baseline: root.g + 22px;
+    }
+
+    Placed {
+        text: root.bar.label;
+        font-family: "Inter";
+        font-weight: 500;
+        font-size: 15px;
+        color: root.colours.ink;
+        x: (M.column - self.width) / 2;
+        baseline: root.g + 51px;
+    }
+
+    Rectangle {
+        visible: root.has-badge;
+        x: (M.column - self.width) / 2;
+        y: root.g + 62px;
+        // A badge wider than its column is cut at the column's edges, as 1.1 cuts it.
+        width: min(root.badge-width, M.column);
+        clip: true;
+        height: 20px;
+        border-radius: 10px;
+        background: root.bar.badge-fill;
+
+        badge-text := Placed {
+            text: root.bar.badge;
+            font-family: "Inter";
+            font-weight: 500;
+            font-size: 13px;
+            color: root.bar.badge-ink;
+            x: M.badge-pad;
+            baseline: 15px;
+        }
+    }
+
+    Placed {
+        text: root.bar.resets;
+        font-family: "Inter";
+        font-size: 13px;
+        color: root.colours.soft;
+        x: (M.column - self.width) / 2;
+        baseline: root.resets-top + 15px;
+    }
+
+    detail-text := Block {
+        text: root.bar.detail;
+        color: root.colours.soft;
+        wrap-width: M.column;
+        horizontal-alignment: center;
+        baseline: root.detail-top + 15px;
+    }
+}
+
 // The card: a border, the Claude Code block, the GitHub Copilot block and the footer, each as the
 // model says. Heights follow what the rows hold.
 export component FlyoutCard inherits Rectangle {
@@ -242,7 +393,10 @@ export component FlyoutCard inherits Rectangle {
 
     private property <length> session-top: M.edge + M.heading;
     private property <length> weekly-top: root.session-top + session-row.row-height;
-    private property <length> spend-top: root.weekly-top + weekly-row.row-height;
+    // The two columns, 16 under the heading's rule, and a hairline 14 under the taller.
+    private property <length> columns-height: max(session-column.column-height, weekly-column.column-height);
+    private property <length> group-height: root.columns-height + 31px;
+    private property <length> spend-top: root.session-top + (root.data.style == 0 ? session-row.row-height + weekly-row.row-height : root.group-height);
     private property <length> claude-end: root.spend-top + (root.data.show-spend ? spend-row.row-height : 0px);
     // Copilot's heading is 10 under the rows above it when Claude shows.
     private property <length> copilot-top: root.data.show-claude ? root.claude-end + 10px : M.edge;
@@ -260,7 +414,7 @@ export component FlyoutCard inherits Rectangle {
     }
 
     session-row := BarRow {
-        visible: root.data.show-claude;
+        visible: root.data.show-claude && root.data.style == 0;
         x: M.edge;
         y: root.session-top;
         bar: root.data.session;
@@ -268,11 +422,38 @@ export component FlyoutCard inherits Rectangle {
     }
 
     weekly-row := BarRow {
-        visible: root.data.show-claude;
+        visible: root.data.show-claude && root.data.style == 0;
         x: M.edge;
         y: root.weekly-top;
         bar: root.data.weekly;
         colours: root.data.colours;
+    }
+
+    session-column := GlyphColumn {
+        visible: root.data.show-claude && root.data.style != 0;
+        x: M.edge;
+        y: root.session-top + 16px;
+        bar: root.data.session;
+        colours: root.data.colours;
+        thermometer: root.data.style == 2;
+    }
+
+    weekly-column := GlyphColumn {
+        visible: root.data.show-claude && root.data.style != 0;
+        x: M.edge + M.column + M.column-gap;
+        y: root.session-top + 16px;
+        bar: root.data.weekly;
+        colours: root.data.colours;
+        thermometer: root.data.style == 2;
+    }
+
+    Rectangle {
+        visible: root.data.show-claude && root.data.style != 0;
+        x: M.edge;
+        y: root.session-top + root.group-height - 1px;
+        width: M.inner;
+        height: 1px;
+        background: root.data.colours.line;
     }
 
     spend-row := BarRow {
