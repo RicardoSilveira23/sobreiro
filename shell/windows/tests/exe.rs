@@ -3,8 +3,9 @@
 // A test fails by panicking, in the helpers below as in the tests themselves.
 #![allow(clippy::unwrap_used)]
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 use sobreiro_core::connect::bridge_command::{command_for, status_line_json};
 
@@ -158,10 +159,7 @@ fn alone_in_a_folder_it_draws_each_font() {
 }
 
 #[test]
-#[cfg_attr(
-    not(carries_bridge),
-    ignore = "only the release build carries the bridge"
-)]
+#[cfg_attr(debug_assertions, ignore = "only the release build carries the bridge")]
 fn the_bridge_is_inside_the_exe() {
     let bridge = built_bridge().unwrap();
     assert!(bridge.starts_with(b"MZ"), "the bridge is not a PE file");
@@ -170,7 +168,7 @@ fn the_bridge_is_inside_the_exe() {
 }
 
 #[test]
-#[cfg_attr(carries_bridge, ignore = "the release build carries the bridge")]
+#[cfg_attr(not(debug_assertions), ignore = "the release build carries the bridge")]
 fn without_the_bridge_the_step_says_so() {
     let layout = Layout::new("bridge-not-carried");
     layout.settings(&settings_running(&layout.bridge()));
@@ -179,10 +177,7 @@ fn without_the_bridge_the_step_says_so() {
 }
 
 #[test]
-#[cfg_attr(
-    not(carries_bridge),
-    ignore = "only the release build carries the bridge"
-)]
+#[cfg_attr(debug_assertions, ignore = "only the release build carries the bridge")]
 fn the_start_writes_the_bridge_and_then_finds_it_current() {
     let layout = Layout::new("bridge-written");
     layout.settings(&settings_running(&layout.bridge()));
@@ -193,6 +188,7 @@ fn the_start_writes_the_bridge_and_then_finds_it_current() {
         built_bridge().unwrap()
     );
     assert_eq!(layout.refresh(), "current");
+    the_written_bridge_runs(&layout);
 
     let log = std::fs::read_to_string(layout.data().join("log.txt")).unwrap();
     let line = log
@@ -203,10 +199,7 @@ fn the_start_writes_the_bridge_and_then_finds_it_current() {
 }
 
 #[test]
-#[cfg_attr(
-    not(carries_bridge),
-    ignore = "only the release build carries the bridge"
-)]
+#[cfg_attr(debug_assertions, ignore = "only the release build carries the bridge")]
 fn a_stale_copy_is_replaced_at_the_start() {
     let layout = Layout::new("bridge-stale");
     layout.settings(&settings_running(&layout.bridge()));
@@ -220,10 +213,7 @@ fn a_stale_copy_is_replaced_at_the_start() {
 }
 
 #[test]
-#[cfg_attr(
-    not(carries_bridge),
-    ignore = "only the release build carries the bridge"
-)]
+#[cfg_attr(debug_assertions, ignore = "only the release build carries the bridge")]
 fn a_status_line_that_runs_something_else_leaves_the_copy_alone() {
     let layout = Layout::new("bridge-elsewhere");
     layout.settings(&settings_running(Path::new(
@@ -239,12 +229,40 @@ fn a_status_line_that_runs_something_else_leaves_the_copy_alone() {
 }
 
 #[test]
-#[cfg_attr(
-    not(carries_bridge),
-    ignore = "only the release build carries the bridge"
-)]
+#[cfg_attr(debug_assertions, ignore = "only the release build carries the bridge")]
 fn without_settings_the_copy_is_not_used() {
     let layout = Layout::new("bridge-no-settings");
     assert_eq!(layout.refresh(), "not-used");
     assert!(!layout.bridge().exists());
+}
+
+/// Runs the data folder's copy as Claude Code's status line does, with a status line's JSON on
+/// its input: it prints the line and writes the limits.
+fn the_written_bridge_runs(layout: &Layout) {
+    let input = r#"{"rate_limits":{"five_hour":{"used_percentage":23.5,"resets_at":1738425600}}}"#;
+    let mut child = Command::new(layout.bridge())
+        .env("SOBREIRO_DATA_DIR", layout.data())
+        .env("CLAUDE_CONFIG_DIR", layout.root.join("claude"))
+        .env_remove("SOBREIRO_IN_CHAIN")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        String::from_utf8(output.stdout)
+            .unwrap()
+            .starts_with("5h 23%"),
+        "the bridge printed no status line"
+    );
+    let usage = std::fs::read_to_string(layout.data().join("usage.json")).unwrap();
+    assert!(usage.contains("\"used_percentage\":23.5"), "{usage}");
 }

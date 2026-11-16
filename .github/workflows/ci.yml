@@ -102,8 +102,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: Sobreiro-rust-win-x64
-          path: |
-            target/release/Sobreiro.exe
-            target/release/sobreiro-bridge.exe
+          # One file: the exe carries the bridge.
+          path: target/release/Sobreiro.exe
           if-no-files-found: error
           retention-days: 14

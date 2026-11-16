@@ -8,6 +8,7 @@ use sobreiro_core::connect::bridge_refresh::{self, BridgeRefresh};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::thread::JoinHandle;
 
 /// The bridge's exe, as built in the same build as this one.
 #[cfg(carries_bridge)]
@@ -27,10 +28,14 @@ pub fn open() -> io::Result<&'static [u8]> {
 }
 
 /// The bridge Sobreiro owns: the data folder's copy when the bridge is carried, else the one
-/// beside the exe. None when there is none, or the exe's folder cannot be found.
+/// beside the exe. None when there is none. When the exe's folder cannot be found, nothing is
+/// looked for beside it, and a carried bridge is still the data folder's copy.
 pub fn own(app: &AppPaths) -> Option<PathBuf> {
-    let exe = std::env::current_exe().ok()?;
-    bridge_locator::own(carried(), &app.bridge_file(), exe.parent()?, Path::is_file)
+    let exe = std::env::current_exe().ok();
+    match exe.as_deref().and_then(Path::parent) {
+        Some(folder) => bridge_locator::own(carried(), &app.bridge_file(), folder, Path::is_file),
+        None => bridge_locator::own(carried(), &app.bridge_file(), Path::new(""), |_| false),
+    }
 }
 
 /// The start's step: brings the data folder's copy up to date when `settings.json` runs it, and
@@ -45,24 +50,25 @@ fn step(places: &Locations, diagnostics: &Diagnostics) -> BridgeRefresh {
     outcome
 }
 
-/// Runs the step on a thread of its own, so the start does not wait on the disk. A thread that
-/// cannot start, or folders Windows does not name, let it go.
-pub fn start() {
-    let _ = std::thread::Builder::new()
+/// Runs the step on a thread of its own, so the start does not wait on the disk. The thread
+/// gives the outcome back, or None when Windows names no folders. A thread that cannot start
+/// gives None, and the start goes on without the step.
+pub fn start() -> Option<JoinHandle<Option<BridgeRefresh>>> {
+    std::thread::Builder::new()
         .name("bridge-refresh".into())
         .spawn(|| {
-            if let Some(places) = Locations::find() {
-                step(&places, &Diagnostics::new(&places.app.log_file()));
-            }
-        });
+            let places = Locations::find()?;
+            Some(step(&places, &Diagnostics::new(&places.app.log_file())))
+        })
+        .ok()
 }
 
-/// Hidden: the step on this thread, with its word on stdout.
+/// Hidden: the start's thread, waited for, with its word on stdout.
 pub fn refresh_now() -> ExitCode {
-    let Some(places) = Locations::find() else {
+    let outcome = start().and_then(|thread| thread.join().ok()).flatten();
+    let Some(outcome) = outcome else {
         return ExitCode::FAILURE;
     };
-    let outcome = step(&places, &Diagnostics::new(&places.app.log_file()));
     println!("{}", outcome.word());
     ExitCode::SUCCESS
 }
