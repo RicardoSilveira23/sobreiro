@@ -3,17 +3,16 @@
 //!
 //! `TrackPopupMenu` only dismisses the menu properly when its owner window is in the foreground,
 //! so the owner is a hidden window of the app's own (never the pill, which must not be
-//! activated): it is made the foreground window before the menu opens, a `WM_NULL` is posted to it
-//! after, and the window that had the foreground gets it back unless a click went elsewhere.
+//! activated): it is made the foreground window before the menu opens, and a `WM_NULL` is posted
+//! to it after. It keeps the foreground once the menu has closed, as 1.1's menu window does.
 #![allow(unsafe_code)]
 
 use std::ffi::c_void;
 use windows::Win32::Foundation::{HWND, LPARAM, POINT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, GetForegroundWindow, HMENU, IsWindow,
-    MF_CHECKED, MF_POPUP, MF_STRING, MF_UNCHECKED, PostMessageW, SetForegroundWindow,
-    TPM_BOTTOMALIGN, TPM_LEFTALIGN, TPM_NONOTIFY, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu,
-    WM_NULL,
+    AppendMenuW, CreatePopupMenu, DestroyMenu, GetCursorPos, HMENU, IsWindow, MF_CHECKED, MF_POPUP,
+    MF_STRING, MF_UNCHECKED, PostMessageW, SetForegroundWindow, TPM_BOTTOMALIGN, TPM_LEFTALIGN,
+    TPM_NONOTIFY, TPM_RETURNCMD, TPM_RIGHTBUTTON, TrackPopupMenu, WM_NULL,
 };
 use windows::core::HSTRING;
 
@@ -52,10 +51,9 @@ pub fn track(owner: isize, entries: &[Entry]) -> Option<u32> {
         let _ = unsafe { DestroyMenu(menu) };
         return None;
     }
-    // SAFETY: plain calls on the menu made above and on windows of this thread. The previous
-    // foreground window may be any window, or none; Windows refuses what it will not do.
+    // SAFETY: plain calls on the menu made above and on a window of this thread; Windows refuses
+    // what it will not do.
     let chosen = unsafe {
-        let before = GetForegroundWindow();
         let _ = SetForegroundWindow(owner);
         let chosen = TrackPopupMenu(
             menu,
@@ -68,15 +66,6 @@ pub fn track(owner: isize, entries: &[Entry]) -> Option<u32> {
         );
         // Lets the menu close for good (the documented answer to the menu staying up).
         let _ = PostMessageW(Some(owner), WM_NULL, WPARAM(0), LPARAM(0));
-        // Only while the hidden window still has the foreground: a click outside the menu that
-        // closed it gave the foreground to the window clicked, and it stays there.
-        if GetForegroundWindow() == owner
-            && !before.0.is_null()
-            && before != owner
-            && IsWindow(Some(before)).as_bool()
-        {
-            let _ = SetForegroundWindow(before);
-        }
         // Destroys the submenus with it.
         let _ = DestroyMenu(menu);
         chosen

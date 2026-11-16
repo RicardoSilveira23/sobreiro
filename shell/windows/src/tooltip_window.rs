@@ -1,7 +1,9 @@
 //! The tooltip's window: a toolkit window born owned by the taskbar as the pill's is, made once
 //! and then only shown and hidden, so it opens at once and the toolkit has no new window to make
-//! while the pointer rests. It is shown with Windows' own calls, never activated and raised
-//! without moving its owner in the z-order (`taskbar::raise_to`): putting a tooltip above the
+//! while the pointer rests. It is shown and hidden through the toolkit, which then knows to paint
+//! it (a window hidden and shown behind the toolkit's back is never painted again), and raised
+//! with Windows' own call, never activated and without moving its owner in the z-order
+//! (`taskbar::raise_to`): putting a tooltip above the
 //! other windows in the usual way carries its owner, the taskbar, along, and the pill loses its
 //! owner.
 //!
@@ -69,11 +71,11 @@ impl TooltipWindow {
             .into_iter()
             .rev()
             .find(|window| !self.before.contains(window));
-        if let Some(window) = found {
-            // It is seen only once the pointer has rested.
-            taskbar::hide(window);
-        }
         self.window = found;
+        if found.is_some() {
+            // It is seen only once the pointer has rested.
+            self.hide();
+        }
         found.is_some()
     }
 
@@ -114,6 +116,25 @@ impl TooltipWindow {
         self.component
             .window()
             .set_size(LogicalSize::new(width, height));
+    }
+
+    /// Hides it, through the toolkit.
+    pub fn hide(&self) {
+        let _ = self.component.hide();
+    }
+
+    /// Shows it with its top left corner at (x, y): moved there while hidden, shown through the
+    /// toolkit so it paints, and raised above the taskbar without moving the taskbar.
+    pub fn present(&self, x: i32, y: i32) {
+        let Some(window) = self.window() else {
+            return;
+        };
+        if !taskbar::is_visible(window) {
+            taskbar::move_hidden(window, x, y);
+        }
+        let _ = self.component.show();
+        taskbar::raise_to(window, x, y);
+        self.component.window().request_redraw();
     }
 
     /// Hides it and lets its window go: the toolkit destroys the window when the component is

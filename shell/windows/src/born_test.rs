@@ -10,7 +10,7 @@
 //! second window that is not taken within the deadline, with code 3.
 use crate::tooltip_window::TooltipWindow;
 use crate::ui::BornTest;
-use crate::win::{born, taskbar};
+use crate::win::born;
 use slint::{ComponentHandle, Timer, TimerMode};
 use std::cell::Cell;
 use std::process::ExitCode;
@@ -56,7 +56,7 @@ pub fn run(owner: Option<&str>) -> ExitCode {
 struct Run {
     /// Stands for the pill; held so its window stays up.
     _first: BornTest,
-    tooltip: Option<TooltipWindow>,
+    tooltip: Option<Rc<TooltipWindow>>,
     said_first: bool,
     said_tooltip: bool,
 }
@@ -95,7 +95,7 @@ fn show(owner: isize) -> Result<bool, String> {
                 match TooltipWindow::create(owner) {
                     Ok(made) => {
                         made.set_text(WORDS);
-                        run.tooltip = Some(made);
+                        run.tooltip = Some(Rc::new(made));
                     }
                     Err(error) => {
                         failed.set(Some(error));
@@ -104,7 +104,7 @@ fn show(owner: isize) -> Result<bool, String> {
                 }
                 return;
             }
-            let Some(made) = run.tooltip.as_mut() else {
+            let Some(made) = run.tooltip.as_mut().and_then(Rc::get_mut) else {
                 return;
             };
             made.find();
@@ -114,7 +114,9 @@ fn show(owner: isize) -> Result<bool, String> {
             println!("{window}");
             run.said_tooltip = true;
             both.set(true);
-            start_turns(&turns, window);
+            if let Some(made) = run.tooltip.clone() {
+                start_turns(&turns, made);
+            }
             Timer::single_shot(UP, || {
                 let _ = slint::quit_event_loop();
             });
@@ -135,9 +137,9 @@ fn show(owner: isize) -> Result<bool, String> {
     }
 }
 
-/// Shows the tooltip's window and hides it again, three times, as the shell does: raised with
-/// Windows' own call, which leaves its owner where it is, and hidden with Windows' own call.
-fn start_turns(timer: &Timer, window: isize) {
+/// Shows the tooltip's window and hides it again, three times, as the shell does: through the
+/// toolkit and raised with Windows' own call, which leaves its owner where it is.
+fn start_turns(timer: &Timer, tooltip: Rc<TooltipWindow>) {
     let left = Cell::new(TURNS * 2);
     let shown = Cell::new(false);
     timer.start(TimerMode::Repeated, TURN, move || {
@@ -147,11 +149,11 @@ fn start_turns(timer: &Timer, window: isize) {
         left.set(left.get() - 1);
         if shown.get() {
             println!("hiding");
-            taskbar::hide(window);
+            tooltip.hide();
             println!("hidden");
         } else {
             println!("showing");
-            taskbar::raise_to(window, AT.0, AT.1);
+            tooltip.present(AT.0, AT.1);
             println!("shown");
         }
         shown.set(!shown.get());

@@ -59,6 +59,10 @@ const GAP_UNITS: f64 = 4.0;
 /// How many times the tooltip waits for its window to take the taskbar's scale before it shows
 /// anyway, at one try every `FIND_POLL`.
 const SCALE_TRIES: u32 = 20;
+/// How many times a right click waits for `born` to finish a window, at one try every `FIND_POLL`.
+const MENU_TRIES: u32 = 100;
+/// A menu that closes sooner than this, with no choice, did not open.
+const MENU_REFUSED: Duration = Duration::from_millis(150);
 
 thread_local! {
     static HOST: RefCell<Option<Host>> = const { RefCell::new(None) };
@@ -763,9 +767,6 @@ impl Host {
         self.hover.reset();
         self.hover_timer.stop();
         if let Some(tooltip) = self.tooltip.take() {
-            if let Some(window) = tooltip.window() {
-                taskbar::hide(window);
-            }
             tooltip.close();
         }
     }
@@ -816,8 +817,8 @@ impl Host {
     }
 
     fn close_tooltip(&self) {
-        if let Some(window) = self.tooltip.as_ref().and_then(TooltipWindow::window) {
-            taskbar::hide(window);
+        if let Some(tooltip) = self.tooltip.as_ref() {
+            tooltip.hide();
         }
     }
 
@@ -865,7 +866,7 @@ impl Host {
             wanted
         };
         let (x, y) = tooltip::place(monitor, pill_rect.left, self.band_top, size, gap);
-        taskbar::raise_to(window, x, y);
+        tooltip.present(x, y);
     }
 
     /// A left click on the pill.
@@ -879,20 +880,39 @@ impl Host {
 
     /// A right click on the pill opens the menu, once the pointer's own handler has returned.
     fn on_right_click(&mut self) {
-        Timer::single_shot(Duration::ZERO, || with_host(Host::show_menu));
+        Timer::single_shot(Duration::ZERO, || {
+            with_host(|host| host.show_menu(MENU_TRIES))
+        });
     }
 
     /// Opens the menu at the pointer and does what is chosen.
-    fn show_menu(&mut self) {
-        // A menu is a window the thread makes, and `born` would take it for a window it waits for.
+    fn show_menu(&mut self, tries: u32) {
         let Some(owner) = self.messages.as_ref().map(MessageWindow::handle) else {
+            self.diagnostics
+                .say("the menu has no window of ours to open from");
             return;
         };
+        // A menu is a window the thread makes, and `born` would take it for a window it waits for
+        // (the tooltip's, made when the pill came back): the click waits for it, and is not lost.
         if born::is_pending() {
+            if tries > 0 {
+                Timer::single_shot(FIND_POLL, move || {
+                    with_host(move |host| host.show_menu(tries - 1));
+                });
+            }
             return;
         }
         let (config, _) = pill_feed::config_for_display(&self.places.app.config_file());
+        let opened = Instant::now();
         let chosen = menu::track(owner, &pill_menu::entries(config.bar_colour));
+        // A menu that was gone before anyone could have read it never opened (Windows refused the
+        // foreground, say): it is tried again, a few times, so a right click always opens one.
+        if chosen.is_none() && opened.elapsed() < MENU_REFUSED && tries + 3 > MENU_TRIES {
+            Timer::single_shot(FIND_POLL, move || {
+                with_host(move |host| host.show_menu(tries - 1));
+            });
+            return;
+        }
         match chosen.and_then(pill_menu::command) {
             Some(Command::SetBarColour(colour)) => self.set_bar_colour(colour),
             Some(Command::Quit) => {

@@ -12,16 +12,18 @@ use std::io::{BufRead, BufReader};
 use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::Graphics::Gdi::{COLOR_INFOBK, GetDC, GetPixel, GetSysColor, ReleaseDC};
 use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, SetFocus, VK_MENU, keybd_event,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DestroyWindow, DispatchMessageW, GUITHREADINFO, GW_OWNER, GWL_EXSTYLE,
-    GetForegroundWindow, GetGUIThreadInfo, GetWindow, GetWindowLongPtrW, GetWindowThreadProcessId,
-    IsWindowVisible, MSG, PM_REMOVE, PeekMessageW, SetForegroundWindow, TranslateMessage,
-    WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP, WS_VISIBLE,
+    GetForegroundWindow, GetGUIThreadInfo, GetWindow, GetWindowLongPtrW, GetWindowRect,
+    GetWindowThreadProcessId, IsWindowVisible, MSG, PM_REMOVE, PeekMessageW, SetForegroundWindow,
+    TranslateMessage, WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    WS_VISIBLE,
 };
 use windows::core::w;
 
@@ -126,6 +128,20 @@ fn next_handle(receive: &mpsc::Receiver<String>) -> HWND {
         .parse()
         .expect("the line is not a handle");
     HWND(handle as *mut _)
+}
+
+/// The colour on the screen at a window's top left corner, just inside its edge and padding.
+/// Reads what the screen shows, so a window that was never painted gives what is behind it.
+fn pixel_inside(window: HWND) -> u32 {
+    let mut rect = RECT::default();
+    // SAFETY: reads a window that is alive, and the screen's colour at one point.
+    unsafe {
+        GetWindowRect(window, &mut rect).unwrap();
+        let screen = GetDC(None);
+        let colour = GetPixel(screen, rect.left + 3, rect.top + 3).0;
+        ReleaseDC(None, screen);
+        colour
+    }
 }
 
 /// What must hold of a born window at every look.
@@ -234,7 +250,7 @@ fn the_windows_are_owned_and_never_activated() {
     // held to for 200 ms after the line that says it was read, and not asserted after that.
     let mut tooltip_visible = Some(false);
     let mut said_at = Instant::now();
-    let (mut shown, mut hidden) = (0, 0);
+    let (mut shown, mut hidden, mut painted) = (0, 0, 0);
     let mut looks = 0;
     pump(Duration::from_millis(2500), || {
         while let Ok(line) = receive.try_recv() {
@@ -252,6 +268,22 @@ fn the_windows_are_owned_and_never_activated() {
                 other => panic!("an unexpected line from the exe: {other}"),
             }
         }
+        // Some time after a show the tooltip must be painted: the screen at its corner is its
+        // ground, the system's tooltip colour, and not what is behind it. Once for each show.
+        if holds_foreground
+            && tooltip_visible == Some(true)
+            && said_at.elapsed() > Duration::from_millis(120)
+            && painted < shown
+        {
+            painted = shown;
+            // SAFETY: asks Windows for one of its colours.
+            let ground = unsafe { GetSysColor(COLOR_INFOBK) };
+            assert_eq!(
+                pixel_inside(second),
+                ground,
+                "the tooltip is shown but not painted (turn {shown})"
+            );
+        }
         let expected = tooltip_visible.filter(|_| said_at.elapsed() < Duration::from_millis(200));
         looks += 1;
         look(first, &setting, looks, Some(true));
@@ -260,6 +292,10 @@ fn the_windows_are_owned_and_never_activated() {
     });
     assert!(looks > 50, "too few looks: {looks}");
     assert_eq!((shown, hidden), (3, 3), "the tooltip's three turns");
+    assert!(
+        painted == 3 || !holds_foreground,
+        "the tooltip was painted {painted} of 3 times"
+    );
     // After the three turns the stand-in for the pill still has its owner (looked at above, at
     // every look), and the owner was not raised along with the tooltip: it is no topmost window.
     // SAFETY: reads from a window that is alive.
