@@ -114,9 +114,10 @@ impl Guard {
 }
 
 /// Opens the details by the tray (the bottom-right corner of the primary monitor's work area), as
-/// 1.1's `ShowFlyoutByTray`. The flyout's window is not in the shell yet: until it is, the ask is
-/// only written to the log, as `show-asked`.
-fn show_by_tray() {}
+/// 1.1's `ShowFlyoutByTray`.
+fn show_by_tray() {
+    crate::flyout::window::open_by_tray();
+}
 
 #[cfg(test)]
 mod tests {

@@ -878,8 +878,10 @@ impl Host {
         self.flyout_hook();
     }
 
+    /// A left click on the pill opens the flyout, or closes it, once the pointer's own handler has
+    /// returned.
     fn flyout_hook(&mut self) {
-        // #7 opens the flyout here.
+        Timer::single_shot(Duration::ZERO, crate::flyout::window::on_pill_click);
     }
 
     /// A right click on the pill opens the menu, once the pointer's own handler has returned.
