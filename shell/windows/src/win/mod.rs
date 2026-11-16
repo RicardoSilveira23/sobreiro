@@ -6,6 +6,7 @@ pub mod known_folders;
 pub mod local_zone;
 pub mod locale;
 pub mod menu;
+pub mod message_box;
 pub mod probe;
 pub mod registry;
 pub mod taskbar;
