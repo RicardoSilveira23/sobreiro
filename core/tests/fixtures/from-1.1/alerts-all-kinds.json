@@ -1,0 +1,18 @@
+{
+  "session": {
+    "resets_at": 1790010000,
+    "threshold": 80
+  },
+  "weekly": {
+    "resets_at": 1790500000,
+    "threshold": 95
+  },
+  "spend": {
+    "resets_at": null,
+    "threshold": 80
+  },
+  "copilot_credits": {
+    "resets_at": 1792000000,
+    "threshold": 95
+  }
+}

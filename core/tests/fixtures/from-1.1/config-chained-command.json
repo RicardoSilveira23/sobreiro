@@ -1,0 +1,7 @@
+{
+  "chained_command": "node status.js",
+  "style": "bars",
+  "bar_colour": "purple",
+  "show": "trayandpill",
+  "pace": "everyday"
+}
