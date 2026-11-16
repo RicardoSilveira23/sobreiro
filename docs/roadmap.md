@@ -281,6 +281,13 @@ In this order:
    1.1's ink within 2% in every state, style and theme at 100%, 150% and 200%. The manual's lines on the
    flyout hold in the code and its tests; those that need the running app are checked by hand.
 4. **The release:** its baseline row, and the comparison below.
+   The rest of the manual was walked line by line on 2026-11-16
+   ([note](shell-comparison.md#b-for-20-the-manual-line-by-line)): install, Connect, the tray
+   icons, the pill, the menu, toasts, Live usage, what it reads and sends, the data folder and
+   its log, and uninstall. Every line holds in the code, nearly all with a test; the log's line
+   on errors described 1.1 and now says what 2.0 writes, and Disconnect leaving the bridge's
+   copy gained its test. What only the running app can show is checked by hand before the
+   release.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
   two languages in one process.

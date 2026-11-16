@@ -175,7 +175,7 @@
     <div class="row"><span class="k">Log</span><span class="n">What log.txt holds</span><p class="s">A small trace, so a tray that quit or failed to start leaves something behind. It never leaves your machine.</p>
       <ul class="d">
         <li>Each entry has the time, the process id and what happened: the start (with the version), the exit code, a failed start, an unexpected error, or Windows asking to end the session.</li>
-        <li>Errors are recorded by their type name and stack trace only. It holds no error messages, usage numbers or file contents.</li>
+        <li>An error is recorded by a fixed name, and a crash by the file and line it happened at, only. It holds no error messages, usage numbers or file contents.</li>
         <li>One line each time Copilot's poll changes: which sources had a token and what GitHub answered. It holds no tokens, names or numbers.</li>
         <li>The session entry, session-ending, is written when Windows asks to end the session: sign-out, shutdown, restart, or an installer or updater asking apps to close. The tray quits then, even if the sign-out or shutdown is cancelled. reason=Shutdown covers everything except sign-out.</li>
         <li>A start with no later exit means the process was killed or crashed hard, which the log can't record.</li>
