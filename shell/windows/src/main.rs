@@ -7,6 +7,7 @@
 #![windows_subsystem = "windows"]
 
 mod about;
+mod alerts;
 mod app_host;
 mod auto_start;
 mod born_test;
