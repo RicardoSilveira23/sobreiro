@@ -84,24 +84,29 @@ impl Guard {
     /// the toolkit's backend exists (`app_host::run` makes it), `invoke_from_event_loop` has no
     /// loop to answer to. Timers need no backend, so one set now fires then.
     pub fn listen(&mut self) {
-        let Some(event) = self.event.take() else {
+        // Both are there together: neither is made without the data folder.
+        let (Some(event), Some(diagnostics)) = (self.event.take(), self.diagnostics.clone()) else {
             return;
         };
-        let diagnostics = self.diagnostics.clone();
         Timer::single_shot(Duration::ZERO, move || {
+            let waiting = diagnostics.clone();
             let started = std::thread::Builder::new()
                 .name("show-wait".to_string())
                 .spawn(move || {
                     while event.wait() {
+                        let heard = waiting.clone();
+                        let shown = slint::invoke_from_event_loop(move || {
+                            heard.say("show-asked");
+                            show_by_tray();
+                        });
                         // An Err means the loop has ended: nothing is left to show.
-                        if slint::invoke_from_event_loop(show_by_tray).is_err() {
-                            break;
+                        if shown.is_err() {
+                            return;
                         }
                     }
+                    waiting.say("the show wait failed");
                 });
-            if started.is_err()
-                && let Some(diagnostics) = diagnostics
-            {
+            if started.is_err() {
                 diagnostics.say("the show wait could not start");
             }
         });
@@ -109,8 +114,8 @@ impl Guard {
 }
 
 /// Opens the details by the tray (the bottom-right corner of the primary monitor's work area), as
-/// 1.1's `ShowFlyoutByTray`. The flyout's window is not in the shell yet, and until it is the ask
-/// is heard and nothing opens.
+/// 1.1's `ShowFlyoutByTray`. The flyout's window is not in the shell yet: until it is, the ask is
+/// only written to the log, as `show-asked`.
 fn show_by_tray() {}
 
 #[cfg(test)]

@@ -91,12 +91,18 @@ impl Layout {
     }
 
     /// Starts the app with no argument, in this folder. The copy is ended when the guard drops.
+    /// Its polls start at once: the GitHub tokens of the environment and `gh` on the PATH are kept
+    /// from it, but a Copilot sign-in in Credential Manager is still found.
     fn spawn(&self) -> Running {
         let app = self.root.join("app");
         let child = Command::new(app.join("Sobreiro.exe"))
             .current_dir(&app)
             .env("SOBREIRO_DATA_DIR", self.data())
             .env("CLAUDE_CONFIG_DIR", self.root.join("claude"))
+            .env_remove("COPILOT_GITHUB_TOKEN")
+            .env_remove("GH_TOKEN")
+            .env_remove("GITHUB_TOKEN")
+            .env("PATH", "")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -492,7 +498,10 @@ fn one_copy_runs_per_data_folder() {
     a.wait_for_mutex();
     assert!(first.0.try_wait().unwrap().is_none());
     // Arguments take no mutex.
-    assert!(a.run("--version").status.success());
+    let version = a.run("--version");
+    assert!(version.status.success());
+    let expected = format!("Sobreiro {}\n", env!("CARGO_PKG_VERSION"));
+    assert_eq!(String::from_utf8_lossy(&version.stdout), expected);
 
     // A second launch on the same folder asks and ends.
     let mut second = a.spawn();
@@ -505,8 +514,18 @@ fn one_copy_runs_per_data_folder() {
         std::thread::sleep(Duration::from_millis(50));
     };
     assert!(status.success());
-    let log = std::fs::read_to_string(a.data().join("log.txt")).unwrap();
-    assert!(log.contains("already-running"), "{log}");
+    // The second launch says so, and the first hears the ask on its UI thread.
+    let said = format!("pid={} already-running", second.0.id());
+    let heard = format!("pid={} show-asked", first.0.id());
+    let end = Instant::now() + Duration::from_secs(5);
+    loop {
+        let log = std::fs::read_to_string(a.data().join("log.txt")).unwrap_or_default();
+        if log.contains(&said) && log.contains(&heard) {
+            break;
+        }
+        assert!(Instant::now() < end, "{log}");
+        std::thread::sleep(Duration::from_millis(50));
+    }
     assert!(first.0.try_wait().unwrap().is_none());
 
     // Another folder has a copy of its own.

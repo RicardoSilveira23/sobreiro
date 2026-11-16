@@ -76,7 +76,7 @@ impl NamedMutex {
             }
             Ok(handle) => Taken::First(NamedMutex(handle)),
             // The mutex exists but this launch may not open it, e.g. an elevated first copy.
-            Err(_) if last == ERROR_ACCESS_DENIED => Taken::Held,
+            Err(error) if error.code() == ERROR_ACCESS_DENIED.to_hresult() => Taken::Held,
             Err(_) => Taken::Failed,
         }
     }
