@@ -69,8 +69,8 @@ pub struct Shown {
 }
 
 /// What one redraw draws from: the figures, what is shown of them, and the settings and
-/// surroundings they were read with. Each part of the app (the pill, later the tray icons, the
-/// flyout and the toasts) takes its own view of it.
+/// surroundings they were read with. Each part of the app (the pill, the tray icons, the flyout and
+/// later the toasts) takes its own view of it.
 pub struct Snapshot {
     pub now: DateTime<Utc>,
     pub claude: Vec<Limit>,

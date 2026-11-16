@@ -13,9 +13,11 @@
 //! and pixel size with what it saw after the last placement, and places it again when they
 //! changed (the scale changed, or the window landed on a monitor at another scale).
 //!
-//! The card draws the latest snapshot's `flyout()` view (`pill_feed`): kept on every redraw, drawn
-//! only while the flyout is open, and again on each open. Every open also asks both pollers
-//! (`app_host::flyout_opened`), whose answers redraw it.
+//! The card draws a snapshot's `flyout()` view (`pill_feed`). Each redraw hands its snapshot in;
+//! the flyout takes the newest one handed in when its turn comes, so a step that had to wait never
+//! puts back an older one, and draws it only while open. Every open asks both pollers and redraws
+//! (`app_host::flyout_opened`) before the window is shown, so it opens on the snapshot of that
+//! redraw; the polls' answers redraw it again.
 //!
 //! The state lives in a value of the UI thread. A call that comes while it is busy runs a turn of
 //! the event loop later.
@@ -51,6 +53,17 @@ const MARGIN_UNITS: f64 = 12.0;
 
 thread_local! {
     static FLYOUT: RefCell<Option<Flyout>> = const { RefCell::new(None) };
+    /// The newest snapshot handed in by a redraw and not taken by the flyout yet: apart from the
+    /// flyout's value, so a redraw hands it in also while the flyout is busy.
+    static INCOMING: RefCell<Option<Rc<Snapshot>>> = const { RefCell::new(None) };
+}
+
+/// The newest snapshot handed in and not taken yet.
+fn take_incoming() -> Option<Rc<Snapshot>> {
+    INCOMING
+        .try_with(|cell| cell.try_borrow_mut().ok().and_then(|mut slot| slot.take()))
+        .ok()
+        .flatten()
 }
 
 /// What was seen of the window after it was placed.
@@ -109,8 +122,11 @@ fn margin_at(dpi: u32) -> i32 {
 }
 
 impl Flyout {
-    /// The card's data from the latest snapshot; the default until the first one.
-    fn data(&self) -> FlyoutData {
+    /// The card's data from the newest snapshot; the default until the first one.
+    fn data(&mut self) -> FlyoutData {
+        if let Some(snapshot) = take_incoming() {
+            self.latest = Some(snapshot);
+        }
         match &self.latest {
             Some(snapshot) => {
                 let view = snapshot.flyout();
@@ -400,17 +416,28 @@ fn deactivated(window: isize) {
     });
 }
 
-/// A redraw: keeps the snapshot, and draws it when the flyout is open and its card exists. A
-/// closed flyout is not drawn. The watch timer places the window again if the card's height moved.
+/// A redraw: hands the snapshot in. The flyout takes the newest one handed in, now or a turn later
+/// if it is busy, and draws it when it is open and its card exists; a step that finds nothing new
+/// (an open or an earlier step took it) does nothing. A closed flyout is not drawn. The watch timer
+/// places the window again if the card's height moved.
 pub fn show(snapshot: Rc<Snapshot>) {
-    with_flyout(move |flyout| {
+    let _ = INCOMING.try_with(|cell| {
+        if let Ok(mut slot) = cell.try_borrow_mut() {
+            *slot = Some(snapshot);
+        }
+    });
+    with_flyout(|flyout| {
+        let Some(snapshot) = take_incoming() else {
+            return;
+        };
         flyout.latest = Some(snapshot);
-        if flyout.toggle.is_open() && flyout.component.is_some() {
-            let data = flyout.data();
-            if let Some(component) = &flyout.component {
-                component.set_data(data);
-                component.window().request_redraw();
-            }
+        if !flyout.toggle.is_open() {
+            return;
+        }
+        let data = flyout.data();
+        if let Some(component) = &flyout.component {
+            component.set_data(data);
+            component.window().request_redraw();
         }
     });
 }
