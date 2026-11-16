@@ -114,7 +114,7 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .tell { display: grid; gap: 16px; align-content: start; }
 .key2 { font-size: 13px; color: var(--soft); }
 .charts { display: grid; gap: 12px; }
-.m { display: grid; gap: 6px; align-content: start; padding: 14px 16px 16px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); cursor: default; }
+.m { display: grid; gap: 6px; align-content: start; padding: 14px 16px 16px; border: 1.5px solid var(--line); border-radius: 8px; background: var(--box); }
 .m figcaption { font-weight: 600; font-size: 14.5px; line-height: 1.3; }
 .m .big { font-size: 15px; color: var(--soft); white-space: nowrap; }
 .m .big b { font: 700 32px/1.15 Unbounded, Inter, system-ui, sans-serif; color: var(--ink); }
@@ -162,7 +162,12 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
   .pill.hit { animation: hit .6s ease-out; }
   @keyframes ask { 0% { --p: 0; opacity: 0; background: var(--v); } 4% { --p: 0; opacity: 1; background: var(--v); } 24% { --p: 1; opacity: 1; background: var(--v); } 30% { --p: 1; background: var(--ink); } 52% { --p: 0; opacity: 1; background: var(--ink); } 56%, 100% { --p: 0; opacity: 0; background: var(--ink); } }
   @keyframes land { 0%, 54% { --p: 1; opacity: 0; background: var(--ink); } 58% { --p: 1; opacity: 1; background: var(--ink); } 78% { --p: 0; opacity: 1; background: var(--ink); } 84%, 100% { --p: 0; opacity: 0; background: var(--ink); } }
-  .m.play .new i { animation: shrink .9s var(--ease); }
-  @keyframes shrink { from { width: calc((100% - 104px) * var(--from)); } }
+  .pair .new i { animation: shrink 5s linear infinite; }
+  @keyframes shrink {
+    0% { width: calc((100% - 104px) * var(--from)); opacity: 0; }
+    8% { width: calc((100% - 104px) * var(--from)); opacity: 1; animation-timing-function: var(--ease); }
+    26%, 92% { width: calc((100% - 104px) * var(--w)); opacity: 1; }
+    100% { width: calc((100% - 104px) * var(--w)); opacity: 0; }
+  }
   @keyframes hit { 0% { box-shadow: 0 0 0 0 rgba(111, 77, 246, .55); } 100% { box-shadow: 0 0 0 12px rgba(111, 77, 246, 0); } }
 }
