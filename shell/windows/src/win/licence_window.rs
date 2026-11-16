@@ -57,12 +57,14 @@ pub fn client_size(dpi: u32) -> (i32, i32) {
     (scaled(CLIENT_WIDTH, dpi), scaled(CLIENT_HEIGHT, dpi))
 }
 
-/// The top left corner of a window of `width` by `height` centred in `work`. A window larger than
-/// the work area starts at its top left corner, so the title bar stays reachable.
-pub fn centred(work: PixelRect, width: i32, height: i32) -> (i32, i32) {
+/// Where a window of `width` by `height` goes in `work`: centred, and no larger than the work area,
+/// so its title bar and the end of its scroll bar stay on the screen. Left, top, width, height.
+pub fn placed(work: PixelRect, width: i32, height: i32) -> (i32, i32, i32, i32) {
+    let width = width.min(work.width());
+    let height = height.min(work.height());
     let x = work.left + (work.width() - width) / 2;
     let y = work.top + (work.height() - height) / 2;
-    (x.max(work.left), y.max(work.top))
+    (x, y, width, height)
 }
 
 /// Shows the licence window with `text` and runs its message loop until it is closed. If one is
@@ -310,8 +312,11 @@ fn make_window(
     };
     // SAFETY: `frame` is ours to change.
     unsafe { AdjustWindowRectExForDpi(&mut frame, style, false, Default::default(), dpi) }.ok()?;
-    let (width, height) = (frame.right - frame.left, frame.bottom - frame.top);
-    let (x, y) = centred(screen.work_area, width, height);
+    let (x, y, width, height) = placed(
+        screen.work_area,
+        frame.right - frame.left,
+        frame.bottom - frame.top,
+    );
     // SAFETY: the class is registered, the owner is ours, and the title is a literal.
     let window = unsafe {
         CreateWindowExW(
@@ -358,6 +363,9 @@ fn make_window(
         return None;
     };
     EDIT.set(edit.0 as isize);
+    // The window may have been made smaller than asked, to fit the work area: the edit takes the
+    // client area it has.
+    fit_edit(window);
     remake_font(dpi);
     let text = wide(text);
     // SAFETY: the edit is ours; the text is nul-ended and alive for the call. The limit is raised
@@ -406,15 +414,32 @@ mod tests {
 
     #[test]
     fn the_window_is_centred_in_the_work_area() {
-        assert_eq!(centred(rect(0, 0, 1920, 1040), 600, 600), (660, 220));
+        assert_eq!(
+            placed(rect(0, 0, 1920, 1040), 600, 600),
+            (660, 220, 600, 600)
+        );
         // A second monitor to the left, with a negative origin.
-        assert_eq!(centred(rect(-1920, 0, 0, 1040), 600, 600), (-1260, 220));
+        assert_eq!(
+            placed(rect(-1920, 0, 0, 1040), 600, 600),
+            (-1260, 220, 600, 600)
+        );
         // An odd gap rounds down.
-        assert_eq!(centred(rect(0, 0, 1001, 1001), 600, 600), (200, 200));
+        assert_eq!(
+            placed(rect(0, 0, 1001, 1001), 600, 600),
+            (200, 200, 600, 600)
+        );
     }
 
     #[test]
-    fn a_window_larger_than_the_work_area_starts_at_its_corner() {
-        assert_eq!(centred(rect(100, 50, 700, 450), 900, 900), (100, 50));
+    fn a_window_larger_than_the_work_area_is_made_to_fit_it() {
+        assert_eq!(
+            placed(rect(100, 50, 700, 450), 900, 900),
+            (100, 50, 600, 400)
+        );
+        // Too tall only, as 200% on a 1080-line screen is: the full width, the work area's height.
+        assert_eq!(
+            placed(rect(0, 0, 1920, 1032), 1136, 1102),
+            (392, 0, 1136, 1032)
+        );
     }
 }

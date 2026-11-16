@@ -20,8 +20,8 @@ pub fn all() -> [(&'static str, &'static str); 4] {
     ]
 }
 
-/// Nothing reads the texts yet, and the linker drops what nothing reads. The licence window will
-/// read them; until then this keeps them in the exe.
+/// Keeps the texts in the exe, which the linker would drop if nothing read them. The licence
+/// window reads them now, so this and its call in `main` can go.
 pub fn keep() {
     std::hint::black_box(all());
 }

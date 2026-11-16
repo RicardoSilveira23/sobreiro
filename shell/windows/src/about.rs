@@ -6,6 +6,8 @@ use crate::licences;
 use crate::providers::Locations;
 use crate::win::{known_folders, licence_window, message_box};
 use sobreiro_core::live::live_usage_message::ABOUT_LINE;
+use std::ffi::OsString;
+use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 
@@ -66,8 +68,19 @@ pub fn show_about() {
 /// by bare name: Windows would look in the exe's own folder first, and that may be Downloads.
 fn explorer_command(windows: &Path, folder: &Path) -> Command {
     let mut command = Command::new(windows.join("explorer.exe"));
-    command.arg(folder);
+    command.raw_arg(explorer_argument(folder));
     command
+}
+
+/// The folder as Explorer reads it: made absolute with backslashes, and always in quotes, as 1.1
+/// passes it. Explorer reads a comma outside quotes as a separator and a leading slash as a
+/// switch; a Windows path holds no quote.
+fn explorer_argument(folder: &Path) -> OsString {
+    let absolute = std::path::absolute(folder).unwrap_or_else(|_| folder.to_path_buf());
+    let mut quoted = OsString::from("\"");
+    quoted.push(absolute.as_os_str());
+    quoted.push("\"");
+    quoted
 }
 
 /// Makes the data folder when it is missing and opens it in Explorer, without waiting for it.
@@ -123,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    fn explorer_is_started_by_its_full_path_with_the_folder_as_its_one_argument() {
+    fn explorer_is_started_by_its_full_path() {
         let windows = PathBuf::from(r"C:\Windows");
         let folder = PathBuf::from(r"C:\Data\Sobreiro");
         let command = explorer_command(&windows, &folder);
@@ -132,7 +145,16 @@ mod tests {
             OsStr::new(r"C:\Windows\explorer.exe")
         );
         assert!(Path::new(command.get_program()).is_absolute());
-        let args: Vec<_> = command.get_args().collect();
-        assert_eq!(args, [folder.as_os_str()]);
+    }
+
+    #[test]
+    fn the_folder_goes_to_explorer_absolute_and_in_quotes() {
+        let argument = |folder: &str| explorer_argument(Path::new(folder));
+        assert_eq!(argument(r"C:\Data\Sobreiro"), r#""C:\Data\Sobreiro""#);
+        // A comma, or a space, stays inside the quotes.
+        assert_eq!(argument(r"D:\a,b\Sobreiro"), r#""D:\a,b\Sobreiro""#);
+        assert_eq!(argument(r"C:\My Data\Sobreiro"), r#""C:\My Data\Sobreiro""#);
+        // Forward slashes, which Explorer does not open, become backslashes.
+        assert_eq!(argument("C:/Data/Sobreiro"), r#""C:\Data\Sobreiro""#);
     }
 }
