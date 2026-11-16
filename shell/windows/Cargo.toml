@@ -27,6 +27,10 @@ slint = { version = "=1.18.1", default-features = false, features = [
     "raw-window-handle-06",
 ] }
 
+# The pictures `--pill-pictures` writes.
+png = "=0.18.1"
+# Core: the pill model and the colours the face is drawn from.
+sobreiro-core = { path = "../../core" }
 # Windows' own calls, for the pill's window. Already in the build through the toolkit; only the
 # parts the shell calls are asked for.
 windows = { version = "0.62", features = [

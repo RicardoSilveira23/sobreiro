@@ -3,6 +3,8 @@
 #![windows_subsystem = "windows"]
 
 mod born_test;
+mod pictures;
+mod pill_face;
 mod specimen;
 mod win;
 
@@ -11,19 +13,22 @@ use std::process::ExitCode;
 /// What the toolkit writes from the .slint files. That code is the toolkit's, so the workspace's
 /// rules on panics are not asked of it.
 mod ui {
-    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+    #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::todo)]
     slint::include_modules!();
 }
 
 fn main() -> ExitCode {
-    match std::env::args().nth(1).as_deref() {
+    // Arguments are compared as they come: one that is not Unicode matches nothing.
+    let mut args = std::env::args_os().skip(1);
+    match args.next().as_deref().and_then(|arg| arg.to_str()) {
         Some("--version") => {
             println!("Sobreiro {}", env!("CARGO_PKG_VERSION"));
             ExitCode::SUCCESS
         }
         Some("--specimen") => specimen::run(),
         // Hidden: what the born test launches.
-        Some("--born") => born_test::run(std::env::args().nth(2).as_deref()),
+        Some("--born") => born_test::run(args.next().as_deref().and_then(|arg| arg.to_str())),
+        Some("--pill-pictures") => pictures::run(args.next()),
         // Nothing to show yet.
         _ => ExitCode::from(2),
     }

@@ -1,0 +1,297 @@
+// The pill's face: what Core's PillModel looks like on the taskbar, in DIPs, drawn as 1.1's WPF
+// pill draws it. The Rust side (src/pill_face.rs) fills `FaceData` from the model and the colours;
+// this file only draws.
+// The fonts are the 1.x app's, read from where they are until the C# leaves this branch.
+import "../../../src/Sobreiro/Fonts/Inter-Regular.ttf";
+import "../../../src/Sobreiro/Fonts/Inter-Medium.ttf";
+import "../../../src/Sobreiro/Fonts/Unbounded-Bold.ttf";
+
+// A label and its figure as text ("45%", or a dash); `star` adds "*" after the figure of a block
+// whose numbers have stopped.
+export struct FaceLine {
+    label: string,
+    figure: string,
+    star: bool,
+}
+
+export struct FaceData {
+    show-claude: bool,
+    show-copilot: bool,
+    // The pointer is over the pill.
+    hovered: bool,
+    // The ink, the ring and bar track (ink at 0x26), the reset date (ink at 0x99), and the ground
+    // at rest (ink at alpha 1, so clicks land) and under the pointer (ink at 0x1A).
+    ink: color,
+    track: color,
+    secondary: color,
+    ground: color,
+    ground-hover: color,
+    session: FaceLine,
+    weekly: FaceLine,
+    // Degrees clockwise from 12 o'clock to draw with round caps (0: no fill, 360 or more: full).
+    outer-sweep: float,
+    outer-fill: color,
+    inner-sweep: float,
+    inner-fill: color,
+    copilot: FaceLine,
+    reset-date: string,
+    // 0 to 1, filling the bar from the bottom.
+    bar-fraction: float,
+    bar-fill: color,
+}
+
+// DIPs, as 1.1's PillView.
+global Metrics {
+    out property <length> label-size: 12px;
+    out property <length> figure-size: 11px;
+    out property <length> reset-size: 11px;
+    out property <length> rings-size: 26px;
+    out property <length> stroke: 3px;
+    out property <length> ring-gap: 2px;
+    out property <length> text-to-rings: 8px;
+    out property <length> block-gap: 12px;
+    out property <length> bar-width: 5px;
+    out property <length> bar-height: 26px;
+    out property <length> pad-x: 8px;
+    out property <length> pad-y: 4px;
+    // 1.1's lines are as tall as WPF sets them: 15 for a line of the label and the figure, 13 for
+    // the reset date (stills: 38 DIPs tall with Claude's block, 36 with Copilot's alone).
+    out property <length> line-height: 15px;
+    out property <length> reset-height: 13px;
+    // The space after a label. Inter's space at 12 is 3.38; a whole 3 keeps what follows on whole
+    // pixels at 100%, so the rings' arcs and tracks fall on the same pixels.
+    out property <length> label-space: 3px;
+}
+
+// Measures a figure; never drawn.
+component Digit inherits Text {
+    font-family: "Unbounded";
+    font-weight: 700;
+    font-size: Metrics.figure-size;
+    visible: false;
+    // Not for a screen reader: it is only measured.
+    accessible-role: none;
+}
+
+// A ring: a track all the way round, and the fill as an arc from 12 o'clock.
+component Ring inherits Rectangle {
+    in property <length> radius;
+    in property <float> sweep;
+    in property <color> fill;
+    in property <color> track;
+    width: Metrics.rings-size;
+    height: Metrics.rings-size;
+
+    private property <length> outer: root.radius + Metrics.stroke / 2;
+    private property <length> centre: Metrics.rings-size / 2;
+
+    Rectangle {
+        x: root.centre - root.outer;
+        y: root.centre - root.outer;
+        width: root.outer * 2;
+        height: root.outer * 2;
+        border-radius: root.outer;
+        border-width: Metrics.stroke;
+        border-color: root.track;
+    }
+
+    if root.sweep >= 360: Rectangle {
+        x: root.centre - root.outer;
+        y: root.centre - root.outer;
+        width: root.outer * 2;
+        height: root.outer * 2;
+        border-radius: root.outer;
+        border-width: Metrics.stroke;
+        border-color: root.fill;
+    }
+
+    // The toolkit fits a stroked path into its box less the stroke, offset by half a stroke, so the
+    // box is one stroke larger than the canvas and starts half a stroke before it: the viewbox
+    // then lies on the canvas unscaled, and the arc on its track.
+    if root.sweep > 0 && root.sweep < 360: Path {
+        x: -Metrics.stroke / 2;
+        y: -Metrics.stroke / 2;
+        width: Metrics.rings-size + Metrics.stroke;
+        height: Metrics.rings-size + Metrics.stroke;
+        viewbox-width: 26;
+        viewbox-height: 26;
+        stroke: root.fill;
+        stroke-width: Metrics.stroke;
+        stroke-line-cap: round;
+        MoveTo {
+            x: 13;
+            y: 13 - root.radius / 1px;
+        }
+        ArcTo {
+            radius-x: root.radius / 1px;
+            radius-y: root.radius / 1px;
+            x: 13 + root.radius / 1px * sin(root.sweep * 1deg);
+            y: 13 - root.radius / 1px * cos(root.sweep * 1deg);
+            large-arc: root.sweep > 180;
+            sweep: true;
+        }
+    }
+}
+
+// A label, a figure right-aligned in a box, and "*" when the figure is a last reading.
+component Line inherits HorizontalLayout {
+    in property <FaceLine> line;
+    in property <color> ink;
+    // As wide as the widest figure from 00% to 99%: the figure ends at the same place whatever it
+    // says, so the percent sign and what follows it stay put. A wider figure (100%) widens it.
+    in property <length> box;
+    alignment: end;
+    height: Metrics.line-height;
+
+    Text {
+        text: root.line.label;
+        font-family: "Inter";
+        font-size: Metrics.label-size;
+        color: root.ink;
+        vertical-alignment: center;
+    }
+
+    Rectangle {
+        width: Metrics.label-space;
+    }
+
+    Text {
+        text: root.line.figure;
+        font-family: "Unbounded";
+        font-weight: 700;
+        font-size: Metrics.figure-size;
+        color: root.ink;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+        min-width: root.box;
+        horizontal-stretch: 0;
+    }
+
+    if root.line.star: Text {
+        text: "*";
+        font-family: "Inter";
+        font-size: Metrics.label-size;
+        color: root.ink;
+        vertical-alignment: center;
+    }
+}
+
+export component PillFace inherits Rectangle {
+    in property <FaceData> data;
+    // The size the pill wants, for the window that holds it.
+    out property <length> face-width: row.preferred-width;
+    out property <length> face-height: row.preferred-height;
+    width: root.face-width;
+    height: root.face-height;
+    border-radius: 4px;
+    background: root.data.hovered ? root.data.ground-hover : root.data.ground;
+
+    // The widest two-digit figure of the figures' font, measured here and never typed in. Two
+    // digits of one kind are the widest sum of advances, and the percent sign is part of it.
+    private property <length> box: max(max(max(p0.preferred-width, p1.preferred-width), max(p2.preferred-width, p3.preferred-width)), max(max(p4.preferred-width, p5.preferred-width), max(max(p6.preferred-width, p7.preferred-width), max(p8.preferred-width, p9.preferred-width))));
+
+    p0 := Digit { text: "00%"; }
+    p1 := Digit { text: "11%"; }
+    p2 := Digit { text: "22%"; }
+    p3 := Digit { text: "33%"; }
+    p4 := Digit { text: "44%"; }
+    p5 := Digit { text: "55%"; }
+    p6 := Digit { text: "66%"; }
+    p7 := Digit { text: "77%"; }
+    p8 := Digit { text: "88%"; }
+    p9 := Digit { text: "99%"; }
+
+    row := HorizontalLayout {
+        padding-left: Metrics.pad-x;
+        padding-right: Metrics.pad-x;
+        padding-top: Metrics.pad-y;
+        padding-bottom: Metrics.pad-y;
+        spacing: 0px;
+
+        if root.data.show-claude: HorizontalLayout {
+            spacing: Metrics.text-to-rings;
+            VerticalLayout {
+                alignment: center;
+                Line { line: root.data.session; ink: root.data.ink; box: root.box; }
+                Line { line: root.data.weekly; ink: root.data.ink; box: root.box; }
+            }
+            VerticalLayout {
+                alignment: center;
+                // Outer ring: 5h. Inner: 7d, a stroke and a gap inside it.
+                Rectangle {
+                    width: Metrics.rings-size;
+                    height: Metrics.rings-size;
+                    Ring {
+                        radius: Metrics.rings-size / 2 - Metrics.stroke / 2;
+                        sweep: root.data.outer-sweep;
+                        fill: root.data.outer-fill;
+                        track: root.data.track;
+                    }
+                    Ring {
+                        radius: Metrics.rings-size / 2 - Metrics.stroke / 2 - Metrics.stroke - Metrics.ring-gap;
+                        sweep: root.data.inner-sweep;
+                        fill: root.data.inner-fill;
+                        track: root.data.track;
+                    }
+                }
+            }
+        }
+
+        if root.data.show-copilot: HorizontalLayout {
+            spacing: Metrics.text-to-rings;
+            padding-left: root.data.show-claude ? Metrics.block-gap : 0px;
+            VerticalLayout {
+                alignment: center;
+                Line { line: root.data.copilot; ink: root.data.ink; box: root.box; }
+                Text {
+                    text: root.data.reset-date;
+                    font-family: "Inter";
+                    font-size: Metrics.reset-size;
+                    color: root.data.secondary;
+                    horizontal-alignment: right;
+                    vertical-alignment: center;
+                    height: Metrics.reset-height;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                // A rounded track, and over it a rounded fill the height of the bar, shown through a
+                // rectangular window that covers the filled part from the bottom: both ends round,
+                // since the software renderer does not clip to a border radius.
+                Rectangle {
+                    width: Metrics.bar-width;
+                    height: Metrics.bar-height;
+                    border-radius: Metrics.bar-width / 2;
+                    background: root.data.track;
+                    Rectangle {
+                        width: parent.width;
+                        height: parent.height * max(0, min(1, root.data.bar-fraction));
+                        y: parent.height - self.height;
+                        clip: true;
+                        Rectangle {
+                            y: -(parent.y);
+                            width: parent.width;
+                            height: Metrics.bar-height;
+                            border-radius: Metrics.bar-width / 2;
+                            background: root.data.bar-fill;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// The face alone in a window of its own size, over nothing: what `--pill-pictures` draws.
+export component PillPicture inherits Window {
+    in property <FaceData> data;
+    out property <length> pill-width: face.face-width;
+    out property <length> pill-height: face.face-height;
+    background: transparent;
+
+    face := PillFace {
+        x: 0px;
+        y: 0px;
+        data: root.data;
+    }
+}
