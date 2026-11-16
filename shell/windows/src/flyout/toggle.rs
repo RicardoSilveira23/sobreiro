@@ -4,10 +4,19 @@
 //! focus, so the flyout is still open when that click lands); Esc closes; losing the focus closes
 //! and, for `GRACE` after, says so, so a click on a tray icon that took the focus closes the flyout
 //! instead of opening it again.
+//!
+//! A select on a tray icon (`tray_click`) follows 1.1's other rule: open closes; closed opens,
+//! unless it closed on focus loss less than `GRACE` ago (the click took the focus and that closed
+//! it), then nothing. A select less than `REPEAT` after the previous one that was taken is ignored:
+//! the second half of a double click, or the second of two key selects, which would close what the
+//! first is opening.
 use std::time::{Duration, Instant};
 
 /// How long after a close on focus loss `closed_just_now` is true.
 pub const GRACE: Duration = Duration::from_millis(300);
+
+/// How long after a tray select that was taken the next one is ignored.
+pub const REPEAT: Duration = Duration::from_millis(500);
 
 /// What a click on the pill is to do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,6 +30,8 @@ pub struct Toggle {
     open: bool,
     /// When it last closed on focus loss; none after any other close or open.
     lost_at: Option<Instant>,
+    /// When the last tray select that was taken (not ignored as a repeat) came.
+    tray_at: Option<Instant>,
 }
 
 impl Toggle {
@@ -31,6 +42,25 @@ impl Toggle {
     /// What a click on the pill does now. Not told apart by the grace: see the module docs.
     pub fn click(&self) -> Click {
         if self.open { Click::Close } else { Click::Open }
+    }
+
+    /// What a select on a tray icon at `now` does: none when it is a repeat of the last one taken
+    /// or follows a close on focus loss within the grace. See the module docs.
+    pub fn tray_click(&mut self, now: Instant) -> Option<Click> {
+        if self
+            .tray_at
+            .is_some_and(|last| now.saturating_duration_since(last) < REPEAT)
+        {
+            return None;
+        }
+        self.tray_at = Some(now);
+        if self.open {
+            Some(Click::Close)
+        } else if self.closed_just_now(now) {
+            None
+        } else {
+            Some(Click::Open)
+        }
     }
 
     /// It is open now.
@@ -84,6 +114,88 @@ mod tests {
         assert!(toggle.closed());
         assert!(!toggle.is_open());
         assert_eq!(toggle.click(), Click::Open);
+    }
+
+    #[test]
+    fn a_tray_click_closes_an_open_flyout() {
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        assert_eq!(toggle.tray_click(Instant::now()), Some(Click::Close));
+    }
+
+    #[test]
+    fn a_tray_click_opens_a_closed_flyout() {
+        let mut toggle = Toggle::default();
+        assert_eq!(toggle.tray_click(Instant::now()), Some(Click::Open));
+    }
+
+    #[test]
+    fn a_tray_click_within_the_grace_does_nothing() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focus_lost(now);
+        assert_eq!(toggle.tray_click(now + GRACE - STEP), None);
+    }
+
+    #[test]
+    fn a_tray_click_at_the_grace_opens() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focus_lost(now);
+        assert_eq!(toggle.tray_click(now + GRACE), Some(Click::Open));
+    }
+
+    #[test]
+    fn a_tray_click_after_the_grace_opens() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focus_lost(now);
+        assert_eq!(toggle.tray_click(now + GRACE + STEP), Some(Click::Open));
+    }
+
+    #[test]
+    fn a_second_tray_select_inside_the_repeat_is_ignored() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        assert_eq!(toggle.tray_click(now), Some(Click::Open));
+        toggle.opened();
+        // Enter twice: the second must not close what the first opened.
+        assert_eq!(toggle.tray_click(now + REPEAT - STEP), None);
+        assert!(toggle.is_open());
+    }
+
+    #[test]
+    fn a_tray_select_at_the_repeat_acts() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        assert_eq!(toggle.tray_click(now), Some(Click::Open));
+        toggle.opened();
+        assert_eq!(toggle.tray_click(now + REPEAT), Some(Click::Close));
+    }
+
+    #[test]
+    fn an_ignored_repeat_does_not_move_the_window() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.tray_click(now);
+        toggle.opened();
+        assert_eq!(toggle.tray_click(now + REPEAT - STEP), None);
+        // Counted from the select that was taken, not from the ignored one.
+        assert_eq!(toggle.tray_click(now + REPEAT), Some(Click::Close));
+    }
+
+    #[test]
+    fn a_select_the_grace_swallowed_still_starts_the_repeat_window() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focus_lost(now);
+        assert_eq!(toggle.tray_click(now + STEP), None);
+        // Within REPEAT of that select, and past the grace: ignored as a repeat.
+        assert_eq!(toggle.tray_click(now + GRACE + STEP), None);
     }
 
     #[test]

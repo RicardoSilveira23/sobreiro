@@ -226,8 +226,11 @@ pub fn on_event(event: TrayEvent) {
     });
 }
 
-/// #37 opens the flyout at the pointer here, or closes it when it is open.
-fn flyout_hook(_x: i32, _y: i32) {}
+/// A select on an icon (click, or Enter or Space on a focused one): closes the flyout when it is
+/// open, else opens it at the event's point (physical pixels).
+fn flyout_hook(x: i32, y: i32) {
+    crate::flyout::window::on_tray_click(x, y);
+}
 
 impl Tray {
     fn show(&mut self, snapshot: &Snapshot) {
