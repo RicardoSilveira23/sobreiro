@@ -102,7 +102,7 @@ the table differ: no figure is typed on the page.
 | 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
 | 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured |
 | Caption | "Each bar starts at zero; shorter is lighter." |
-| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×" then "less"), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the downloads level with the cards' foot. |
+| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the downloads level with the cards' foot. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, and "How it is measured" |
 
 - The multiple is the headline and the bars are its proof: linear, from zero, each a share of
@@ -115,13 +115,13 @@ the table differ: no figure is typed on the page.
 - 2.0's bars play the diagram's 5-second loop: each appears at 1.1's length, shrinks to its own
   in 0.9 s on the page's easing, holds, and fades out before the loop starts again, so it is
   never seen growing. The figure at its tip counts down with it and the multiple counts up
-  (script). The multiple keeps a width of 2.6 em so the word after it does not move. With no
+  (script). The word sits under the multiple, so nothing beside it moves. With no
   script the bars still play and the figures stand; with reduced motion nothing moves.
 
 | Thing | Size |
 |---|---|
 | Card | 14 px padding above, 16 px at the sides and below; 12 px between cards |
-| Multiple | Unbounded 700, 32 px, Ink; its word 15 px Soft |
+| Multiple | Unbounded 700, 32 px, Ink; its word under it, 15 px Soft |
 | Bars | 10 px tall, square at zero, 4 px corners at the tip; release label Sora 600 13 px |
 | Figures | 13 px, tabular, 8 px after the bar; 2.0's Inter 600 Ink, 1.1's Soft |
 
