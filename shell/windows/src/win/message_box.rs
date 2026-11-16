@@ -3,7 +3,8 @@
 #![allow(unsafe_code)]
 
 use windows::Win32::UI::WindowsAndMessaging::{
-    IDYES, MB_ICONERROR, MB_OK, MB_SETFOREGROUND, MB_YESNO, MESSAGEBOX_STYLE, MessageBoxW,
+    IDYES, MB_DEFBUTTON2, MB_ICONERROR, MB_OK, MB_SETFOREGROUND, MB_YESNO, MESSAGEBOX_STYLE,
+    MessageBoxW,
 };
 use windows::core::PCWSTR;
 
@@ -28,6 +29,11 @@ fn show(title: &str, text: &str, style: MESSAGEBOX_STYLE) -> bool {
 /// Asks a Yes/No question, with no icon. True on Yes.
 pub fn ask(title: &str, text: &str) -> bool {
     show(title, text, MB_YESNO | MB_SETFOREGROUND)
+}
+
+/// Asks a Yes/No question, with no icon and No the default button. True on Yes.
+pub fn ask_default_no(title: &str, text: &str) -> bool {
+    show(title, text, MB_YESNO | MB_DEFBUTTON2 | MB_SETFOREGROUND)
 }
 
 /// Says something, with no icon, and waits for OK.

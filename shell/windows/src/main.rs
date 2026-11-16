@@ -6,6 +6,7 @@
 //! next.
 #![windows_subsystem = "windows"]
 
+mod about;
 mod alerts;
 mod app_host;
 mod auto_start;
@@ -29,6 +30,7 @@ mod theme;
 mod tooltip;
 mod tooltip_window;
 mod tray_icons;
+mod usage_watch;
 mod win;
 
 use std::process::ExitCode;
@@ -46,14 +48,32 @@ fn main() -> ExitCode {
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {
         let one_copy::Start::First(mut guard) = one_copy::start() else {
+            // A second copy ends here, as 1.1's does: after `already-running`.
+            say(&exit_line(true));
             return ExitCode::SUCCESS;
         };
         guard.listen();
+        std::panic::set_hook(Box::new(on_panic));
+        // Main is the UI thread: the message window is made on it and hears the session's end.
+        win::taskbar::on_session_ending(on_session_ending);
         // After the check: only the first copy refreshes the bridge.
         carried_bridge::start();
-        let code = app_host::run();
-        drop(guard);
-        return code;
+        return match app_host::run() {
+            Ok(code) => {
+                // The mutex first; the tray icons went with the run.
+                drop(guard);
+                say(&exit_line(code == ExitCode::SUCCESS));
+                code
+            }
+            Err(kind) => {
+                let written = diagnostics::installed()
+                    .is_some_and(|log| log.say_with_kind("startup-failed", kind));
+                drop(guard);
+                show_startup_failed(kind, written);
+                say(&exit_line(false));
+                ExitCode::FAILURE
+            }
+        };
     };
     match first.to_str() {
         Some("--version") => {
@@ -72,5 +92,98 @@ fn main() -> ExitCode {
         Some("--icon-pictures") => icon_pictures::run(args.next()),
         Some("--flyout-pictures") => flyout::pictures::run(args.next()),
         _ => ExitCode::from(2),
+    }
+}
+
+/// Writes a line to this run's log, when there is one.
+fn say(event: &str) -> bool {
+    diagnostics::installed().is_some_and(|log| log.say_written(event))
+}
+
+/// The last entry of a run, as 1.1's.
+fn exit_line(success: bool) -> String {
+    format!("exit code={}", u8::from(!success))
+}
+
+/// The word 1.1 writes for why the session ends: a sign-out is `Logoff`, anything else `Shutdown`.
+fn session_end_line(logoff: bool) -> &'static str {
+    if logoff {
+        "session-ending reason=Logoff"
+    } else {
+        "session-ending reason=Shutdown"
+    }
+}
+
+/// Windows asks to end the session. Says so at once and quits, even if the end is then cancelled.
+fn on_session_ending(logoff: bool) {
+    say(session_end_line(logoff));
+    let _ = slint::quit_event_loop();
+}
+
+/// A panic's place as `<file name>:<line>:<column>`: the file's own name, so no folder of the
+/// machine that built the exe is written.
+fn panic_place(file: &str, line: u32, column: u32) -> String {
+    let name = file.rsplit(['/', '\\']).next().unwrap_or(file);
+    format!("{name}:{line}:{column}")
+}
+
+/// Writes the panic's place, never its message. The release build aborts after this.
+fn on_panic(info: &std::panic::PanicHookInfo<'_>) {
+    let Some(log) = diagnostics::installed() else {
+        return;
+    };
+    match info.location() {
+        Some(at) => log.say_with_kind(
+            "unhandled-exception terminating=true",
+            &panic_place(at.file(), at.line(), at.column()),
+        ),
+        None => log.say_written("unhandled-exception terminating=true"),
+    };
+}
+
+/// Tells that the start failed: the box names the log, or the data folder when the log could not
+/// be written.
+fn show_startup_failed(kind: &str, logged: bool) {
+    use sobreiro_core::diagnostics::diagnostics_message::{
+        startup_failed, startup_failed_unlogged,
+    };
+    let log = diagnostics::installed();
+    let text = match (&log, logged) {
+        (Some(log), true) => startup_failed(kind, &log.path().display().to_string()),
+        _ => {
+            let folder = log
+                .as_ref()
+                .and_then(|log| log.path().parent().map(|dir| dir.display().to_string()))
+                .unwrap_or_else(|| "%LOCALAPPDATA%\\Sobreiro".to_string());
+            startup_failed_unlogged(kind, &folder)
+        }
+    };
+    win::message_box::error(&text);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_exit_line_has_the_code() {
+        assert_eq!(exit_line(true), "exit code=0");
+        assert_eq!(exit_line(false), "exit code=1");
+    }
+
+    #[test]
+    fn the_reason_is_logoff_or_shutdown() {
+        assert_eq!(session_end_line(true), "session-ending reason=Logoff");
+        assert_eq!(session_end_line(false), "session-ending reason=Shutdown");
+    }
+
+    #[test]
+    fn the_place_keeps_the_file_name_only() {
+        assert_eq!(panic_place("src/main.rs", 3, 9), "main.rs:3:9");
+        assert_eq!(
+            panic_place("C:\\build\\shell\\src\\app_host.rs", 10, 1),
+            "app_host.rs:10:1"
+        );
+        assert_eq!(panic_place("lib.rs", 1, 2), "lib.rs:1:2");
     }
 }
