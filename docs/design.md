@@ -100,9 +100,9 @@ the table differ: no figure is typed on the page.
 | Part | Holds |
 |---|---|
 | 1.0 to 1.1 | One short paragraph: what 1.1 changed (idle), with the CPU figures and the start's cost |
-| 2.0 | One line: rewritten in Rust and set against 1.1, and how it was measured, led by the mark (36 px) in Rust |
+| Why 2.0 moved to Rust | A heading led by the mark (36 px) in Rust, then one short paragraph: WPF held most of 1.1's memory, three other shells were measured, the Rust one rested lowest. No figures in it. |
 | Caption | "Each bar starts at zero; shorter is lighter." |
-| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the downloads level with the cards' foot. |
+| Cards | Private memory, CPU per idle hour, start to the pill, `Sobreiro.exe`. Each: the name, the multiple large ("14×", "less" under it), and two bars, 1.1 over 2.0, each with its figure at the tip. One column, two from 600 px. From 1000 px the words take the left column (at most 62 characters) and the cards sit two by two on the right, 1 : 1.25, 56 px apart, the cards top-aligned with the heading. |
 | Downloads | A Manual-shaped button per release with a GitHub Release, newest first, sharing the row's width equally; "How it is measured" on its own line under them |
 
 - The multiple is the headline and the bars are its proof: linear, from zero, each a share of

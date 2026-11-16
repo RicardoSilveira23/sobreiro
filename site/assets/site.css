@@ -114,8 +114,8 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 .cmp h2 { margin-bottom: 0; }
 .cmp .lead { font-size: 14.5px; color: var(--soft); max-width: 62ch; }
 .tell { display: grid; gap: 16px; align-content: start; }
-.r20 { display: flex; gap: 12px; align-items: start; }
-.rmark { flex: none; width: 36px; height: 36px; margin-top: 2px; color: var(--on); }
+.r20 { display: flex; gap: 12px; align-items: center; margin-top: 4px; font: 600 16px Sora, system-ui, sans-serif; }
+.rmark { flex: none; width: 36px; height: 36px; color: var(--on); }
 .rmark .tile { fill: var(--rust); }
 .rmark .trunk { transform-box: view-box; transform-origin: 32px 32px; }
 .key2 { font-size: 13px; color: var(--soft); }
@@ -140,7 +140,7 @@ h2 { font: 600 16px Sora, system-ui, sans-serif; margin-bottom: 10px; }
 @media (min-width: 1000px) {
   .cmp { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: auto 1fr; grid-template-areas: "tell charts" "gets charts"; column-gap: 56px; }
   .cmp .tell { grid-area: tell; }
-  .cmp .charts { grid-area: charts; }
+  .cmp .charts { grid-area: charts; align-self: start; }
   .cmp .gets { grid-area: gets; align-self: end; }
 }
 

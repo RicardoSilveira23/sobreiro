@@ -148,6 +148,14 @@ export function rustMark(svgText) {
   return `<svg class="rmark" viewBox="0 0 64 64" aria-hidden="true">${tile[0]}<g class="trunk">${inner.slice(tile[0].length)}</g></svg>`;
 }
 
+// Why 2.0 is in Rust, from docs/roadmap.md, "The decision". No figures: the cards carry them.
+const WHY_TITLE = "Why 2.0 moved to Rust";
+const WHY =
+  "1.1 had cut the idle work, but most of its memory went to WPF, the toolkit it is drawn with." +
+  " Three other shells were built and measured the same way. The one in Rust rested lowest and" +
+  " ships as one small file, so 2.0 rewrites the shell and its logic in Rust.";
+const AGAINST = "The cards set it against 1.1, on one PC after 10 minutes left alone.";
+
 const MEASURED = "Measured the same way on one PC, after 10 minutes left alone.";
 const KEY = "Each bar starts at zero; shorter is lighter.";
 // A multiple cut for the card: the number large, its word after it.
@@ -178,9 +186,9 @@ export function pageSection(c, mark = readFileSync(join(root, "site/assets/img/s
     `    <div class="tell">`,
     `    <h2 id="cmp">How heavy each release is</h2>`,
     ...(c.step ? [`    <p class="lead">${esc(stepWords(c))}</p>`] : []),
-    c.charted.length
-      ? `    <p class="lead r20">${rustMark(mark)}<span>${esc(rustWords(c))} ${MEASURED}</span></p>`
-      : `    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`,
+    ...(c.charted.length
+      ? [`    <h3 class="r20">${rustMark(mark)}${WHY_TITLE}</h3>`, `    <p class="lead">${esc(WHY)} ${esc(AGAINST)}</p>`]
+      : [`    <p class="lead">${esc(rustWords(c))} ${MEASURED}</p>`]),
     ...(charts.length ? [`    <p class="key2">${KEY}</p>`] : []),
     `    </div>`,
     ...(charts.length ? [`    <div class="charts">`, ...charts, `    </div>`] : []),
@@ -233,7 +241,9 @@ export function readmeBlock(c) {
     OPEN,
     "## How heavy each release is",
     "",
-    [stepWords(c), rustWords(c)].filter(Boolean).join(" ") + " " + MEASURED,
+    ...(c.charted.length
+      ? [stepWords(c), "", `### ${WHY_TITLE}`, "", `${WHY} ${AGAINST}`]
+      : [[stepWords(c), rustWords(c)].filter(Boolean).join(" ") + " " + MEASURED]),
     ...table,
     "",
     "Every figure, and how it is measured: [docs/baseline.md](docs/baseline.md).",
