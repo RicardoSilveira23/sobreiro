@@ -517,13 +517,14 @@ fn one_copy_runs_per_data_folder() {
         std::thread::sleep(Duration::from_millis(50));
     };
     assert!(status.success());
-    // The second launch says so, and the first hears the ask on its UI thread.
+    // The second launch says so and logs its exit, and the first hears the ask on its UI thread.
     let said = format!("pid={} already-running", second.0.id());
+    let exited = format!("pid={} exit code=0", second.0.id());
     let heard = format!("pid={} show-asked", first.0.id());
     let end = Instant::now() + Duration::from_secs(5);
     loop {
         let log = std::fs::read_to_string(a.data().join("log.txt")).unwrap_or_default();
-        if log.contains(&said) && log.contains(&heard) {
+        if log.contains(&said) && log.contains(&exited) && log.contains(&heard) {
             break;
         }
         assert!(Instant::now() < end, "{log}");

@@ -59,6 +59,8 @@ pub fn run() -> Result<ExitCode, &'static str> {
     let messages = MessageWindow::create(on_broadcast, tray_icons::on_event);
     if messages.is_none() {
         diagnostics.say("the message window could not be made");
+        // Without it there are no tray icons, no menu and no session end: no way to quit.
+        return Err("MessageWindowNotMade");
     }
     tray_icons::start(
         messages.as_ref().map(MessageWindow::handle),

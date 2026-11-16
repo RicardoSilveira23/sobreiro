@@ -46,6 +46,8 @@ fn main() -> ExitCode {
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {
         let one_copy::Start::First(mut guard) = one_copy::start() else {
+            // A second copy ends here, as 1.1's does: after `already-running`.
+            say(&exit_line(true));
             return ExitCode::SUCCESS;
         };
         guard.listen();
