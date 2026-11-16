@@ -82,7 +82,6 @@ static OPEN: Gate = Gate::new();
 
 /// Where the status line stands now, for the menu. No folders, or a `settings.json` that cannot
 /// be read, count as not connected.
-#[expect(dead_code, reason = "the menu reads it from #57")]
 pub fn current_state() -> ConnectionState {
     match Locations::find() {
         Some(places) => state_of(
