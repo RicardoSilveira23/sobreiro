@@ -1,7 +1,9 @@
-//! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar with live figures;
-//! the arguments say its version, draw the specimen of its fonts and the pill's pictures, run the
-//! born test, bring the bridge in the data folder up to date, and run Connect or Disconnect alone.
-//! The flyout and the tray icons come next.
+//! Sobreiro's Windows shell. With no argument it shows the pill on the taskbar with live figures,
+//! one copy per data folder: a second launch on the same folder asks the first to show its details
+//! and exits. The arguments say its version, draw the specimen of its fonts and the pill's
+//! pictures, run the born test, bring the bridge in the data folder up to date, and run Connect or
+//! Disconnect alone; they take no part in the one-copy rule. The flyout and the tray icons come
+//! next.
 #![windows_subsystem = "windows"]
 
 mod app_host;
@@ -14,6 +16,7 @@ mod diagnostics;
 mod flyout;
 mod icon_pictures;
 mod licences;
+mod one_copy;
 mod pictures;
 mod pill_face;
 mod pill_feed;
@@ -41,8 +44,15 @@ fn main() -> ExitCode {
     // Arguments are compared as they come: one that is not Unicode matches nothing.
     let mut args = std::env::args_os().skip(1);
     let Some(first) = args.next() else {
+        let one_copy::Start::First(mut guard) = one_copy::start() else {
+            return ExitCode::SUCCESS;
+        };
+        guard.listen();
+        // After the check: only the first copy refreshes the bridge.
         carried_bridge::start();
-        return app_host::run();
+        let code = app_host::run();
+        drop(guard);
+        return code;
     };
     match first.to_str() {
         Some("--version") => {
