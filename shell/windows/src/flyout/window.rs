@@ -424,14 +424,12 @@ pub fn on_pill_click() {
 
 /// Opens the flyout beside the point (physical pixels). Open already: placed again there and
 /// given the focus again.
-#[allow(dead_code)] // Called by the tray icons (#49) and the second launch (#51).
 pub fn open_at(x: i32, y: i32) {
     with_flyout(move |flyout| flyout.open(x, y));
 }
 
 /// Opens the flyout at the bottom right corner of the primary monitor's work area, where the tray
 /// is; at the pointer when the monitor cannot be read.
-#[allow(dead_code)] // Called by the tray icons (#49) and the second launch (#51).
 pub fn open_by_tray() {
     let corner = monitor::primary()
         .map(|screen| (screen.work_area.right - 1, screen.work_area.bottom - 1))
