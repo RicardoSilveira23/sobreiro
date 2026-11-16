@@ -84,12 +84,12 @@ global M {
 // A text whose baseline lies `baseline` below the top of its parent. The toolkit lays a line out
 // at the font's natural height, ascent plus descent (Inter's hhea ascent is 1984 of 2048 units,
 // Unbounded's 995 of 1000), with the baseline at the ascent, so the top is the baseline less it.
+// Each use of it, and of `Block`, sets `accessible-role: none`: the item that holds a text says
+// what it says, and a role set on the component's root does not reach its uses in this toolkit.
 component Placed inherits Text {
     in property <length> baseline;
     x: 0px;
     y: self.baseline - self.font-metrics.ascent;
-    // What a row or a heading says is said by the item that holds it.
-    accessible-role: none;
 }
 
 // Text in Inter 14 that wraps at the row's width, its lines 1.45 of the size apart as 1.1's are.
@@ -105,7 +105,6 @@ component Block inherits Text {
     x: 0px;
     width: self.wrap-width;
     wrap: word-wrap;
-    accessible-role: none;
     font-family: "Inter";
     font-size: 14px;
     line-height-factor: 1.45 / 1.2100586;
@@ -122,6 +121,7 @@ component Heading inherits Rectangle {
     accessible-label: root.text;
 
     Placed {
+        accessible-role: none;
         text: root.text;
         font-family: "Inter";
         font-size: 15px;
@@ -161,20 +161,23 @@ component BarRow inherits Rectangle {
 
     // The row is one item for a screen reader, read as the line Rust made; the note is another.
     if root.announced: Rectangle {
+        y: 0px;
         width: 100%;
-        height: 100%;
+        height: root.bar.note != "" ? root.detail-bottom : root.height;
         accessible-role: text;
         accessible-label: root.bar.spoken;
     }
 
     if root.announced && root.bar.note != "": Rectangle {
+        y: root.note-top;
         width: 100%;
-        height: 100%;
+        height: note-text.block-height;
         accessible-role: text;
         accessible-label: root.bar.note;
     }
 
     Placed {
+        accessible-role: none;
         text: root.bar.label;
         font-family: "Inter";
         font-size: 15px;
@@ -183,6 +186,7 @@ component BarRow inherits Rectangle {
     }
 
     unit := Placed {
+        accessible-role: none;
         text: "used";
         font-family: "Inter";
         font-size: 14px;
@@ -192,6 +196,7 @@ component BarRow inherits Rectangle {
     }
 
     Placed {
+        accessible-role: none;
         text: root.bar.figure;
         font-family: "Unbounded Tabular";
         font-weight: 700;
@@ -233,6 +238,7 @@ component BarRow inherits Rectangle {
         background: root.bar.badge-fill;
 
         badge-text := Placed {
+            accessible-role: none;
             text: root.bar.badge;
             font-family: "Inter Tabular";
             font-weight: 500;
@@ -244,6 +250,7 @@ component BarRow inherits Rectangle {
     }
 
     resets-text := Placed {
+        accessible-role: none;
         text: root.bar.resets;
         font-family: "Inter Tabular";
         font-size: 14px;
@@ -253,6 +260,7 @@ component BarRow inherits Rectangle {
     }
 
     detail-text := Block {
+        accessible-role: none;
         text: root.bar.detail;
         font-family: "Inter Tabular";
         color: root.colours.soft;
@@ -260,6 +268,7 @@ component BarRow inherits Rectangle {
     }
 
     note-text := Block {
+        accessible-role: none;
         text: root.bar.note;
         color: root.colours.soft;
         baseline: root.note-top + 15px;
@@ -329,6 +338,7 @@ component GlyphColumn inherits Rectangle {
     // The scale: 100% at the top of the tube and 0% at the bottom of its 88 high box, centred on
     // the glyph's 104.
     full := Placed {
+        accessible-role: none;
         visible: root.thermometer;
         text: "100%";
         font-family: "Inter";
@@ -339,6 +349,7 @@ component GlyphColumn inherits Rectangle {
     }
 
     Placed {
+        accessible-role: none;
         visible: root.thermometer;
         text: "0%";
         font-family: "Inter";
@@ -349,6 +360,7 @@ component GlyphColumn inherits Rectangle {
     }
 
     fig := Placed {
+        accessible-role: none;
         text: root.bar.left-figure;
         font-family: "Unbounded Tabular";
         font-weight: 700;
@@ -359,6 +371,7 @@ component GlyphColumn inherits Rectangle {
     }
 
     unit := Placed {
+        accessible-role: none;
         text: "left";
         font-family: "Inter";
         font-size: 14px;
@@ -368,6 +381,7 @@ component GlyphColumn inherits Rectangle {
     }
 
     Placed {
+        accessible-role: none;
         text: root.bar.label;
         font-family: "Inter";
         font-weight: 500;
@@ -389,6 +403,7 @@ component GlyphColumn inherits Rectangle {
         background: root.bar.badge-fill;
 
         badge-text := Placed {
+            accessible-role: none;
             text: root.bar.badge;
             font-family: "Inter Tabular";
             font-weight: 500;
@@ -400,6 +415,7 @@ component GlyphColumn inherits Rectangle {
     }
 
     Placed {
+        accessible-role: none;
         text: root.bar.resets;
         font-family: "Inter Tabular";
         font-size: 13px;
@@ -409,6 +425,7 @@ component GlyphColumn inherits Rectangle {
     }
 
     detail-text := Block {
+        accessible-role: none;
         text: root.bar.detail;
         font-family: "Inter Tabular";
         color: root.colours.soft;
@@ -524,6 +541,7 @@ export component FlyoutCard inherits Rectangle {
     }
 
     footer-text := Block {
+        accessible-role: none;
         text: root.data.footer;
         x: M.edge;
         baseline: root.footer-top + 16px;

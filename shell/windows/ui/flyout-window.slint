@@ -13,10 +13,8 @@ export component FlyoutWindow inherits Window {
     no-frame: true;
     always-on-top: true;
     background: transparent;
+    // Also the window's accessible name, which a screen reader says when the flyout opens.
     title: "Sobreiro";
-    // The window's name, which Narrator says when the flyout opens.
-    accessible-role: none;
-    accessible-label: "Sobreiro";
 
     keys := FocusScope {
         width: 100%;
