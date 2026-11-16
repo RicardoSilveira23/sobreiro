@@ -780,9 +780,8 @@ themes and both bar colours, at 100%, 150% and 200%: 132 pairs, set side by side
 200% 1.1 was laid out at that scale, as its per-monitor window is; the `--media` stills lay it
 out at 100% and scale the drawing. Claude's block alone gives the same bytes as the `--media`
 stills at 100% and 200%; with Copilot's block the stills' bar holds 17.6% where the pairs hold
-17%, one row of pixels apart. In short: shapes and colours match by eye; the pill is wider, by
-the figure box on purpose; its text is lighter; and it is a pixel or two taller at 150% and
-200%.
+17%, one row of pixels apart. In short: shapes and colours match by eye; the pill is wider;
+its text is lighter; and it is a pixel or two taller at 150% and 200%.
 
 The same by eye:
 
@@ -800,11 +799,11 @@ What differs:
   `00%` to `99%` ([#23](https://github.com/RicardoSilveira23/sobreiro/issues/23)), so a
   changing figure moves nothing. The box is 2 DIPs wider than `45%`, which sets the width of
   Claude's lines, and 6.4 wider than Copilot's `17%`; a narrower figure leaves a gap after its
-  label.
-- **With no reading the dash sits at the box's right.** The pill is 103 pixels wide at 100%,
-  where 1.1's is 75.
-- **Beyond the box, a block is up to 3 pixels wider at 100%.** Each text's width rounds up to
-  a whole DIP, which keeps the rings on whole pixels.
+  label. With no reading the dash sits at the box's right: the pill is 103 pixels wide at
+  100%, where 1.1's is 75. Beyond the box, a block is up to 3 pixels wider at 100%, because
+  each text's width rounds up to a whole DIP. The taskbar has little room, so the box goes and
+  the pill is to be no wider than 1.1's in any state. Ticket
+  [#61](https://github.com/RicardoSilveira23/sobreiro/issues/61).
 - **The text is lighter.** The figures carry 16% less ink at 100%, 20% less at 150% and 8% less
   at 200%; the labels 5 to 7% less at 100% and 150%. The glyphs stand in the same places, within
   half a pixel at 100%. Ticket [#59](https://github.com/RicardoSilveira23/sobreiro/issues/59).

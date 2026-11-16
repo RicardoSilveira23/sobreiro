@@ -259,9 +259,11 @@ In this order:
    sign-in, the migration.
    The pill's face was set beside 1.1's on 2026-11-16, in every state, theme, bar colour and
    scale ([note](shell-comparison.md#b-for-20-the-pill-beside-11s)). Shapes and colours match
-   by eye; it is wider by the figure box on purpose; its text is lighter
-   ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)); and it is a pixel or two
-   taller at 150% and 200% ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
+   by eye. It is wider, which the taskbar cannot spare: the figure box goes and the pill is to
+   be no wider than 1.1's ([#61](https://github.com/RicardoSilveira23/sobreiro/issues/61)).
+   Its text is lighter ([#59](https://github.com/RicardoSilveira23/sobreiro/issues/59)), and
+   it is a pixel or two taller at 150% and 200%
+   ([#46](https://github.com/RicardoSilveira23/sobreiro/issues/46)).
 4. **The release:** its baseline row, and the comparison below.
 
 - The WPF app keeps shipping from a 1.x branch until the new one matches it. No release mixes
