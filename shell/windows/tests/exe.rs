@@ -6,12 +6,15 @@
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
+use std::time::{Duration, Instant};
 
 use sobreiro_core::connect::bridge_command::{command_for, status_line_json};
+use windows::Win32::Foundation::CloseHandle;
 use windows::Win32::Storage::FileSystem::{
     GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW,
 };
+use windows::Win32::System::Threading::{OpenMutexW, SYNCHRONIZATION_SYNCHRONIZE};
 use windows::Win32::UI::Shell::ExtractIconExW;
 use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, HICON};
 use windows::core::{HSTRING, PCWSTR};
@@ -87,11 +90,58 @@ impl Layout {
         output
     }
 
+    /// Starts the app with no argument, in this folder. The copy is ended when the guard drops.
+    fn spawn(&self) -> Running {
+        let app = self.root.join("app");
+        let child = Command::new(app.join("Sobreiro.exe"))
+            .current_dir(&app)
+            .env("SOBREIRO_DATA_DIR", self.data())
+            .env("CLAUDE_CONFIG_DIR", self.root.join("claude"))
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        Running(child)
+    }
+
+    /// The name of the mutex a copy on this folder holds.
+    fn mutex_name(&self) -> String {
+        let id = sobreiro_core::app_paths::AppPaths::new(Some(self.data().as_os_str()), &self.root)
+            .instance_id();
+        format!("Local\\{id}.Tray")
+    }
+
+    /// Waits until a copy on this folder holds its mutex.
+    fn wait_for_mutex(&self) {
+        let name = HSTRING::from(self.mutex_name());
+        let end = Instant::now() + Duration::from_secs(15);
+        loop {
+            // SAFETY: the name outlives the call; a handle that comes back is closed at once.
+            if let Ok(handle) = unsafe { OpenMutexW(SYNCHRONIZATION_SYNCHRONIZE, false, &name) } {
+                let _ = unsafe { CloseHandle(handle) };
+                return;
+            }
+            assert!(Instant::now() < end, "the copy never took its mutex");
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+
     /// What `--refresh-bridge` says: the one word of the outcome.
     fn refresh(&self) -> String {
         let output = self.run("--refresh-bridge");
         assert!(output.status.success());
         String::from_utf8(output.stdout).unwrap().trim().to_string()
+    }
+}
+
+/// A copy of the app that runs; it is killed and waited for when this drops.
+struct Running(Child);
+
+impl Drop for Running {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
     }
 }
 
@@ -431,4 +481,48 @@ fn the_written_bridge_runs(layout: &Layout) {
     );
     let usage = std::fs::read_to_string(layout.data().join("usage.json")).unwrap();
     assert!(usage.contains("\"used_percentage\":23.5"), "{usage}");
+}
+
+#[test]
+fn one_copy_runs_per_data_folder() {
+    let a = Layout::new("one-copy-a");
+    let b = Layout::new("one-copy-b");
+
+    let mut first = a.spawn();
+    a.wait_for_mutex();
+    assert!(first.0.try_wait().unwrap().is_none());
+    // Arguments take no mutex.
+    assert!(a.run("--version").status.success());
+
+    // A second launch on the same folder asks and ends.
+    let mut second = a.spawn();
+    let end = Instant::now() + Duration::from_secs(5);
+    let status = loop {
+        if let Some(status) = second.0.try_wait().unwrap() {
+            break status;
+        }
+        assert!(Instant::now() < end, "the second launch did not end");
+        std::thread::sleep(Duration::from_millis(50));
+    };
+    assert!(status.success());
+    let log = std::fs::read_to_string(a.data().join("log.txt")).unwrap();
+    assert!(log.contains("already-running"), "{log}");
+    assert!(first.0.try_wait().unwrap().is_none());
+
+    // Another folder has a copy of its own.
+    let mut other = b.spawn();
+    b.wait_for_mutex();
+    std::thread::sleep(Duration::from_secs(1));
+    assert!(other.0.try_wait().unwrap().is_none());
+
+    drop(first);
+    drop(second);
+    drop(other);
+    for layout in [&a, &b] {
+        let left: Vec<_> = std::fs::read_dir(layout.root.join("app"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(left, ["Sobreiro.exe"]);
+    }
 }
