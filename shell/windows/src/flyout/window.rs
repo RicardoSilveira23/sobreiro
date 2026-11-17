@@ -1,12 +1,15 @@
 //! The flyout's window: the card in a borderless, transparent window of its own, opened beside the
-//! pill (or a tray icon) and closed on Esc, on loss of focus and on a second click on the pill.
+//! pill (or a tray icon) and closed on Esc, on loss of focus (another window takes the foreground)
+//! and on a second click on the pill.
 //!
 //! The window is made once, on the first open, and then only shown and hidden through the toolkit
 //! (a window hidden and shown behind the toolkit's back is never painted again; see
 //! `tooltip_window`). It is born off screen, as a tool window with no owner that may be activated
 //! (`born::show_focusable`): no taskbar button and not in Alt+Tab, and, unlike the pill's windows,
-//! it takes the focus, which is how it learns to close. It is not owned by the taskbar: activating
-//! a window the taskbar owns carries the taskbar up and the pill loses its owner.
+//! it takes the focus, which is how it learns to close: from the window's deactivation, and from the
+//! pill host's foreground hook (`on_foreground_changed`), which catches the cases where the
+//! deactivation did not come. It is not owned by the taskbar: activating a window the taskbar owns
+//! carries the taskbar up and the pill loses its owner.
 //!
 //! It is placed with Core's `flyout_placement::place` at the size the card has in pixels at the
 //! DPI of the monitor it opens on. A repeating timer, while it is open, compares the window's DPI
@@ -262,6 +265,7 @@ impl Flyout {
             component.invoke_take_focus();
         }
         if born::activate(window) {
+            self.toggle.focused();
             self.rescaling = false;
             return;
         }
@@ -413,6 +417,23 @@ fn deactivated(window: isize) {
                 flyout.hide();
             }
         });
+    });
+}
+
+/// Told by the pill host that the foreground window changed. Closes the flyout as a focus loss when
+/// it is open, has had the focus since it opened, is not hidden to take a new scale and is no
+/// longer the foreground window. The deactivation path stays; this one covers a loss it missed.
+pub fn on_foreground_changed() {
+    with_flyout(|flyout| {
+        let Some(window) = flyout.window else {
+            return;
+        };
+        if !flyout.rescaling
+            && !born::is_foreground(window)
+            && flyout.toggle.foreground_moved(Instant::now())
+        {
+            flyout.hide();
+        }
     });
 }
 
