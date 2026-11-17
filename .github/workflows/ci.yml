@@ -48,9 +48,13 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       # In the release profile, so the exe the tests take apart is built as the shipped one is.
-      # The licence of every library is one of the tests.
+      # The licence of every library is one of the tests. The shipped members first, then the
+      # measuring tool on its own, so its Windows features never reach the exe's build.
       - name: Test
-        run: cargo test --release --workspace --locked
+        run: |
+          cargo test --release --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --release --locked -p sobreiro-baseline
 
       - name: Build
         run: |

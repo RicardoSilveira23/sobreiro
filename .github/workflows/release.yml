@@ -53,10 +53,12 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
 
       # In the release profile: the tests that take the exe apart see the one that ships. Its hash
-      # is kept so the check below can tell if the build made a different exe.
+      # is kept so the check below can tell if the build made a different exe. Only the shipped
+      # members (default-members): the measuring tool's Windows features would otherwise be
+      # unified into the exe's build and change it. CI tests the tool on its own.
       - name: Test
         run: |
-          cargo test --release --workspace --locked
+          cargo test --release --locked
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $hash = (Get-FileHash -LiteralPath target/release/Sobreiro.exe -Algorithm SHA256).Hash
           "TESTED_SHA256=$hash" >> $env:GITHUB_ENV
