@@ -22,9 +22,11 @@ fn shown_below_the_taskbar_raises() {
 }
 
 #[test]
-fn hidden_raises() {
+fn hidden_is_shown_not_just_raised() {
     for (above_taskbar, in_place) in [(true, true), (true, false), (false, true), (false, false)] {
-        assert_eq!(step(false, above_taskbar, in_place), PillShowStep::Raise);
+        let got = step(false, above_taskbar, in_place);
+        assert_eq!(got, PillShowStep::Show);
+        assert_ne!(got, PillShowStep::Raise);
     }
 }
 

@@ -26,8 +26,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, ENDSESSION_LOGOFF, EVENT_OBJECT_LOCATIONCHANGE,
     EVENT_SYSTEM_FOREGROUND, FindWindowExW, FindWindowW, GW_HWNDPREV, GetWindow, GetWindowRect,
     GetWindowThreadProcessId, HWND_TOPMOST, IsWindowVisible, RegisterClassW,
-    RegisterWindowMessageW, SM_CXSMICON, SW_HIDE, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE,
-    SWP_NOZORDER, SWP_SHOWWINDOW, SetWindowPos, ShowWindow, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
+    RegisterWindowMessageW, SM_CXSMICON, SWP_NOACTIVATE, SWP_NOOWNERZORDER, SWP_NOSIZE,
+    SWP_NOZORDER, SWP_SHOWWINDOW, SetWindowPos, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
     WINEVENT_SKIPOWNPROCESS, WM_DISPLAYCHANGE, WM_QUERYENDSESSION, WM_SETTINGCHANGE, WM_TIMECHANGE,
     WNDCLASSW, WS_EX_TOOLWINDOW,
 };
@@ -434,10 +434,4 @@ pub fn move_hidden(window: isize, x: i32, y: i32) {
             SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOSIZE | SWP_NOACTIVATE,
         )
     };
-}
-
-/// Hides a window.
-pub fn hide(window: isize) {
-    // SAFETY: changes a window of this process; any handle is allowed and a bad one fails.
-    let _ = unsafe { ShowWindow(hwnd(window), SW_HIDE) };
 }

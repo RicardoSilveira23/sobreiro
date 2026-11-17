@@ -570,9 +570,13 @@ impl Host {
         }
     }
 
-    /// Hides the pill's window, and with it an open tooltip: the pointer is no longer on it.
-    fn hide_window(&mut self, window: isize) {
-        taskbar::hide(window);
+    /// Hides the pill's window through the toolkit, which is what makes it paint again when it
+    /// is shown (a window hidden behind the toolkit's back is never drawn again), and with it an
+    /// open tooltip: the pointer is no longer on it.
+    fn hide_window(&mut self, _window: isize) {
+        if let Some(pill) = self.pill.as_ref() {
+            let _ = pill.component.hide();
+        }
         self.hover.reset();
         self.hover_timer.stop();
         if let Some(tooltip) = self.tooltip.as_ref() {
@@ -711,15 +715,26 @@ impl Host {
         self.place();
     }
 
-    /// Shows the pill at (x, y) as 1.1 does. A hidden pill, or one below the taskbar, goes back
-    /// to the top of the topmost band (while it was hidden Explorer may have raised the taskbar
-    /// past it), without moving the taskbar; otherwise it only moves, and not at all when it is in
-    /// place. True when a call was made.
+    /// Shows the pill at (x, y). A hidden pill is moved while hidden, shown through the toolkit
+    /// so it is drawn, and raised to the top of the topmost band (while it was hidden Explorer
+    /// may have raised the taskbar past it) without moving the taskbar. A visible pill below the
+    /// taskbar is only raised; otherwise it only moves, and not at all when it is in place. True
+    /// when a call was made.
     fn show_at(&self, window: isize, x: i32, y: i32) -> bool {
         let visible = taskbar::is_visible(window);
         let in_place = taskbar::window_rect(window).is_some_and(|r| r.left == x && r.top == y);
         let above = ZOrder::is_above(window, self.taskbar, taskbar::window_above);
         match pill_show::step(visible, above, in_place) {
+            PillShowStep::Show => {
+                taskbar::move_hidden(window, x, y);
+                if let Some(pill) = self.pill.as_ref() {
+                    let _ = pill.component.show();
+                    taskbar::raise_to(window, x, y);
+                    pill.component.window().request_redraw();
+                } else {
+                    taskbar::raise_to(window, x, y);
+                }
+            }
             PillShowStep::Raise => taskbar::raise_to(window, x, y),
             PillShowStep::Move => taskbar::move_to(window, x, y),
             PillShowStep::None => return false,
