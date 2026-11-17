@@ -12,9 +12,7 @@ page's design: [docs/design.md](docs/design.md); read it before styling anything
   `cargo fmt --all`, `cargo clippy --workspace --all-targets -- -D warnings`,
   `cargo test --workspace`. The compiler, the libraries and the toolkit stay pinned:
   [how it is built](docs/roadmap.md#where-it-lives-and-how-it-is-built).
-- 1.x is C# / .NET 10 and ships from the branch `1.x`; its fixes go there. The C# under `src/`
-  and `tests/` on `main` is 1.x's, kept for the fonts and icon the build reads until #105
-  removes it; change it only for that.
+- 1.x is C# / .NET 10 and ships from the branch `1.x`; its source and its fixes are there.
 - Data comes from the status line JSON via the bridge and from `GET
   https://api.anthropic.com/api/oauth/usage`, which the tray asks every 5 minutes with Claude
   Code's access token. Copilot's numbers come from `GET https://api.github.com/copilot_internal/user`,

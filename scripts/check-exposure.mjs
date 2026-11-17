@@ -52,19 +52,13 @@ const ALLOWED_IN_FILE = [
   {
     kind: "dev-path",
     value: "C:\\Dev\\my sobreiro",
-    paths: [
-      "core/tests/all/bridge_command.rs",
-      "tests/Sobreiro.Tests/BridgeCommandTests.cs",
-    ],
+    paths: ["core/tests/all/bridge_command.rs"],
     reason: "a folder name with a space, made up for the bridge command tests",
   },
   {
     kind: "user-path",
     value: "c:/users/A",
-    paths: [
-      "core/tests/all/bridge_command.rs",
-      "tests/Sobreiro.Tests/BridgeCommandTests.cs",
-    ],
+    paths: ["core/tests/all/bridge_command.rs"],
     reason: "a made-up user folder in capitals, in the bridge command tests",
   },
   {

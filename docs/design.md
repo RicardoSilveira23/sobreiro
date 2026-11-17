@@ -158,7 +158,7 @@ The page:
 Violet is an accent. It never fills an area larger than the Download button.
 
 The pill, as the app draws it on a dark taskbar. Purple, amber and red are the dark values in
-`src/Sobreiro.Core/Colours/NightPalette.cs`:
+`core/src/colours/night_palette.rs`:
 
 | Name | Value | Used for |
 |---|---|---|
