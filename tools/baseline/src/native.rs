@@ -274,23 +274,17 @@ pub fn product_version(path: &Path) -> Option<String> {
 
     // The first language and code page the file lists, then that language's ProductVersion.
     let (language, length) = query(&block, "\\VarFileInfo\\Translation")?;
+    // Its length is in bytes: one language and code page take 4.
     if length < 4 {
         return None;
     }
-    // SAFETY: `query` gave a pointer into `block` with `length` readable bytes, at least 4.
-    let (lang, page) = unsafe {
-        (
-            std::ptr::read_unaligned(language.cast::<u16>()),
-            std::ptr::read_unaligned(language.cast::<u16>().add(1)),
-        )
-    };
+    let pair = units_in(&block, language, 2)?;
+    let (lang, page) = (*pair.first()?, *pair.get(1)?);
     let (text, chars) = query(
         &block,
         &format!("\\StringFileInfo\\{lang:04x}{page:04x}\\ProductVersion"),
     )?;
-    // SAFETY: `query` gave a pointer into `block` to `chars` UTF-16 units, the NUL included.
-    let units = unsafe { std::slice::from_raw_parts(text.cast::<u16>(), chars as usize) };
-    let version = String::from_utf16_lossy(units);
+    let version = String::from_utf16_lossy(&units_in(&block, text, chars)?);
     let version = version
         .trim_end_matches('\0')
         .split('+')
@@ -299,7 +293,24 @@ pub fn product_version(path: &Path) -> Option<String> {
     (!version.is_empty()).then_some(version)
 }
 
-/// A pointer into `block` and the length `VerQueryValueW` gives for `sub_block`.
+/// `count` UTF-16 units at `at`, read as bytes from `block`: none when they do not lie wholly
+/// inside it, so a malformed version block cannot make this read past it or unaligned.
+fn units_in(block: &[u8], at: *const c_void, count: u32) -> Option<Vec<u16>> {
+    let start = (at as usize).checked_sub(block.as_ptr() as usize)?;
+    let end = start.checked_add(usize::try_from(count).ok()?.checked_mul(2)?)?;
+    let bytes = block.get(start..end)?;
+    Some(
+        bytes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|pair| u16::from_le_bytes(*pair))
+            .collect(),
+    )
+}
+
+/// A pointer into `block` and the length `VerQueryValueW` gives for `sub_block`. The pointer
+/// is only compared with `block`'s bounds, never read through.
 fn query(block: &[u8], sub_block: &str) -> Option<(*const c_void, u32)> {
     let name = wide(sub_block);
     let mut value: *mut c_void = std::ptr::null_mut();
