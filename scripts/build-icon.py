@@ -1,4 +1,4 @@
-"""Rebuilds src/Sobreiro/Assets/sobreiro.ico from scripts/sobreiro-mark.svg.
+"""Rebuilds shell/windows/assets/sobreiro.ico from scripts/sobreiro-mark.svg.
 
 The mark is the cork oak's trunk in section on the Night tile (tile #6f4df6, sign #ffffff). Each size is
 rendered to a PNG by headless Chrome (or Edge), then the PNGs are packed as PNG-in-ICO entries. Standard
@@ -18,7 +18,7 @@ from pathlib import Path
 SIZES = [16, 24, 32, 48, 256]
 ROOT = Path(__file__).resolve().parent.parent
 SVG = ROOT / "scripts" / "sobreiro-mark.svg"
-ICO = ROOT / "src" / "Sobreiro" / "Assets" / "sobreiro.ico"
+ICO = ROOT / "shell" / "windows" / "assets" / "sobreiro.ico"
 BROWSERS = [
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",

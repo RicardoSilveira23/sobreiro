@@ -6,9 +6,9 @@ pub static NOTICES: &str = include_str!("../notices.txt");
 /// Sobreiro's own licence.
 pub static LICENCE: &str = include_str!("../../../LICENSE");
 /// The licence of the Inter font.
-pub static INTER: &str = include_str!("../../../src/Sobreiro/Fonts/OFL-Inter.txt");
+pub static INTER: &str = include_str!("../fonts/OFL-Inter.txt");
 /// The licence of the Unbounded font.
-pub static UNBOUNDED: &str = include_str!("../../../src/Sobreiro/Fonts/OFL-Unbounded.txt");
+pub static UNBOUNDED: &str = include_str!("../fonts/OFL-Unbounded.txt");
 
 /// Each text with its name.
 pub fn all() -> [(&'static str, &'static str); 4] {
