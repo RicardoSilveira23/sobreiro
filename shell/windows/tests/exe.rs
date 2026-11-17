@@ -492,6 +492,30 @@ fn the_written_bridge_runs(layout: &Layout) {
     assert!(usage.contains("\"used_percentage\":23.5"), "{usage}");
 }
 
+/// A DLL beside the exe that has the name of one the exe imports is not loaded: the imports come
+/// from System32. The planted file is a real DLL that lacks what the exe needs, so loading it
+/// would stop the exe before it starts.
+#[test]
+fn imports_load_from_system32_not_from_beside_the_exe() {
+    let layout = Layout::new("dll-beside-exe");
+    let system = std::env::var_os("SystemRoot").unwrap();
+    let other_dll = Path::new(&system).join("System32").join("version.dll");
+    // Layout::run wants the app folder to hold the exe alone, so this test runs the exe itself.
+    let app = layout.root.join("app");
+    std::fs::copy(&other_dll, app.join("dwmapi.dll")).unwrap();
+    let output = Command::new(app.join("Sobreiro.exe"))
+        .arg("--version")
+        .current_dir(&app)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "the exe did not start: {:?}",
+        output.status
+    );
+    assert!(String::from_utf8_lossy(&output.stdout).starts_with("Sobreiro "));
+}
+
 #[test]
 fn one_copy_runs_per_data_folder() {
     let a = Layout::new("one-copy-a");

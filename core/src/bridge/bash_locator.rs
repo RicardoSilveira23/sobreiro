@@ -1,6 +1,8 @@
 //! Finds Git Bash the way Claude Code does on Windows, so the user's previous status line
 //! command runs in the same shell it ran in before.
 
+use crate::app_paths::is_full_path;
+
 /// The path of `bash.exe`, or `None` when there is no Git Bash.
 ///
 /// `get_env` gives an environment variable's value and `file_exists` says whether a file is
@@ -30,7 +32,8 @@ pub fn find(
     let directories: Vec<String> = path
         .split(';')
         .map(str::trim)
-        .filter(|entry| !entry.is_empty())
+        // A relative entry would be read against the working folder: only full paths count.
+        .filter(|entry| !entry.is_empty() && is_full_path(entry.as_ref()))
         .map(normalise)
         .collect();
 

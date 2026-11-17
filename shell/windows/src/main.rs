@@ -43,6 +43,8 @@ mod ui {
 }
 
 fn main() -> ExitCode {
+    // Before anything loads a DLL: system DLLs come from System32 only.
+    win::dll_search::system32_only();
     licences::keep();
     // Arguments are compared as they come: one that is not Unicode matches nothing.
     let mut args = std::env::args_os().skip(1);
