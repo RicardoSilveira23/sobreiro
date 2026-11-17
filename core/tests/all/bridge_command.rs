@@ -1,14 +1,50 @@
 //! Ported from `tests/Sobreiro.Tests/BridgeCommandTests.cs`.
 use std::path::Path;
 
-use sobreiro_core::connect::bridge_command::{command_for, is_bridge, runs, status_line_json};
+use sobreiro_core::connect::bridge_command::{
+    UnsafeBridgePath, command_for, is_bridge, runs, status_line_json,
+};
 
 #[test]
 fn for_uses_forward_slashes_and_quotes() {
     assert_eq!(
-        command_for(Path::new(r"C:\Dev\my sobreiro\sobreiro-bridge.exe")),
+        command_for(Path::new(r"C:\Dev\my sobreiro\sobreiro-bridge.exe")).unwrap(),
         "\"C:/Dev/my sobreiro/sobreiro-bridge.exe\""
     );
+}
+
+#[test]
+fn for_keeps_a_single_quote_and_a_unicode_letter() {
+    assert_eq!(
+        command_for(Path::new(
+            "D:\\Apps\\O'Brien\\Ren\u{e9}\\sobreiro-bridge.exe"
+        ))
+        .unwrap(),
+        "\"D:/Apps/O'Brien/Ren\u{e9}/sobreiro-bridge.exe\""
+    );
+}
+
+#[test]
+fn for_keeps_an_exclamation_mark_and_a_percent_sign() {
+    assert_eq!(
+        command_for(Path::new("D:\\Apps\\Rick!\\100%\\sobreiro-bridge.exe")).unwrap(),
+        "\"D:/Apps/Rick!/100%/sobreiro-bridge.exe\""
+    );
+}
+
+#[test]
+fn for_refuses_a_path_that_would_not_be_taken_literally() {
+    let refused = [
+        '$', '`', '"', '\n', '\r', '\t', '\0', '\u{1b}', '\u{201C}', '\u{201D}', '\u{201E}',
+    ];
+    for character in refused {
+        let path = format!("D:\\Apps\\a{character}b\\sobreiro-bridge.exe");
+        assert_eq!(
+            command_for(Path::new(&path)),
+            Err(UnsafeBridgePath),
+            "{character:?}"
+        );
+    }
 }
 
 #[test]

@@ -22,6 +22,9 @@ Sobreiro reads two sign-ins it doesn't own, so these matter most:
   `api.github.com`, and is never renewed, logged or stored.
 - Those two addresses, every 5 minutes and when the details open on a reading over a minute
   old, are its only network calls.
+- A request that fails or gets no answer is tried again after 2 minutes.
+- Copilot is asked with each GitHub token found, one request per token in that order, until one
+  gives a reading.
 - Connect to Claude Code changes one key, `statusLine`, in Claude Code's `settings.json`, after
   asking and with a backup.
 - The bridge writes only the `rate_limits` fields and a timestamp to `usage.json`.

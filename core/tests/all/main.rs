@@ -23,6 +23,7 @@ mod atomic_file;
 mod auto_start_command;
 mod bar_colour;
 mod bash_locator;
+mod bounded_read;
 mod bridge_command;
 mod bridge_config;
 mod bridge_install;

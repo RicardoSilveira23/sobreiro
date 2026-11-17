@@ -1,4 +1,5 @@
 //! The status line command that runs the bridge, and the `statusLine` object around it.
+use std::fmt;
 use std::path::Path;
 
 use super::json_reader::{self, Dialect, Kind, Value};
@@ -8,11 +9,47 @@ use crate::config::app_config::quoted;
 
 const BRIDGE_NAME: &str = "sobreiro-bridge";
 
+/// The bridge's path holds a character that cannot be put between double quotes so that every
+/// shell Claude Code may run the status line in reads it literally.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UnsafeBridgePath;
+
+impl fmt::Display for UnsafeBridgePath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(
+            "The folder that holds Sobreiro's status line bridge has a character in its path ($, a backtick, a double quote or a curly quote) that Claude Code's status line cannot run safely. Nothing was changed.",
+        )
+    }
+}
+
+impl std::error::Error for UnsafeBridgePath {}
+
+/// True for a character that is not taken literally between double quotes in Git Bash or in
+/// PowerShell, the two shells Claude Code may run the status line in.
+///
+/// `$` and the backtick still expand in both, and `"` ends the quotes. PowerShell also reads
+/// the curly double quotes as straight ones, so those end the quotes there. A control
+/// character has no place in a command line. `!` and `%` are left alone: history expansion is
+/// off in the bash that runs the status line, and `cmd` is not one of the two shells. A single
+/// quote is fine too: neither shell gives it a meaning inside double quotes, and Windows
+/// allows it in a folder name (`O'Brien`).
+fn is_unsafe_in_double_quotes(character: char) -> bool {
+    character.is_control()
+        || matches!(
+            character,
+            '$' | '`' | '"' | '\u{201C}' | '\u{201D}' | '\u{201E}'
+        )
+}
+
 /// The command for the bridge at `bridge_exe_path`: with forward slashes and between quotes,
-/// so Git Bash runs it as one path.
-pub fn command_for(bridge_exe_path: &Path) -> String {
+/// so Git Bash runs it as one path. A path with a character that would not be taken literally
+/// in every shell gives [`UnsafeBridgePath`], so no command is written for it.
+pub fn command_for(bridge_exe_path: &Path) -> Result<String, UnsafeBridgePath> {
     let path = bridge_exe_path.to_string_lossy().replace('\\', "/");
-    format!("\"{path}\"")
+    if path.chars().any(is_unsafe_in_double_quotes) {
+        return Err(UnsafeBridgePath);
+    }
+    Ok(format!("\"{path}\""))
 }
 
 /// True when `command` runs exactly `bridge_exe_path`: spaces around it and one pair of

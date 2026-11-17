@@ -160,7 +160,7 @@ fn run_alone(name: &str, argument: &str) -> Output {
 
 /// A `settings.json` whose status line runs the bridge at `path`.
 fn settings_running(path: &Path) -> String {
-    let line = status_line_json(&command_for(path), None).unwrap();
+    let line = status_line_json(&command_for(path).unwrap(), None).unwrap();
     format!("{{\"statusLine\": {line}}}")
 }
 

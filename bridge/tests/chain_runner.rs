@@ -28,7 +28,7 @@ fn arguments(command: &std::process::Command) -> Vec<&OsStr> {
 
 #[test]
 fn start_info_uses_bash_dash_c() {
-    let command = chain_runner::command("echo hi", Some(r"C:\Git\bin\bash.exe"));
+    let command = chain_runner::command("echo hi", Some(r"C:\Git\bin\bash.exe")).unwrap();
 
     assert_eq!(command.get_program(), r"C:\Git\bin\bash.exe");
     assert_eq!(arguments(&command), ["-c", "echo hi"]);
@@ -36,9 +36,17 @@ fn start_info_uses_bash_dash_c() {
 
 #[test]
 fn start_info_falls_back_to_powershell() {
-    let command = chain_runner::command("echo hi", None);
+    let command = chain_runner::command("echo hi", None).unwrap();
 
-    assert_eq!(command.get_program(), "powershell.exe");
+    // Started by its full path under the system folder, not found on the search path.
+    let program = Path::new(command.get_program());
+    assert!(program.is_absolute(), "{program:?}");
+    assert!(
+        program
+            .to_string_lossy()
+            .ends_with(r"\WindowsPowerShell\v1.0\powershell.exe"),
+        "{program:?}"
+    );
     assert_eq!(
         arguments(&command),
         [
@@ -53,7 +61,7 @@ fn start_info_falls_back_to_powershell() {
 #[test]
 fn start_info_marks_the_child_as_inside_a_chain() {
     for bash_path in [Some(r"C:\Git\bin\bash.exe"), None] {
-        let command = chain_runner::command("echo hi", bash_path);
+        let command = chain_runner::command("echo hi", bash_path).unwrap();
 
         let marked = command
             .get_envs()
@@ -147,6 +155,61 @@ fn run_times_out_when_a_background_child_keeps_stdout_open() {
 }
 
 // Not in the C# tests.
+
+#[test]
+fn powershell_is_found_under_the_system_folder() {
+    assert_eq!(
+        chain_runner::powershell_in(Path::new(r"C:\Windows\System32")),
+        Path::new(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
+    );
+}
+
+/// A command that prints more than the most that is read gives no output, as a command that
+/// could not be started does, and a command that never stops printing is still ended in time.
+#[test]
+fn output_over_the_cap_gives_no_result() {
+    let Some(bash) = git_bash() else { return };
+
+    let result = chain_runner::run(
+        "head -c 1100000 /dev/zero | tr '\\0' x",
+        "",
+        Some(&bash),
+        Duration::from_secs(30),
+    );
+
+    assert_eq!(result, None);
+}
+
+#[test]
+fn a_command_that_never_stops_printing_is_ended_by_the_time_limit() {
+    let Some(bash) = git_bash() else { return };
+    let watch = Instant::now();
+
+    // `yes` stops once the bridge lets go of the output at the cap; the `sleep` after it keeps
+    // the command running, so only the time limit can end it.
+    let result = chain_runner::run("yes; sleep 30", "", Some(&bash), Duration::from_secs(3));
+
+    assert_eq!(result, None);
+    assert!(
+        watch.elapsed() < Duration::from_secs(10),
+        "took {:?}",
+        watch.elapsed()
+    );
+}
+
+#[test]
+fn output_at_the_cap_is_kept() {
+    let Some(bash) = git_bash() else { return };
+
+    let result = chain_runner::run(
+        "head -c 1048576 /dev/zero | tr '\\0' x",
+        "",
+        Some(&bash),
+        Duration::from_secs(30),
+    );
+
+    assert_eq!(result.unwrap().output.len(), 1 << 20);
+}
 
 /// The C# ends the command and every process it started when its time is up. Here a process the
 /// command left in the background would write a file two seconds in; the command is ended after

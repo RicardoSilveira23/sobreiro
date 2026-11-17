@@ -3,6 +3,8 @@ use std::path::Path;
 
 use serde_json::Value;
 
+use crate::io::bounded_read;
+
 /// `config.json` as the bridge sees it: the user's previous status line command, which the
 /// bridge chains to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,7 +26,7 @@ impl BridgeConfig {
 const BYTE_ORDER_MARK: [u8; 3] = [0xEF, 0xBB, 0xBF];
 
 fn read_chained_command(path: &Path) -> Option<String> {
-    let bytes = std::fs::read(path).ok()?;
+    let bytes = bounded_read::read_file(path).ok()?;
     let text = bytes.strip_prefix(&BYTE_ORDER_MARK).unwrap_or(&bytes);
     let document: Value = serde_json::from_slice(text).ok()?;
     let command = document.as_object()?.get("chained_command")?.as_str()?;

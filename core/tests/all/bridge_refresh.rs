@@ -28,7 +28,7 @@ fn layout(name: &str) -> (TestFolder, PathBuf, PathBuf) {
 
 /// A `settings.json` whose status line runs `bridge`.
 fn connect(settings: &Path, bridge: &Path) {
-    let line = status_line_json(&command_for(bridge), None).unwrap();
+    let line = status_line_json(&command_for(bridge).unwrap(), None).unwrap();
     std::fs::write(settings, format!("{{\"statusLine\": {line}}}")).unwrap();
 }
 

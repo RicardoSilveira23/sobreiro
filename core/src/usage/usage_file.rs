@@ -2,7 +2,7 @@
 use std::io;
 use std::path::Path;
 
-use crate::io::atomic_file;
+use crate::io::{atomic_file, bounded_read};
 use crate::usage::UsageSnapshot;
 use crate::usage::rate_limits_json;
 
@@ -22,7 +22,8 @@ pub fn read(path: &Path) -> Option<UsageSnapshot> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ForMerge {
     /// A merge may be written. Inside is the stored snapshot to merge into, or `None` when the
-    /// file is missing or its content does not parse: both are safe to write over.
+    /// file is missing, its content does not parse, or it is over the most that is read: all
+    /// are safe to write over.
     SafeToWrite(Option<UsageSnapshot>),
     /// `usage.json` is there but cannot be read now (a writer holds it). Writing a merge now
     /// would drop what it holds.
@@ -37,6 +38,9 @@ pub fn read_for_merge(path: &Path) -> ForMerge {
         Err(error) if error.kind() == io::ErrorKind::NotFound && !path.is_file() => {
             ForMerge::SafeToWrite(None)
         }
+        // Over the most that is read: as unusable as content that does not parse, and no
+        // writer is going to make it readable later.
+        Err(error) if error.kind() == io::ErrorKind::InvalidData => ForMerge::SafeToWrite(None),
         Err(_) => ForMerge::NotNow,
     }
 }
@@ -47,7 +51,7 @@ const BYTE_ORDER_MARK: [u8; 3] = [0xEF, 0xBB, 0xBF];
 /// The file's text. Opening it does not stop anyone else from reading, writing or replacing it
 /// meanwhile. Bytes that are not UTF-8 are read as the "unknown character" sign, not refused.
 fn read_text(path: &Path) -> io::Result<String> {
-    let bytes = std::fs::read(path)?;
+    let bytes = bounded_read::read_file(path)?;
     let text = bytes.strip_prefix(&BYTE_ORDER_MARK).unwrap_or(&bytes);
     Ok(String::from_utf8_lossy(text).into_owned())
 }

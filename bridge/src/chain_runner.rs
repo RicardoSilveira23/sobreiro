@@ -1,11 +1,13 @@
 //! Runs the user's previous status line command with the same stdin.
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::windows::process::CommandExt;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use sobreiro_core::bridge::ChainResult;
+use sobreiro_core::io::bounded_read;
 
 use crate::windows_calls::{self, ProcessFamily};
 
@@ -18,9 +20,30 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 /// The three bytes that some programs put at the start of UTF-8 text.
 const BYTE_ORDER_MARK: [u8; 3] = [0xEF, 0xBB, 0xBF];
 
+/// Where Windows PowerShell is, under the system folder `system_directory`. Started by its
+/// full path, so that no `powershell.exe` earlier on the search path, or in the folder the
+/// bridge runs in, is found first.
+pub fn powershell_in(system_directory: &Path) -> PathBuf {
+    system_directory
+        .join("WindowsPowerShell")
+        .join("v1.0")
+        .join("powershell.exe")
+}
+
 /// The process to start for `chained`: Git Bash when there is one, as Claude Code itself would
-/// use, and Windows PowerShell otherwise.
-pub fn command(chained: &str, bash_path: Option<&str>) -> Command {
+/// use, and Windows PowerShell otherwise. `None` when there is no Git Bash and Windows does
+/// not say where its system folder is, and so where PowerShell is.
+pub fn command(chained: &str, bash_path: Option<&str>) -> Option<Command> {
+    let powershell = || windows_calls::system_directory().map(|folder| powershell_in(&folder));
+    command_with(chained, bash_path, powershell)
+}
+
+/// [`command`], with the lookup of PowerShell's path handed in.
+fn command_with(
+    chained: &str,
+    bash_path: Option<&str>,
+    powershell: impl FnOnce() -> Option<PathBuf>,
+) -> Option<Command> {
     let mut command = match bash_path {
         Some(bash) => {
             let mut command = Command::new(bash);
@@ -28,7 +51,7 @@ pub fn command(chained: &str, bash_path: Option<&str>) -> Command {
             command
         }
         None => {
-            let mut command = Command::new("powershell.exe");
+            let mut command = Command::new(powershell()?);
             // PowerShell is first told to print UTF-8 with no byte order mark, like Git Bash.
             command
                 .args(["-NoProfile", "-NonInteractive", "-Command"])
@@ -48,7 +71,7 @@ pub fn command(chained: &str, bash_path: Option<&str>) -> Command {
         // --debug still sees it.
         .stderr(Stdio::inherit())
         .creation_flags(CREATE_NO_WINDOW);
-    command
+    Some(command)
 }
 
 /// Runs `chained`, gives it `stdin`, and gives back what it printed and its exit code. `None`
@@ -60,7 +83,7 @@ pub fn run(
     bash_path: Option<&str>,
     timeout: Duration,
 ) -> Option<ChainResult> {
-    let mut child = command(chained, bash_path).spawn().ok()?;
+    let mut child = command(chained, bash_path)?.spawn().ok()?;
     let started = Instant::now();
     let remaining = || timeout.saturating_sub(started.elapsed());
     let family = ProcessFamily::of(&child);
@@ -71,9 +94,11 @@ pub fn run(
     let child_stdout = child.stdout.take();
     let reading = std::thread::Builder::new().spawn(move || {
         if let Some(mut child_stdout) = child_stdout {
-            let mut bytes = Vec::new();
-            let read = child_stdout.read_to_end(&mut bytes);
-            let _ = hand_over.send(read.map(|_length| bytes));
+            // More than the cap is an error, and the pipe is let go of at once, so a command
+            // that keeps printing is not waited for; the time limit ends it.
+            let read = bounded_read::read_at_most(&mut child_stdout, bounded_read::MAX_BYTES);
+            drop(child_stdout);
+            let _ = hand_over.send(read);
         }
     });
     // Stdin is written on another thread, so a command that never reads it cannot hold the

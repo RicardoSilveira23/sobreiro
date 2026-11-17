@@ -13,6 +13,7 @@ use chrono::{DateTime, Utc};
 
 use super::AccessToken;
 use crate::connect::json_reader::{self, Dialect, Kind};
+use crate::io::wipe::wipe;
 
 /// What reading the sign-in file came to. Only `Ok` carries a token.
 #[derive(Debug)]
@@ -172,14 +173,4 @@ fn expiry(number: &str) -> Option<DateTime<Utc>> {
         return None;
     }
     DateTime::from_timestamp_millis(milliseconds)
-}
-
-/// Overwrites bytes with zeros, so that what the file held does not stay behind in memory
-/// that is about to be given back.
-fn wipe(bytes: &mut [u8]) {
-    bytes.fill(0);
-    // Nobody reads these bytes again, so a compiler could decide that the zeros need not be
-    // written at all. `black_box` tells it to assume that someone does read them. The
-    // standard library promises no more than its best effort here.
-    std::hint::black_box(bytes);
 }

@@ -289,3 +289,43 @@ fn the_data_folder_is_the_default_one_without_an_override_or_with_one_naming_it(
         !with_override(&format!(r"{LOCAL_APP_DATA}\Sobreiro\inner")).is_default_data_directory()
     );
 }
+
+// Not in the C# tests.
+
+#[test]
+fn new_full_has_no_paths_without_a_full_path_to_keep_them_in() {
+    for local in [
+        None,
+        Some(Path::new("")),
+        Some(Path::new(r"relative\Local")),
+    ] {
+        for overridden in [
+            None,
+            Some(OsStr::new("")),
+            Some(OsStr::new(r"relative\data")),
+        ] {
+            assert_eq!(
+                AppPaths::new_full(overridden, local),
+                None,
+                "{local:?} {overridden:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn new_full_takes_the_local_application_data_folder() {
+    let paths = AppPaths::new_full(None, Some(Path::new(LOCAL_APP_DATA))).unwrap();
+
+    assert_eq!(paths, without_override());
+}
+
+#[test]
+fn new_full_takes_a_full_path_override_with_no_local_folder() {
+    let paths = AppPaths::new_full(Some(OsStr::new(r"D:\data")), None).unwrap();
+
+    assert_eq!(paths.usage_file(), Path::new(r"D:\data\usage.json"));
+    // A relative local folder does not matter either, when the override is a full path.
+    let paths = AppPaths::new_full(Some(OsStr::new(r"D:\data")), Some(Path::new("rel"))).unwrap();
+    assert_eq!(paths.config_file(), Path::new(r"D:\data\config.json"));
+}

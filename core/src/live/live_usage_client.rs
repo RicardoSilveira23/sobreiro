@@ -13,6 +13,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use super::{AccessToken, usage_api_json};
 use crate::io::http::{Answer, NetworkSender, NoAnswer, Sender};
 use crate::io::retry_after::retry_after;
+use crate::io::wipe::wipe;
 use crate::usage::RateLimits;
 
 /// What a request for the usage came to.
@@ -113,8 +114,12 @@ impl LiveUsageClient {
         }
 
         // The header's value holds the token, so it stays inside this function: it is handed
-        // to the sender and to nobody else.
-        let authorization = format!("Bearer {}", token.value());
+        // to the sender and to nobody else, and wiped as soon as the sender is done. It is
+        // built with room for all of it, so growing never leaves a copy of a part behind.
+        const SCHEME: &str = "Bearer ";
+        let mut authorization = String::with_capacity(SCHEME.len() + token.value().len());
+        authorization.push_str(SCHEME);
+        authorization.push_str(token.value());
         let headers = [
             ("Authorization", authorization.as_str()),
             ("anthropic-beta", "oauth-2025-04-20"),
@@ -122,6 +127,7 @@ impl LiveUsageClient {
             ("User-Agent", self.user_agent.as_str()),
         ];
         let answer = self.sender.get(ENDPOINT, &headers);
+        wipe(&mut authorization.into_bytes());
 
         if cancelled.load(Ordering::SeqCst) {
             return Err(Cancelled);

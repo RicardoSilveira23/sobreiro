@@ -32,6 +32,21 @@ impl AppPaths {
         }
     }
 
+    /// Like [`AppPaths::new`], but for a program that must not guess: `None` when the data
+    /// folder would not be a full path, so that it would lie beside wherever the program was
+    /// started. That is when there is no full-path override and `local_app_data` is missing or
+    /// relative. The bridge, which runs in whatever folder Claude Code is in, prints its
+    /// default line and touches nothing then.
+    pub fn new_full(overridden: Option<&OsStr>, local_app_data: Option<&Path>) -> Option<AppPaths> {
+        let has_override = overridden.is_some_and(is_full_path);
+        let local = match local_app_data {
+            Some(folder) if is_full_path(folder.as_os_str()) => folder,
+            _ if has_override => Path::new(""),
+            _ => return None,
+        };
+        Some(AppPaths::new(overridden, local))
+    }
+
     /// `Sobreiro` in the local application data folder, whatever the override says.
     pub fn default_directory(&self) -> &Path {
         &self.default_directory
