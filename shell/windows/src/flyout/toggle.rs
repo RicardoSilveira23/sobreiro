@@ -3,7 +3,9 @@
 //! a click on the pill closes an open flyout and opens a closed one (the pill never takes the
 //! focus, so the flyout is still open when that click lands); Esc closes; losing the focus closes
 //! and, for `GRACE` after, says so, so a click on a tray icon that took the focus closes the flyout
-//! instead of opening it again.
+//! instead of opening it again. The activation message alone has not always closed it, so a change
+//! of the foreground window closes it too (`foreground_moved`), once it has had the focus; a change
+//! that comes before the flyout was ever focused is a stale one and closes nothing.
 //!
 //! A select on a tray icon (`tray_click`) follows 1.1's other rule: open closes; closed opens,
 //! unless it closed on focus loss less than `GRACE` ago (the click took the focus and that closed
@@ -28,6 +30,8 @@ pub enum Click {
 #[derive(Debug, Default)]
 pub struct Toggle {
     open: bool,
+    /// Whether it has been given the focus since it opened.
+    focused: bool,
     /// When it last closed on focus loss; none after any other close or open.
     lost_at: Option<Instant>,
     /// When a tray select last opened it.
@@ -63,7 +67,20 @@ impl Toggle {
     /// It is open now.
     pub fn opened(&mut self) {
         self.open = true;
+        self.focused = false;
         self.lost_at = None;
+    }
+
+    /// It was given the focus. Only an open flyout notes it.
+    pub fn focused(&mut self) {
+        self.focused = self.open;
+    }
+
+    /// The foreground window changed at `now`. True when that closed the flyout, which then counts
+    /// as a close on focus loss; false when it is closed or has not had the focus since it opened
+    /// (the change may be an old one that arrived late).
+    pub fn foreground_moved(&mut self, now: Instant) -> bool {
+        self.focused && self.focus_lost(now)
     }
 
     /// It was closed by a pill click, Esc or a call; there is no grace. True when it was open. A
@@ -73,6 +90,7 @@ impl Toggle {
             return false;
         }
         self.open = false;
+        self.focused = false;
         self.lost_at = None;
         true
     }
@@ -84,6 +102,7 @@ impl Toggle {
             return false;
         }
         self.open = false;
+        self.focused = false;
         self.lost_at = Some(now);
         true
     }
@@ -296,5 +315,56 @@ mod tests {
         toggle.focus_lost(now);
         assert!(!toggle.closed());
         assert!(toggle.closed_just_now(now + STEP));
+    }
+
+    #[test]
+    fn a_foreground_change_closes_a_focused_flyout() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focused();
+        assert!(toggle.foreground_moved(now));
+        assert!(!toggle.is_open());
+    }
+
+    #[test]
+    fn a_foreground_change_before_the_first_focus_does_nothing() {
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        assert!(!toggle.foreground_moved(Instant::now()));
+        assert!(toggle.is_open());
+    }
+
+    #[test]
+    fn a_foreground_change_while_closed_does_nothing() {
+        let mut toggle = Toggle::default();
+        toggle.focused();
+        assert!(!toggle.foreground_moved(Instant::now()));
+        assert!(!toggle.is_open());
+    }
+
+    #[test]
+    fn the_grace_follows_a_foreground_close() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focused();
+        toggle.foreground_moved(now);
+        assert!(toggle.closed_just_now(now + GRACE - STEP));
+        assert!(!toggle.closed_just_now(now + GRACE));
+    }
+
+    #[test]
+    fn reopening_clears_focused() {
+        let now = Instant::now();
+        let mut toggle = Toggle::default();
+        toggle.opened();
+        toggle.focused();
+        toggle.opened();
+        assert!(!toggle.foreground_moved(now));
+        toggle.focused();
+        assert!(toggle.closed());
+        toggle.opened();
+        assert!(!toggle.foreground_moved(now));
     }
 }

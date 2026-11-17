@@ -995,6 +995,7 @@ impl Host {
                 // No question here: the schedule notes the switch and the next due tick asks.
                 self.schedule = self.schedule.foreground_switched();
                 self.place();
+                crate::flyout::window::on_foreground_changed();
             }
         }
     }
