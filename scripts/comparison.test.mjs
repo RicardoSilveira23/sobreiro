@@ -78,12 +78,12 @@ test("the bars: zero-based shares of the larger, and 2.0's shrinks from 1.1's le
   assert.match(html, /<span>1\.1<\/span><i style="--w:1"><\/i><em>96 MB<\/em><\/p><p class="new"><span>2\.0<\/span><i style="--w:0\.073;--from:1"><\/i><em>7 MB<\/em>/);
 });
 
-test("downloads: 2.0 then 1.1, each its tag; 1.0 predates the repository and has none", () => {
+test("downloads: 2.0 the latest release, 1.1 its line's releases; 1.0 predates the repository and has none", () => {
   const html = pageSection(comparison(with20));
   const buttons = [...html.matchAll(/<a class="mn" href="([^"]+)">([^<]+)<\/a>/g)].map((m) => [m[2], m[1]]);
   assert.deepEqual(buttons, [
-    ["Download 2.0", "https://github.com/RicardoSilveira23/sobreiro/releases/tag/v2.0.0"],
-    ["Download 1.1", "https://github.com/RicardoSilveira23/sobreiro/releases/tag/v1.1.0"],
+    ["Download 2.0", "https://github.com/RicardoSilveira23/sobreiro/releases/latest"],
+    ["Download 1.1", "https://github.com/RicardoSilveira23/sobreiro/releases?q=v1.1"],
   ]);
 });
 
