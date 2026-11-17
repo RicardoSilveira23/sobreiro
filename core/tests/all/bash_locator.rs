@@ -98,3 +98,27 @@ fn returns_null_when_nothing_found() {
     );
     assert_eq!(found, None);
 }
+
+#[test]
+fn ignores_relative_path_entries() {
+    // `.` and `tools` would be read against the working folder, where a `bash.exe` could sit.
+    let here = std::env::current_dir().unwrap();
+    let in_working_folder = here.join("bash.exe").to_string_lossy().into_owned();
+    let in_tools = here
+        .join("tools")
+        .join("bash.exe")
+        .to_string_lossy()
+        .into_owned();
+    let found = find(
+        &[("PATH", r".;tools;C:\Program Files\Git\usr\bin")],
+        &[
+            &in_working_folder,
+            &in_tools,
+            r"C:\Program Files\Git\usr\bin\bash.exe",
+        ],
+    );
+    assert_eq!(
+        found.as_deref(),
+        Some(r"C:\Program Files\Git\usr\bin\bash.exe")
+    );
+}

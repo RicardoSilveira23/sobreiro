@@ -2,6 +2,7 @@
 pub mod born;
 pub mod credentials;
 pub mod dir_watch;
+pub mod dll_search;
 pub mod job;
 pub mod known_folders;
 pub mod licence_window;

@@ -14,6 +14,10 @@ fn main() -> Result<(), Failure> {
         .embed_resources(slint_build::EmbedResourcesKind::EmbedFiles);
     slint_build::compile_with_config("ui/app.slint", config)?;
 
+    // Load the exe's imported system DLLs from System32 only.
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        println!("cargo::rustc-link-arg-bins=/DEPENDENTLOADFLAG:0x800");
+    }
     resources::link_exe_resources(Path::new(&std::env::var("OUT_DIR")?))?;
 
     println!("cargo::rustc-check-cfg=cfg(carries_bridge)");
