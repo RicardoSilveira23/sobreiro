@@ -1,6 +1,7 @@
 # Plan: Sobreiro
 
-Written 2026-11-01. Milestone 0 is next.
+Written 2026-11-01. The milestones below are 1.x's; from 2.0 the app is Rust, and
+[roadmap.md](roadmap.md#where-it-stands) says where it stands.
 
 Sobreiro is the Portuguese name of the cork oak, whose trunk in section is the tray's two rings.
 
@@ -138,6 +139,9 @@ Known limits, stated in the README:
   titled "Copilot AI credits 80% used".
 
 ## Stack
+
+1.x's, which ships from the branch `1.x`. From 2.0 the app is Rust:
+[how it is built](roadmap.md#where-it-lives-and-how-it-is-built).
 
 - C# on .NET 10 (LTS). WPF for the flyout, WinForms `NotifyIcon` for the tray, and no other
   UI packages.

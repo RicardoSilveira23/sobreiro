@@ -50,7 +50,7 @@
         <li>Sobreiro.exe is one file, with the bridge and the fonts inside. It can live anywhere; %LOCALAPPDATA%\Programs\Sobreiro is a good home. Start with Windows records the path where the exe is when you tick it, so tick it again if you move the file.</li>
         <li>Upgrading from 1.x: quit it (right-click the tray icon, then Quit), save the new Sobreiro.exe over the old one, and start it. Start with Windows names the exe's path, so a Sobreiro.exe saved anywhere else is not the one that starts at sign-in.</li>
         <li>Upgrading from 0.7.0's zip: quit the old Sobreiro first (right-click the tray icon, then Quit); while it runs, the new exe only opens its details. Then run the new Sobreiro.exe, choose Reconnect to Claude Code if the menu offers it, and tick Start with Windows again if you use it. Last, delete the old folder. If you saved the new Sobreiro.exe into it (0.7.0 suggested %LOCALAPPDATA%\Programs, so the old folder is ...\Programs\Sobreiro), delete only sobreiro-bridge.exe and Fonts there.</li>
-        <li>It needs no .NET.</li>
+        <li>Since 2.0 Sobreiro is written in Rust, and it needs nothing else installed: no .NET, no other runtime.</li>
         <li>On Windows 11 a new tray icon starts in the overflow (^). Drag it onto the taskbar to keep it in view.</li>
         <li>Starting Sobreiro.exe again while it runs opens the details.</li>
       </ul></div>
@@ -182,7 +182,7 @@
         <li>At about 256 KB the file is moved to log.1.txt, replacing the older one.</li>
         <li>If the tray can't start, it shows a box that names the log, or the data folder when the log couldn't be written there either.</li>
       </ul></div>
-    <div class="row"><span class="k">For IT</span><span class="n">The token in memory</span><p class="s">The last access token, Claude's or GitHub's, can stay in the app's memory until it is overwritten, since HttpClient takes it as a string property. The app holds no refresh token.</p></div>
+    <div class="row"><span class="k">For IT</span><span class="n">The token in memory</span><p class="s">The last access token, Claude's or GitHub's, can stay in the app's memory after its request, until that memory is used again. The app holds no refresh token.</p></div>
   </section>
 
   <section class="section" id="uninstall">

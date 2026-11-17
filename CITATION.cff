@@ -18,6 +18,4 @@ keywords:
   - github-copilot
   - usage
   - rate-limits
-  - dotnet
-  - csharp
-  - wpf
+  - rust
