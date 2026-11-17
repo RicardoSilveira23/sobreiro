@@ -205,8 +205,9 @@ All four faces are openly licensed, served from the site, Latin range only.
 ## Motion
 
 The diagram plays one loop of 5 seconds. It stands for the app's real 5 minutes. Nothing else
-on the page moves: no entrances, nothing on scroll, nothing on hover. The comparison's
-2.0 bars and mark loop beside it, on the same 5 seconds; its figures stand still.
+on the page moves on its own: no entrances, nothing on hover. The comparison's 2.0 bars and
+mark play once, the first time its charts come into view, and then stand still; its figures
+never move.
 
 | Motion | Trigger | Length | Tells the reader |
 |---|---|---|---|
@@ -216,8 +217,8 @@ on the page moves: no entrances, nothing on scroll, nothing on hover. The compar
 | Rings and bar step | The answer dot lands | 0.9 s, slowing to a stop | Usage is what the rings draw. A change of colour takes 0.35 s, starting 0.25 s in. |
 | Figures count | The answer dot lands | 0.8 s | The same reading, as a number |
 | Marker on the scale | The answer dot lands | 0.9 s | Where the session stands against 70% and 90%, so the colour change has a reason |
-| 2.0's bars | The loop starts | Fade in 0.4 s at 1.1's length, shrink 0.9 s from 0.4 s, fade out from 4.6 s | How much lighter 2.0 is than 1.1, figure by figure |
-| 2.0's mark | With the bars' shrink | Rust rises from the tile's foot in 0.9 s, and drops in the fade | This release is the Rust one; no colour between Violet and Rust is ever drawn |
+| 2.0's bars | Half the charts come into view, once | Fade in 0.4 s at 1.1's length, then shrink 0.9 s to their own | How much lighter 2.0 is than 1.1, figure by figure |
+| 2.0's mark | With the bars' shrink | Rust rises from the tile's foot in 0.9 s, and stays | This release is the Rust one; no colour between Violet and Rust is ever drawn |
 | Pulse | The answer dot lands | 0.6 s | A new reading has just arrived. A violet outline grows 12 px from the pill and fades from 55% to nothing. |
 
 The rings, bar and marker share one easing, `cubic-bezier(.3, .7, .2, 1)`. Dots move at a

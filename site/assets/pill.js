@@ -31,3 +31,18 @@
   /* The deferred script may start after the first animationstart has fired */
   arm();
 })();
+
+/* The comparison plays once, when its charts first come into view. Without this script, or
+   under reduced motion, it stands at its end. */
+(function () {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var cmp = document.querySelector('.cmp'), charts = cmp && cmp.querySelector('.charts');
+  if (!charts || !('IntersectionObserver' in window)) return;
+  cmp.classList.add('ready');
+  var seen = new IntersectionObserver(function (entries) {
+    if (!entries.some(function (e) { return e.isIntersecting; })) return;
+    cmp.classList.add('seen');
+    seen.disconnect();
+  }, { threshold: 0.5 });
+  seen.observe(charts);
+})();
