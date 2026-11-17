@@ -1,20 +1,23 @@
 //! What placing the pill does to its window, and how to tell whether it is above the taskbar.
 
-/// What placing the pill does to its window: nothing, a move, or a raise to the top of the
-/// topmost band.
+/// What placing the pill does to its window: nothing, a move, a raise to the top of the topmost
+/// band, or showing a hidden pill (through the toolkit, then raised).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PillShowStep {
     None,
     Move,
     Raise,
+    Show,
 }
 
-/// A pill that is hidden, or shown below the taskbar, is raised: while it is hidden Explorer
-/// can raise the taskbar past it (it does when a full-screen window closes), and a window shown
-/// again keeps its old place in the z-order, under the taskbar. Otherwise it only moves, and not
-/// at all when it is in place.
+/// A hidden pill is shown through the toolkit, so that it is drawn again, and raised: while it
+/// is hidden Explorer can raise the taskbar past it (it does when a full-screen window closes).
+/// A visible pill below the taskbar is raised, as a window keeps its old place in the z-order.
+/// Otherwise it only moves, and not at all when it is in place.
 pub fn step(visible: bool, above_taskbar: bool, in_place: bool) -> PillShowStep {
-    if !visible || !above_taskbar {
+    if !visible {
+        PillShowStep::Show
+    } else if !above_taskbar {
         PillShowStep::Raise
     } else if in_place {
         PillShowStep::None
