@@ -8,7 +8,7 @@ members = ["core", "bridge", "shell/windows", "tools/baseline"]
 default-members = ["core", "bridge", "shell/windows"]
 
 [workspace.package]
-version = "2.0.1"
+version = "2.0.2"
 edition = "2024"
 rust-version = "1.100"
 license = "GPL-3.0-or-later"

@@ -4216,7 +4216,7 @@ dependencies = [
 
 [[package]]
 name = "sobreiro"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "chrono",
  "png",
@@ -4229,14 +4229,14 @@ dependencies = [
 
 [[package]]
 name = "sobreiro-baseline"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "windows",
 ]
 
 [[package]]
 name = "sobreiro-bridge"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "chrono",
  "serde_json",
@@ -4246,7 +4246,7 @@ dependencies = [
 
 [[package]]
 name = "sobreiro-core"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "chrono",
  "log",
