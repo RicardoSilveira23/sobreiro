@@ -2,7 +2,7 @@
 # which ships from the branch 1.x; the build still reads its fonts and icon until #105 removes it.
 [workspace]
 resolver = "3"
-members = ["core", "bridge", "shell/windows"]
+members = ["core", "bridge", "shell/windows", "tools/baseline"]
 
 [workspace.package]
 version = "2.0.0"

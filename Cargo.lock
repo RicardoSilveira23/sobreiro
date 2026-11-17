@@ -4228,6 +4228,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "sobreiro-baseline"
+version = "2.0.0"
+dependencies = [
+ "windows",
+]
+
+[[package]]
 name = "sobreiro-bridge"
 version = "2.0.0"
 dependencies = [
