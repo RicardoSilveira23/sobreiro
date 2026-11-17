@@ -1,6 +1,7 @@
-//! The three things the bridge asks of Windows that Rust's standard library has no way to ask:
-//! to end a process together with every process it started, to wait for a process no longer
-//! than a given time, and to say where the user's local application data folder is.
+//! The things the bridge asks of Windows that Rust's standard library has no way to ask: to end
+//! a process together with every process it started, to wait for a process no longer than a
+//! given time, and to say where the user's local application data folder and its system folder
+//! are.
 //!
 //! Rust cannot check what happens on the other side of such a call, so each one is marked
 //! `unsafe` and says beside it why it is sound. The workspace denies unsafe code; this file is
@@ -19,6 +20,7 @@ use windows_sys::Win32::System::Com::CoTaskMemFree;
 use windows_sys::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, TerminateJobObject,
 };
+use windows_sys::Win32::System::SystemInformation::GetSystemDirectoryW;
 use windows_sys::Win32::System::Threading::WaitForSingleObject;
 use windows_sys::Win32::UI::Shell::{FOLDERID_LocalAppData, SHGetKnownFolderPath};
 
@@ -119,9 +121,31 @@ pub fn local_app_data() -> Option<PathBuf> {
     folder
 }
 
+/// Windows' system folder (`C:\Windows\System32`), where PowerShell's folder is. `None` when
+/// Windows cannot say.
+pub fn system_directory() -> Option<PathBuf> {
+    let mut buffer = [0u16; 512];
+    // SAFETY: `buffer` is valid for the 512 characters that are said to be its size.
+    let length = unsafe { GetSystemDirectoryW(buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
+    // 0 is a failure; a length that does not fit is the size that would have been needed, and
+    // nothing usable was written.
+    if length == 0 || length >= buffer.len() {
+        return None;
+    }
+    Some(PathBuf::from(OsString::from_wide(&buffer[..length])))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::local_app_data;
+    use super::{local_app_data, system_directory};
+
+    #[test]
+    fn windows_says_where_its_system_folder_is() {
+        let folder = system_directory().unwrap();
+
+        assert!(folder.is_absolute(), "{folder:?}");
+        assert!(folder.join("kernel32.dll").is_file(), "{folder:?}");
+    }
 
     /// Only asks where the folder is; nothing in it is read or written.
     #[test]

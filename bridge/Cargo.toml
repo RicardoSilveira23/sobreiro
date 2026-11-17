@@ -19,7 +19,7 @@ path = "src/lib.rs"
 [dependencies]
 sobreiro-core = { path = "../core" }
 chrono = { version = "0.4", default-features = false, features = ["std"] }
-# Windows' own functions, for the three things the standard library cannot do: end a process
+# Windows' own functions, for the things the standard library cannot do: end a process
 # together with all it started, wait for a process no longer than a given time, and ask where
 # the user's local application data folder is.
 windows-sys = { version = "0.61", features = [
@@ -27,6 +27,7 @@ windows-sys = { version = "0.61", features = [
     "Win32_Security",
     "Win32_System_Com",
     "Win32_System_JobObjects",
+    "Win32_System_SystemInformation",
     "Win32_System_Threading",
     "Win32_UI_Shell",
 ] }

@@ -2,7 +2,7 @@
 //! wrote it.
 use std::fmt;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io;
 use std::path::Path;
 
 use serde::de::{Deserialize, Deserializer, IgnoredAny, MapAccess, Visitor};
@@ -10,7 +10,7 @@ use serde_json::value::RawValue;
 
 use crate::colours::BarColourOption;
 use crate::display::{FlyoutStyle, PaceDays};
-use crate::io::atomic_file;
+use crate::io::{atomic_file, bounded_read};
 
 /// The status line the user had before Connect: the raw JSON object, or `None` when there was
 /// none.
@@ -206,8 +206,8 @@ const BYTE_ORDER_MARK: [u8; 3] = [0xEF, 0xBB, 0xBF];
 /// The file's text. Bytes that are not UTF-8 are read as the "unknown character" sign, not
 /// refused.
 fn read_text(path: &Path) -> io::Result<String> {
-    let mut bytes = Vec::new();
-    open_while_nobody_writes(path)?.read_to_end(&mut bytes)?;
+    let bytes =
+        bounded_read::read_at_most(open_while_nobody_writes(path)?, bounded_read::MAX_BYTES)?;
     let text = bytes.strip_prefix(&BYTE_ORDER_MARK).unwrap_or(&bytes);
     Ok(String::from_utf8_lossy(text).into_owned())
 }

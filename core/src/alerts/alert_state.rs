@@ -7,7 +7,7 @@ use std::path::Path;
 use chrono::{DateTime, Utc};
 
 use crate::connect::json_reader::{self, Dialect, Kind};
-use crate::io::atomic_file;
+use crate::io::{atomic_file, bounded_read};
 use crate::limits::limit::LimitKind;
 
 /// The highest threshold already alerted for a limit, and the reset period it was for.
@@ -96,7 +96,7 @@ fn whole_number(kind: Option<&Kind>) -> Option<i64> {
 /// The marks in the file, or none when 1.x would have given up on it. The file is read as UTF-8
 /// with its byte order mark dropped; a file in another encoding is no JSON and gives none.
 fn read(path: &Path) -> Option<AlertState> {
-    let bytes = std::fs::read(path).ok()?;
+    let bytes = bounded_read::read_file(path).ok()?;
     let bytes = bytes.strip_prefix(&BYTE_ORDER_MARK).unwrap_or(&bytes);
     let text = String::from_utf8_lossy(bytes);
     let Kind::Object(root) = json_reader::read(&text, Dialect::Strict).ok()?.kind else {

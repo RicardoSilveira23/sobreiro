@@ -521,6 +521,27 @@ fn invalid_json_throws_format_exception_and_leaves_the_file_alone() {
 }
 
 #[test]
+fn a_bridge_path_that_cannot_be_quoted_safely_stops_connect_before_anything_is_written() {
+    let scene = Scene::new("connection-unsafe-path");
+    scene.write_settings(&original());
+
+    let settings = read_settings(&scene.settings_path()).unwrap();
+    let result = plan_connect(
+        &settings,
+        &AppConfig::default(),
+        Path::new(r"C:\Apps\$HOME\sobreiro-bridge.exe"),
+    );
+    assert!(
+        matches!(result, Err(ConnectError::BridgePath(_))),
+        "{result:?}"
+    );
+
+    assert_eq!(scene.read_settings_text(), original());
+    assert!(!scene.config_path().exists());
+    assert!(scene.backups().is_empty());
+}
+
+#[test]
 fn a_comment_inside_the_old_status_line_stops_connect_before_anything_is_written() {
     let scene = Scene::new("connection-comment-inside");
     let text = "{\n  \"statusLine\": { // x\n \"type\": \"command\", \"command\": \"a\" }\n}\n";

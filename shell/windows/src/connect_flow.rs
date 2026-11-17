@@ -217,7 +217,7 @@ fn title(connect: bool, reconnects: bool) -> &'static str {
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
-    use sobreiro_core::connect::bridge_command::command_for;
+    use sobreiro_core::connect::bridge_command::{UnsafeBridgePath, command_for};
     use std::cell::RefCell;
     use std::fs;
 
@@ -329,7 +329,7 @@ mod tests {
         let settings: serde_json::Value = serde_json::from_str(&text(&files.settings)).unwrap();
         assert_eq!(
             settings["statusLine"]["command"].as_str(),
-            Some(command_for(&bridge).as_str())
+            Some(command_for(&bridge).unwrap().as_str())
         );
         assert_eq!(settings["theme"], "dark");
         assert_eq!(fs::read(&bridge).unwrap(), BRIDGE_BYTES);
@@ -376,7 +376,7 @@ mod tests {
         let elsewhere = sandbox.root.join("other").join("sobreiro-bridge.exe");
         let settings = format!(
             "{{\"statusLine\":{{\"type\":\"command\",\"command\":{}}}}}",
-            serde_like(&command_for(&elsewhere))
+            serde_like(&command_for(&elsewhere).unwrap())
         );
         fs::write(&files.settings, &settings).unwrap();
         let boxes = Fake::new(true);
@@ -518,6 +518,27 @@ mod tests {
     }
 
     #[test]
+    fn a_bridge_path_that_cannot_be_quoted_safely_changes_nothing() {
+        let sandbox = Sandbox::new("unsafe-path");
+        let mut files = sandbox.files(true);
+        files.bridge = Some(sandbox.root.join("$(touch x)").join("sobreiro-bridge.exe"));
+        fs::write(&files.settings, OLD).unwrap();
+        let boxes = Fake::new(true);
+        run_with(true, &files, &boxes, 1);
+
+        assert_eq!(text(&files.settings), OLD);
+        assert!(!files.config.exists());
+        assert!(sandbox.backups().is_empty());
+        let calls = boxes.calls();
+        assert_eq!(calls.len(), 1, "{calls:?}");
+        assert_eq!(calls[0].0, "error");
+        assert_eq!(
+            calls[0].2,
+            ConnectError::BridgePath(UnsafeBridgePath).to_string()
+        );
+    }
+
+    #[test]
     fn a_second_flow_is_turned_away_while_one_is_open() {
         let gate = Gate::new();
         let first = gate.take();
@@ -548,7 +569,7 @@ mod tests {
         let running = |path: &Path| {
             format!(
                 "{{\"statusLine\":{{\"type\":\"command\",\"command\":{}}}}}",
-                serde_like(&command_for(path))
+                serde_like(&command_for(path).unwrap())
             )
         };
         fs::write(&files.settings, running(&own)).unwrap();

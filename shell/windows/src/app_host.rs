@@ -32,6 +32,7 @@ use crate::win::{locale, registry};
 use slint::{Timer, TimerMode};
 use sobreiro_core::connect::connection;
 use sobreiro_core::copilot::copilot_provider::CopilotProvider;
+use sobreiro_core::io::bounded_read;
 use sobreiro_core::polling::provider_poller::Finished;
 use std::cell::RefCell;
 use std::process::ExitCode;
@@ -284,7 +285,11 @@ impl Host {
         let settings = self.places.claude.settings_file();
         let bridge = carried_bridge::own(&self.places.app);
         let snapshot = Rc::new(self.feed.snapshot(now, around, || {
-            let text = std::fs::read_to_string(settings).unwrap_or_default();
+            // A file over the cap, like one that is no UTF-8, counts as no settings.
+            let text = bounded_read::read_file(&settings)
+                .ok()
+                .and_then(|bytes| String::from_utf8(bytes).ok())
+                .unwrap_or_default();
             connection::state(&text, bridge.as_deref())
         }));
         // Each part takes the snapshot on its own and answers for its own failures.

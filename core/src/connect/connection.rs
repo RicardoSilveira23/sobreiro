@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use chrono::NaiveDateTime;
 
-use super::bridge_command::{command_for, is_bridge, runs, status_line_json};
+use super::bridge_command::{UnsafeBridgePath, command_for, is_bridge, runs, status_line_json};
 use super::json_reader::{self, Dialect};
 use super::settings_json::{
     SettingsError, command_of, command_or_error, read_status_line, with_status_line,
@@ -74,6 +74,8 @@ pub enum ConnectError {
     NotConnected,
     /// `settings.json` is no longer what the plan was made from.
     Changed,
+    /// The bridge's path holds a character the status line command cannot quote safely.
+    BridgePath(UnsafeBridgePath),
     /// `config.json` could not be written.
     Config(ConfigError),
     /// A file could not be read, copied or written.
@@ -94,6 +96,7 @@ impl fmt::Display for ConnectError {
                 f.write_str("The status line does not run the Sobreiro bridge.")
             }
             ConnectError::Changed => f.write_str("settings.json changed since the plan was made."),
+            ConnectError::BridgePath(error) => error.fmt(f),
             ConnectError::Config(error) => error.fmt(f),
             ConnectError::Io(error) => error.fmt(f),
         }
@@ -104,6 +107,7 @@ impl std::error::Error for ConnectError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             ConnectError::Settings(error) => Some(error),
+            ConnectError::BridgePath(error) => Some(error),
             ConnectError::Config(error) => Some(error),
             ConnectError::Io(error) => Some(error),
             ConnectError::NotUtf8
@@ -114,7 +118,13 @@ impl std::error::Error for ConnectError {
     }
 }
 
-// These three let `?` turn an error of a smaller kind into a `ConnectError`.
+// These let `?` turn an error of a smaller kind into a `ConnectError`.
+impl From<UnsafeBridgePath> for ConnectError {
+    fn from(error: UnsafeBridgePath) -> ConnectError {
+        ConnectError::BridgePath(error)
+    }
+}
+
 impl From<SettingsError> for ConnectError {
     fn from(error: SettingsError) -> ConnectError {
         ConnectError::Settings(error)
@@ -149,7 +159,7 @@ pub fn read_settings(path: &Path) -> Result<SettingsSnapshot, ConnectError> {
         });
     }
 
-    let bytes = std::fs::read(&target)?;
+    let bytes = crate::io::bounded_read::read_file(&target)?;
     let without_mark = bytes.strip_prefix(&BYTE_ORDER_MARK);
     let text =
         std::str::from_utf8(without_mark.unwrap_or(&bytes)).map_err(|_| ConnectError::NotUtf8)?;
@@ -236,7 +246,7 @@ pub fn plan_connect(
 ) -> Result<ConnectionPlan, ConnectError> {
     let before = read_status_line(&settings.text)?;
     let old_command = command_or_none(command_or_error(before)?);
-    let after = status_line_json(&command_for(bridge_exe_path), before)?;
+    let after = status_line_json(&command_for(bridge_exe_path)?, before)?;
 
     // Already pointing at a bridge, this one or an older copy elsewhere (a Reconnect): never
     // chain to it, and keep what the config already saved, so
