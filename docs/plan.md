@@ -140,31 +140,17 @@ Known limits, stated in the README:
 
 ## Stack
 
-1.x's, which ships from the branch `1.x`. From 2.0 the app is Rust:
+From 2.0 the app is Rust, one Cargo workspace at the root:
 [how it is built](roadmap.md#where-it-lives-and-how-it-is-built).
 
-- C# on .NET 10 (LTS). WPF for the flyout, WinForms `NotifyIcon` for the tray, and no other
-  UI packages.
-- `Sobreiro`: WPF app, published as a self-contained single-file `.exe`.
-- `Sobreiro.Bridge`: console app, published with Native AOT (2.2 MB, a run takes about 9 ms;
-  see [baseline.md](baseline.md)). It runs on every status line refresh, so it must start in
-  milliseconds. It is a separate exe for that reason. Publishing it needs the MSVC linker.
-- `Sobreiro.Core`: shared library holding the `usage.json` model, parsing, window state
-  (reset passed, age, colour level) and the settings.json editor. The UI consumes a
-  provider-neutral list of limits (provider, label, percent, resets at, observed at), so a
-  second provider adds a source rather than a new UI. Copilot is the second: since 2026-11-13
-  both sit behind one interface in `Sobreiro.Core.Polling`.
-- `Sobreiro.Tests`: xUnit tests for Core.
-- `Sobreiro.Baseline`: console tool, not shipped. It measures a release build for
-  [baseline.md](baseline.md); `scripts/baseline.ps1` runs it.
-- Install the SDK with `winget install Microsoft.DotNet.SDK.10`.
-
 ```text
-src/Sobreiro/          tray app
-src/Sobreiro.Bridge/   status line bridge
-src/Sobreiro.Core/     shared logic
-tests/Sobreiro.Tests/
+core/             logic: providers, polling, limits, config and file formats, with its tests
+bridge/           the status line bridge, sobreiro-bridge.exe
+shell/windows/    the tray icon, pill and flyout: Sobreiro.exe, the bridge inside
+tools/baseline/   measures a release build for baseline.md; not shipped
 ```
+
+1.x is C# on .NET 10 (WPF and WinForms) and ships from the branch `1.x`, where its source is.
 
 ## Connecting to Claude Code
 
@@ -374,8 +360,9 @@ little script, with no build step, in its own look. Design: [design.md](design.m
   5. `gh variable set DEPLOY --body true`.
 - The pictures are rendered by the app itself: `scripts/media.ps1` runs `Sobreiro.exe --media`,
   encodes them into `media/`, bakes the README hero and copies the site's picks
-  (`media/picks.json`). To refresh them, run it. The taskbar under the hero is one real capture
-  (`scripts/capture-taskbar.ps1`).
+  (`media/picks.json`). The taskbar under the hero is one real capture
+  (`scripts/capture-taskbar.ps1`). Those scripts drive 1.x and stay on the branch `1.x`; the
+  pictures in `media/` are 1.x's until 2.0 has its own.
 - The site loads nothing from other hosts. Preview it with `python -m http.server` from `site/`.
 - The README is shorter to match: what it is, what it reads and sends, building from source,
   the layout and the licence. Every user step lives in the manual.
@@ -389,7 +376,7 @@ Going public (2026-11-10). The order:
 3. Remove `noindex` from the site's pages.
 4. Apply to SignPath Foundation for signing.
 
-Done on 2026-11-10, all but signing. The ruleset on `main` now requires `build` and `rust`.
+Done on 2026-11-10, all but signing. The ruleset on `main` requires the CI job `rust`.
 Secret scanning and push protection are on as well.
 
 ### 5. After release

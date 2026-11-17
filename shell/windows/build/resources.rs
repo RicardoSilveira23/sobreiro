@@ -33,8 +33,7 @@ pub fn link_exe_resources(out_dir: &Path) -> Result<(), Failure> {
         return Ok(());
     }
 
-    let icon = Path::new(&std::env::var("CARGO_MANIFEST_DIR")?)
-        .join("../../src/Sobreiro/Assets/sobreiro.ico");
+    let icon = Path::new(&std::env::var("CARGO_MANIFEST_DIR")?).join("assets/sobreiro.ico");
     println!("cargo::rerun-if-changed={}", icon.display());
     let icon =
         std::fs::read(&icon).map_err(|error| format!("the icon is not readable: {error}"))?;

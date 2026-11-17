@@ -168,8 +168,8 @@ install it.
   folder (`%USERPROFILE%\.claude`, or `CLAUDE_CONFIG_DIR`), into memory, per request. It calls
   `GET https://api.anthropic.com/api/oauth/usage` with it. Nothing else is sent, no redirects
   are followed and no cookies are kept.
-- The last token can stay in the app's memory until it is overwritten, since `HttpClient` takes
-  it as a string property. The app holds no refresh token.
+- The last token can stay in the app's memory until that memory is reused: it is freed after the
+  request, not wiped. The app holds no refresh token.
 - The status line bridge, `sobreiro-bridge.exe` (Sobreiro copies it from itself to
   `%LOCALAPPDATA%\Sobreiro` when you Connect), saves only the `rate_limits` fields and a
   timestamp to `%LOCALAPPDATA%\Sobreiro\usage.json`, never the rest of what Claude Code passes it.
@@ -199,36 +199,35 @@ All six are in the manual's [Known limits](https://sobreiro.ricardosilveira.dev/
 
 ## Building from source
 
-Needs the .NET 10 SDK (`winget install Microsoft.DotNet.SDK.10`) and Git for Windows.
+Needs the Rust toolchain (`rustup`; `rust-toolchain.toml` pins 1.100.0 and rustup installs it),
+the MSVC build tools (the "Desktop development with C++" workload of Visual Studio or its Build
+Tools) and Git for Windows.
 
 ```bash
-dotnet build
-dotnet test
-dotnet publish src/Sobreiro.Bridge -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishReadyToRun=true -p:PublishTrimmed=true -o publish/bridge
-dotnet publish src/Sobreiro -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o publish/tray
+cargo build
+cargo test --workspace
+cargo build --release --locked
 ```
 
-The tray app finds the bridge next to `Sobreiro.exe` or in `..\bridge\`, which is where those
-commands put it, when it doesn't carry one itself. To build the release `Sobreiro.exe`, run
-`powershell -ExecutionPolicy Bypass -File scripts\package.ps1` from the repo root; it writes to
-`dist\Sobreiro.exe`, the bridge and the fonts included. That script publishes the bridge with
-Native AOT, which also needs the MSVC linker: the "Desktop development with C++" workload of
-Visual Studio or its Build Tools.
+The release build writes `target\release\Sobreiro.exe`, one file with the bridge, the fonts and
+the C runtime inside. The debug build looks for `sobreiro-bridge.exe` beside the exe.
 
-- `powershell -ExecutionPolicy Bypass -File scripts\media.ps1` renders every product picture into
-  `media/` with `Sobreiro.exe --media` (needs Python 3; it installs Pillow in `scripts\.venv-media`),
-  bakes the README hero and copies the site's picks; `scripts\capture-taskbar.ps1` retakes the
-  taskbar plate.
-- `Sobreiro.exe --snapshot file.png` draws every style in both themes, the tray icon at each
-  level, and the taskbar pill, to one PNG.
+- `Sobreiro.exe --pill-pictures <folder>`, `--icon-pictures <folder>` and
+  `--flyout-pictures <folder>` draw the pill, the tray icon and the flyout in every state, theme
+  and scale, as PNGs, without a window.
+- `powershell -ExecutionPolicy Bypass -File scripts\baseline.ps1` measures a release build into
+  [docs/baseline.md](docs/baseline.md).
+- The pictures in `media/` were rendered by 1.x (`scripts\media.ps1` and
+  `scripts\capture-taskbar.ps1`, on the branch `1.x`).
 - To try it without touching your real data folder, set `SOBREIRO_DATA_DIR` to the full path of
   another folder for both the bridge and the tray app.
 
-To release: raise the version in `Directory.Build.props`, merge to `main`, then tag
+To release: raise `version` under `[workspace.package]` in `Cargo.toml`, merge to `main`, then tag
 `v<version>` on `main` and push the tag. The release workflow tests, builds `Sobreiro.exe` and
 creates the GitHub Release with it. The tag must equal `v` plus that version, or the workflow fails; a tag with
 a suffix, like `v0.6.0-rc.1`, makes a prerelease. CI builds the same file on every pull request
-and push to `main`, kept for 14 days as the artifact `Sobreiro-win-x64`.
+and push to `main`, kept for 14 days as the artifact `Sobreiro-rust-win-x64`. 1.x ships from the
+branch `1.x`, which holds its C# source.
 
 The site is plain HTML and CSS in `site/`, with no build step. Preview it with
 `python -m http.server` from `site/`, or with `npm ci` then `npm run dev` to serve it as
@@ -239,13 +238,13 @@ behind a GitHub login. [docs/plan.md](docs/plan.md) has the setup.
 ## Layout
 
 ```text
-src/Sobreiro/          tray app (WPF with a WinForms tray icon)
-src/Sobreiro.Bridge/   status line bridge
-src/Sobreiro.Core/     parsing, usage.json, limits, the text shown and the migration (all tested)
-tests/Sobreiro.Tests/  xUnit tests: dotnet test
+core/                  the logic: providers, polling, limits, config and file formats, with its tests
+bridge/                status line bridge, sobreiro-bridge.exe
+shell/windows/         the tray icon, pill and flyout: Sobreiro.exe, with its fonts and icon
+tools/baseline/        measures a release build for docs/baseline.md; not shipped
 site/                  the website: home page and manual, at sobreiro.ricardosilveira.dev
-scripts/               build-icon.py, package.ps1 (release exe), baseline.ps1 (measurements), media.ps1 (the pictures), check-site.mjs and smoke.mjs (site checks), comparison.mjs (the releases compared, from docs/baseline.md)
-media/                 rendered pictures, regenerated by scripts\media.ps1
+scripts/               build-icon.py, tabular-fonts.py, baseline.ps1 (measurements), check-site.mjs and smoke.mjs (site checks), comparison.mjs (the releases compared, from docs/baseline.md)
+media/                 rendered pictures of 1.x, which the site and the README use
 .github/workflows/     CI, release and site
 wrangler.jsonc         the site's Worker and its domain; package.json pins wrangler
 docs/                  plan, roadmap and design docs; images/ holds only the baked README hero (every other picture comes from media/)
@@ -265,7 +264,7 @@ Copyright 2026 Ricardo Silveira. Sobreiro is free software under the
 and any copy you hand out, changed or not, stays under the same licence, with its source.
 
 The bundled fonts, Inter and Unbounded, are under the SIL Open Font License; their licence files
-are in `src/Sobreiro/Fonts/`, and the fonts and licences are inside `Sobreiro.exe`; About Sobreiro
+are in `shell/windows/fonts/`, and the fonts and licences are inside `Sobreiro.exe`; About Sobreiro
 shows the licences. The site carries its own copies, in `site/assets/fonts/`, with two more faces
 under the same licence, Sora and JetBrains Mono, and their licence files.
 The 2.0 flyout draws its figures, badge texts, resets-in texts and detail lines with copies of Inter and Unbounded that

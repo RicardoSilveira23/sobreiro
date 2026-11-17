@@ -308,20 +308,21 @@ Settled before Core is ported.
 
 - **Branches.** The WPF app ships from the branch `1.x`, cut at 1.1.0: its fixes and its
   `v1.*` tags come from there. `main` takes the Rust work and, from 2.0.0, releases the Rust exe.
-  The C# stayed on `main` as the reference for the port, and CI goes on building and testing
-  it until [#105](https://github.com/RicardoSilveira23/sobreiro/issues/105) moves out the fonts
-  and icon the build reads and removes it.
+  The C# stayed on `main` as the reference for the port until
+  [#105](https://github.com/RicardoSilveira23/sobreiro/issues/105) moved the fonts and icon the
+  build reads into `shell/windows/` and removed it; the branch `1.x` keeps it.
 - **Folders.** One Cargo workspace at the root, in the folders [Structure](#structure) draws:
   `core/` is the crate `sobreiro-core`, and `shell/windows/` is the crate `sobreiro`, which
   builds `Sobreiro.exe`. `bridge/` is the crate `sobreiro-bridge`, which builds
-  `sobreiro-bridge.exe`. The fonts are read from `src/Sobreiro/Fonts` until the C# leaves ([#105](https://github.com/RicardoSilveira23/sobreiro/issues/105)).
+  `sobreiro-bridge.exe`. The fonts and the icon are in `shell/windows/fonts/` and
+  `shell/windows/assets/`.
 - **The bridge is ported,** with the area of Core it stands on. Its name and what it writes do
   not change. Against today's 2.2 MB and 9 ms a run it is 0.4 MB and 9 ms, both bridges
   measured on the same PC on 2026-11-14. About half of that run is one question to Windows:
   where the user's local application data folder is, which 1.x asks too. Reading the folder
   from the environment instead gave 4.5 ms; it is not done, because the bridge would then
   write somewhere else than the tray reads whenever its environment had been changed.
-- **CI** has a second job for the workspace, on Windows, on every push and pull request:
+- **CI** has one job for the workspace, on Windows, on every push and pull request:
   format, lint with warnings as errors, the tests, and the release build kept as an artifact.
 - **The release build is one exe with nothing beside it.** The three fonts and the C runtime
   are inside. The tests take the exe apart to see that, and run a copy alone in an empty

@@ -1,7 +1,7 @@
 # Core's tests and the C# tests they came from
 
-Core is ported from `src/Sobreiro.Core` one area at a time, and each area's tests come with it
-from `tests/Sobreiro.Tests`. This page keeps the count, and gives a line for every C# test that
+Core is ported from 1.x's `src/Sobreiro.Core` one area at a time, and each area's tests come
+with it from `tests/Sobreiro.Tests`. Both are on the branch `1.x`. This page keeps the count, and gives a line for every C# test that
 has no Rust test.
 
 Core's tests build into one program, `core/tests/all`. The bridge's exe has its own, in
@@ -1249,21 +1249,21 @@ held as `NAME.reading.json`.
   - `alerts_mark_raised`, `alerts_mark_new_period`, `alerts_mark_added`: the limits checked as
     1.1 checks them, and the state it keeps saved.
 
-## The measuring tool and the pictures, which are not ported
+## The measuring tool and the pictures
 
-Two folders of `src/Sobreiro.Core` serve tools, not the app, and stay in C# with them:
+Two folders of 1.x's `src/Sobreiro.Core` serve tools, not the app:
 
-- `Baseline` is read only by `Sobreiro.Baseline`, the console tool that measures a release build
-  from outside for `docs/baseline.md`. It is not shipped, and it measures the exes it is
-  given, whatever language they are written in.
-- `Media` is read only by the mode `Sobreiro.exe --media`, which renders the pictures of the
-  README and the site from the app's own views. It draws, so it moves with the shell that
-  draws the pill and the flyout, not with Core.
+- `Baseline` is ported to `tools/baseline`, the console tool that measures a release build
+  from outside for `docs/baseline.md`. It is not shipped. Its logic is a library there, with
+  its tests in `tools/baseline/tests`.
+- `Media`, which is not ported, is read only by the mode `Sobreiro.exe --media`, which renders
+  the pictures of the README and the site from the app's own views. It draws, so it moves with
+  the shell that draws the pill and the flyout, not with Core.
 
 ### C# tests with no Rust test
 
-- `BaselineMathTests.cs` (6 cases), `BaselineTableTests.cs` (10 cases) and
-  `PillSightingTests.cs` (7 cases): the folder `Baseline` is not ported, as above.
+- `BaselineTableTests.cs`: its culture case, since Rust's formatting ignores the culture. The
+  rest of the folder's tests, 22 of 23 cases, are in `tools/baseline/tests`.
 - `MediaStillsTests.cs` (5 cases), `MediaTimelineTests.cs` (18 cases),
   `SampleReadingsTests.cs` (10 cases) and `TaskbarPlateTests.cs` (13 cases): the folder `Media`
   is not ported, as above.

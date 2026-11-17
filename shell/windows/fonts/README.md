@@ -4,7 +4,7 @@ The flyout's figures, badges, resets-in lines and detail lines are drawn with th
 their digits are the same width, as the 1.x flyout's are. The toolkit has no setting for font
 features, so the copies carry the feature as their default.
 
-Each copy is its original (`src/Sobreiro/Fonts/`) with two changes:
+Each copy is its original, in this folder too, with two changes:
 
 - In the character map, every character the font's `tnum` feature replaces shows the tabular
   glyph: the digits 0-9 and, in Inter, the space and the punctuation and signs the feature also

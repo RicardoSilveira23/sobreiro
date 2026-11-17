@@ -27,7 +27,7 @@ import fontTools
 from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent
-ORIGINALS = ROOT / "src" / "Sobreiro" / "Fonts"
+ORIGINALS = ROOT / "shell" / "windows" / "fonts"
 OUT = ROOT / "shell" / "windows" / "fonts"
 
 # (original file, derived file, original family, derived family)

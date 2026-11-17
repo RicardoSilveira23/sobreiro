@@ -1,8 +1,8 @@
 //! Sobreiro's logic: providers, polling, limits, config and file formats. No UI, and no calls to the
 //! system beyond files and HTTP.
 //!
-//! Each area of `src/Sobreiro.Core` is ported here with its tests, one at a time, and the folders
-//! keep the names they have there. So far: the limits, `usage.json` and how readings are merged
+//! Each area of 1.x's `src/Sobreiro.Core` (on the branch `1.x`) is ported here with its tests,
+//! one at a time, and the folders keep the names they have there. So far: the limits, `usage.json` and how readings are merged
 //! into it, the way files are written, what the bridge does, where the files are,
 //! `config.json`, Connect and Disconnect, the two requests Sobreiro makes (Claude Code's
 //! token and the request made with it, a GitHub token and the request for Copilot's AI

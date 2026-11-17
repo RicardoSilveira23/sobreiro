@@ -43,7 +43,7 @@ The copy it starts keeps its data in a scratch folder: an installed copy's data,
   the end of its tenth, scaled to an hour. The first minute is left out because it holds the
   start.
 - **First pill, first start:** from launching the exe to a visible pill inside the taskbar, on
-  the first start after packaging. That start also unpacks the exe's native libraries.
+  the first start after building. In 1.x that start also unpacked the exe's native libraries.
 - **First pill, later starts:** the median of the four starts after it. The five timed starts
   run signed out of Claude Code (an empty config folder), so starting five times in a row does
   not ask for usage five times in a row.
@@ -52,8 +52,8 @@ The copy it starts keeps its data in a scratch folder: an installed copy's data,
 
 The pill is recognised from outside: a visible window of the measured process, owned by the
 taskbar and wholly inside it. Nothing in the app is switched on for the measurement, so the
-same tool can time any shell that draws a pill there. The logic is in
-`src/Sobreiro.Core/Baseline`, the measuring in `src/Sobreiro.Baseline`.
+same tool can time any shell that draws a pill there. The tool and its tests are in
+`tools/baseline`; `scripts/baseline.ps1` runs it after `cargo build --release --locked`.
 
 The rows below were measured on one PC: Ryzen 7 7700X, 32 GB, Windows 11 Pro 26200, a
 2560 × 1440 display at 100%. Figures from another PC are not comparable with them.

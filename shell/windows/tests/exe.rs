@@ -23,12 +23,11 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{HSTRING, PCWSTR, w};
 
 const EXE: &str = env!("CARGO_BIN_EXE_Sobreiro");
-const FONTS: [&str; 3] = [
+/// The fonts in `shell/windows/fonts/`: the originals, then the tabular copies.
+const FONTS: [&str; 6] = [
     "Inter-Regular.ttf",
     "Inter-Medium.ttf",
     "Unbounded-Bold.ttf",
-];
-const TABULAR_FONTS: [&str; 3] = [
     "InterTabular-Regular.ttf",
     "InterTabular-Medium.ttf",
     "UnboundedTabular-Bold.ttf",
@@ -173,16 +172,10 @@ fn built_bridge() -> Option<Vec<u8>> {
 #[test]
 fn the_fonts_are_inside_the_exe() {
     let exe = std::fs::read(EXE).unwrap();
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let folders = [
-        root.join("src/Sobreiro/Fonts"),
-        root.join("shell/windows/fonts"),
-    ];
-    for (folder, names) in folders.iter().zip([FONTS, TABULAR_FONTS]) {
-        for name in names {
-            let font = std::fs::read(folder.join(name)).unwrap();
-            assert!(contains(&exe, &font), "{name} is not inside the exe");
-        }
+    let folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("fonts");
+    for name in FONTS {
+        let font = std::fs::read(folder.join(name)).unwrap();
+        assert!(contains(&exe, &font), "{name} is not inside the exe");
     }
 }
 
@@ -193,8 +186,8 @@ fn the_notices_and_licences_are_inside_the_exe() {
     let files = [
         "notices.txt",
         "../../LICENSE",
-        "../../src/Sobreiro/Fonts/OFL-Inter.txt",
-        "../../src/Sobreiro/Fonts/OFL-Unbounded.txt",
+        "fonts/OFL-Inter.txt",
+        "fonts/OFL-Unbounded.txt",
     ];
     for name in files {
         let text = std::fs::read_to_string(root.join(name)).unwrap();
@@ -316,10 +309,8 @@ fn the_exe_has_the_icon() {
     unsafe { DestroyIcon(large) }.unwrap();
 
     // Each image of 1.1's icon is inside the exe as it is in the file.
-    let ico = std::fs::read(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/Sobreiro/Assets/sobreiro.ico"),
-    )
-    .unwrap();
+    let ico =
+        std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/sobreiro.ico")).unwrap();
     let exe = std::fs::read(EXE).unwrap();
     let count = usize::from(u16::from_le_bytes([ico[4], ico[5]]));
     assert!(count > 0);
