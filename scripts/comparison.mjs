@@ -95,9 +95,18 @@ export function multiple(value, base, m) {
 export function comparison(md) {
   const rows = releaseRows(md);
   const fig = (build, m) => figure(rows.get(build)[m.column], `${build}, ${m.column}`);
-  const releases = RELEASES.filter((r) => rows.has(r.build)).map((r) => ({
+  // A download gets the newest fixes of its line, not the build that was measured: the newest
+  // line goes to GitHub's latest release, an older one to its line's releases (1.1 to 1.1.x).
+  const measured = RELEASES.filter((r) => rows.has(r.build));
+  const newest = measured.filter((r) => !NOT_ON_GITHUB.has(r.build)).at(-1);
+  const line = (build) => build.split(".").slice(0, 2).join(".");
+  const releases = measured.map((r) => ({
     ...r,
-    download: NOT_ON_GITHUB.has(r.build) ? null : `${REPO}/releases/tag/v${r.build}`,
+    download: NOT_ON_GITHUB.has(r.build)
+      ? null
+      : r === newest
+        ? `${REPO}/releases/latest`
+        : `${REPO}/releases?q=v${line(r.build)}`,
   }));
   const step =
     rows.has("1.0.0") && rows.has("1.1.0")
