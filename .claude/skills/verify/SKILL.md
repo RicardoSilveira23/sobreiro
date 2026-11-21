@@ -17,31 +17,49 @@ cargo test --workspace
 npm run check:exposure
 ```
 
-The window tests in `shell/windows/tests` need the foreground: run them with nothing else
-running and the desktop left alone, or one fails for a reason that is not the change.
+If a window test in `shell/windows/tests` fails, rerun that one test alone once and report both
+results. Do not call a failure unrelated to the change without that.
 
-## The tray app (`shell/windows/`, `core/`)
+## Never on the real data
 
-1. One copy runs per data folder: a second launch only asks the first to show its details and
-   exits. Quit the running copy from its tray menu first, and start it again when done.
-2. `cargo run -p sobreiro`
-3. Look at what changed on the real taskbar: the pill, its tooltip, the flyout (opens beside the
-   pill, closes on Esc and on focus loss) and the tray menu.
-4. A drawing change is looked at at 100%, 150% and 200% display scale and in both themes.
-5. Pass: the figures show, nothing is clipped or misplaced, and the log has no new error.
+The bridge and the tray app run on scratch folders, never on the user's data folder, token or
+settings, and the installed copy is left running. Set both of these for every command in the
+next two sections:
+
+- `SOBREIRO_DATA_DIR`: the full path of a new empty folder outside the repo. A copy on its own
+  data folder runs beside the installed one.
+- `CLAUDE_CONFIG_DIR`: the full path of another new empty folder, so the build reads no Claude
+  token and has no real `settings.json` to edit.
+
+The build can still reach the Copilot sign-in. A change to token handling or to a request is
+read through first and run only on a yes. So is any run on the real sign-in, which only a
+change to the polling itself needs.
 
 ## The bridge (`bridge/`)
 
 `cargo test -p sobreiro-bridge`, then pipe a sample status line JSON into
-`cargo run -p sobreiro-bridge` and read the file it writes. Pass: only the `rate_limits` fields
-and a timestamp are there.
+`cargo run -p sobreiro-bridge` and read `usage.json` in the scratch data folder. Pass: only the
+`rate_limits` fields and a timestamp are there.
+
+## The tray app (`shell/windows/`, `core/`)
+
+1. Run the bridge step first, so the scratch data folder holds a reading.
+2. `cargo run -p sobreiro`
+3. Look at what changed on the real taskbar: the pill, its tooltip, the flyout (opens beside the
+   pill, closes on Esc and on focus loss) and the tray menu. Connect and Disconnect are clicked
+   only with `CLAUDE_CONFIG_DIR` set.
+4. A drawing change is looked at at 100%, 150% and 200% display scale and in both themes.
+5. Pass: the figures show, nothing is clipped or misplaced, and the log has no new error.
+6. Quit the test copy from its tray menu and delete the two scratch folders.
 
 ## The landing page (`site/`)
 
 1. `npm run check`
-2. `npm run dev`, then `npm run smoke -- http://localhost:8787`
+2. `npm run dev` in the background, then `npm run smoke -- http://localhost:8787`. Always pass
+   the address: without it the smoke check runs against the public site.
 3. Open `http://localhost:8787` and look at what changed at phone width (375 px) and at desktop
    width.
+4. Stop the dev server.
 
 ## Rules
 
