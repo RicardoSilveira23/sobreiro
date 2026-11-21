@@ -31,15 +31,19 @@ next two sections:
 - `CLAUDE_CONFIG_DIR`: the full path of another new empty folder, so the build reads no Claude
   token and has no real `settings.json` to edit.
 
-The build can still reach the Copilot sign-in. A change to token handling or to a request is
-read through first and run only on a yes. So is any run on the real sign-in, which only a
-change to the polling itself needs.
+Both must be full paths. Any other value is ignored without an error and the run goes to the
+real folders, so check both before the first command.
+
+The build still polls with the Copilot sign-in, as the installed copy does. A change to token
+handling or to a request is read through first and run only on a yes. So is any run without
+`CLAUDE_CONFIG_DIR`, which only a change to the Claude polling itself needs.
 
 ## The bridge (`bridge/`)
 
-`cargo test -p sobreiro-bridge`, then pipe a sample status line JSON into
-`cargo run -p sobreiro-bridge` and read `usage.json` in the scratch data folder. Pass: only the
-`rate_limits` fields and a timestamp are there.
+`cargo test -p sobreiro-bridge`, then pipe a sample status line JSON, with reset times in the
+future, into `cargo run -p sobreiro-bridge` and read `usage.json` in the scratch data folder.
+If the file is not there, stop: the override was not taken. Pass: only the `rate_limits` fields
+and a timestamp are there.
 
 ## The tray app (`shell/windows/`, `core/`)
 
@@ -47,10 +51,13 @@ change to the polling itself needs.
 2. `cargo run -p sobreiro`
 3. Look at what changed on the real taskbar: the pill, its tooltip, the flyout (opens beside the
    pill, closes on Esc and on focus loss) and the tray menu. Connect and Disconnect are clicked
-   only with `CLAUDE_CONFIG_DIR` set.
+   only with `CLAUDE_CONFIG_DIR` set. Start with Windows is never clicked in the test copy: it
+   writes the user's real sign-in entry, which no scratch folder moves. A change to it is
+   verified by its tests.
 4. A drawing change is looked at at 100%, 150% and 200% display scale and in both themes.
 5. Pass: the figures show, nothing is clipped or misplaced, and the log has no new error.
-6. Quit the test copy from its tray menu and delete the two scratch folders.
+6. Quit the test copy from its tray menu, or stop the process this run started by its id, never
+   by name: the installed copy has the same name. Then delete the two scratch folders.
 
 ## The landing page (`site/`)
 
