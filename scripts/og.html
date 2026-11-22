@@ -1,20 +1,36 @@
 <!doctype html>
-<!-- The source of site/assets/img/og.png, the 1200x630 picture a shared link shows: the top of the
-     earlier site, in its dark theme, with the lettering, the rule and the intro's sentence. The
-     colours are its own.
-     After changing the name or the sentence, open this file in a browser window of 1200 by 630 CSS
-     pixels at 100% zoom, capture the viewport, and save it over og.png. -->
+<!-- The source of site/assets/img/og-2.png, the 1200x630 picture a shared link shows: the page's
+     header, its headline and the pill at its first reading, in the page's own colours and fonts
+     (site.css, docs/design.md).
+     After a change, capture this file at 1200 by 630 CSS pixels and 100% zoom (Chrome or Edge:
+     headless, window size 1200,630, file access allowed so the fonts load) and save it over
+     og-2.png. When the picture changes, raise the number in its name and in the og:image tags of
+     site/index.html and site/manual/index.html, so apps that keep a copy fetch the new one. -->
 <meta charset="utf-8">
 <title>Sobreiro's share picture</title>
+<link rel="stylesheet" href="../site/assets/site.css">
 <style>
-  @font-face { font-family: Inter; font-weight: 100 900; src: url('../site/assets/fonts/inter-latin-wght-normal.woff2') format('woff2-variations'); }
-  @font-face { font-family: Unbounded; font-weight: 200 900; src: url('../site/assets/fonts/unbounded-latin-wght-normal.woff2') format('woff2-variations'); }
-  body { margin: 0; width: 1200px; height: 630px; background: #0b0b0b; display: flex; flex-direction: column; justify-content: center; padding-inline: 80px; box-sizing: border-box; }
-  svg { display: block; width: 1040px; height: auto; overflow: visible; }
-  text { font-family: Unbounded; font-weight: 900; fill: #fff; }
-  .rule { height: 6px; background: #a594ff; margin: 22px 0 18px; }
-  p { margin: 0; max-width: 24em; font: 500 34px/1.3 Inter; color: #bdbdbd; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  body { display: flex; flex-direction: column; padding: 56px 72px 64px; }
+  .brand { gap: 14px; font-size: 32px; }
+  .brand img { width: 48px; height: 48px; }
+  .row { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+  .line { font-size: 50px; max-width: 15ch; }
+  .pill { flex: none; gap: 18px; padding: 30px 24px; border-radius: 12px; font-size: 28px; }
+  .rings { width: 96px; height: 96px; }
+  .pr { transition: none; }
 </style>
-<svg viewBox="0 0 1000 94" aria-hidden="true"><text x="0" y="90" font-size="120" textLength="1000" lengthAdjust="spacing">SOBREIRO</text></svg>
-<div class="rule"></div>
-<p>Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</p>
+<div class="brand"><img src="../site/assets/img/sobreiro-mark.svg" alt="">Sobreiro</div>
+<div class="row">
+  <p class="line">Your GitHub Copilot and Claude Code usage, always in view on your taskbar.</p>
+  <div class="pill">
+    <div class="nums"><span>5h <b>15%</b></span><span>7d <b>45%</b></span></div>
+    <svg class="rings" viewBox="0 0 52 52" aria-hidden="true">
+      <circle class="tr" cx="26" cy="26" r="21"/><circle class="tr" cx="26" cy="26" r="12.5"/>
+      <circle class="pr" cx="26" cy="26" r="21" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="85"/>
+      <circle class="pr" cx="26" cy="26" r="12.5" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="55"/>
+    </svg>
+    <div class="nums"><span>AI <b>17%</b></span><span class="dim">1 Dec</span></div>
+    <i class="bar" aria-hidden="true"><b style="height:17%"></b></i>
+  </div>
+</div>
