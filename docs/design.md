@@ -326,5 +326,4 @@ GitHub retired the standalone Copilot logo.
 
 - The manual's look above is drawn from the landing page's and is not rendered yet.
 - A dark theme. The page is light only, and the theme switch is gone.
-- The share picture (`og.png`) still shows the earlier dark page, and the README's hero the
-  earlier purple field.
+- The README's hero still shows the earlier purple field.
