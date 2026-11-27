@@ -34,15 +34,15 @@ fn sign_in_is_offered_for_a_missing_run_out_or_refused_sign_in_and_sign_out_othe
 }
 
 #[test]
-fn signing_in_from_nothing_logs_in_and_otherwise_starts_claude() {
+fn a_sign_in_that_ran_out_starts_claude_and_any_other_logs_in() {
     assert_eq!(
-        ClaudeCommand::sign_in(ProviderState::NoSignIn),
-        ClaudeCommand::Login
+        ClaudeCommand::sign_in(ProviderState::Expired),
+        ClaudeCommand::Start
     );
-    for state in [ProviderState::Expired, ProviderState::Refused] {
+    for state in [ProviderState::NoSignIn, ProviderState::Refused] {
         assert_eq!(
             ClaudeCommand::sign_in(state),
-            ClaudeCommand::Start,
+            ClaudeCommand::Login,
             "{state:?}"
         );
     }

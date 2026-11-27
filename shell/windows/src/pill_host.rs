@@ -1005,6 +1005,7 @@ impl Host {
         let places = claude_sign_in::Places {
             credentials_file: places.claude.credentials_file(),
             user_profile,
+            working_folder: places.app.data_directory().to_path_buf(),
             diagnostics: self.diagnostics.clone(),
             changed: Box::new(|| {
                 let _ = slint::invoke_from_event_loop(app_host::claude_sign_in_changed);

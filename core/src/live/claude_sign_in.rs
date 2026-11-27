@@ -2,8 +2,9 @@
 //! want of a sign-in, and the way to change accounts.
 //!
 //! Sobreiro never renews, writes or removes a sign-in itself. To sign in it starts Claude Code in
-//! a console no one sees: `claude`, which renews its own sign-in when it starts, or `claude auth
-//! login` when there is no sign-in at all, which opens the browser by itself. It watches the
+//! a console no one sees: `claude`, which renews a sign-in that ran out when it starts, or
+//! `claude auth login`, which opens the browser by itself, when there is no sign-in or Anthropic
+//! refused it. It watches the
 //! sign-in file's time of change (the file's contents are not read here) and the console's window
 //! title, which `cmd` sets to [`ENDED_TITLE`] when Claude Code has ended.
 //!
@@ -81,21 +82,23 @@ pub fn offer(state: ProviderState, show_claude: bool) -> Option<Offer> {
 /// What Claude Code is asked to do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClaudeCommand {
-    /// `claude`: it starts, and renews a sign-in that ran out or was refused.
+    /// `claude`: it starts, and renews a sign-in that ran out.
     Start,
-    /// `claude auth login`: a sign-in from nothing.
+    /// `claude auth login`: a new sign-in, in the browser.
     Login,
     /// `claude auth logout`.
     Logout,
 }
 
 impl ClaudeCommand {
-    /// The command for signing in from `state`: a full sign-in when there is none to renew.
+    /// The command for signing in from `state`: `claude` renews a sign-in that ran out; one that
+    /// is missing, or that Anthropic refused while it had not run out (so `claude` would see no
+    /// reason to renew it), takes a new sign-in.
     pub fn sign_in(state: ProviderState) -> ClaudeCommand {
-        if state == ProviderState::NoSignIn {
-            ClaudeCommand::Login
-        } else {
+        if state == ProviderState::Expired {
             ClaudeCommand::Start
+        } else {
+            ClaudeCommand::Login
         }
     }
 

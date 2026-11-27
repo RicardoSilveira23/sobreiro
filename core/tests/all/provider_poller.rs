@@ -1274,7 +1274,7 @@ fn a_changed_sign_in_asks_at_once_but_respects_a_wait() {
     let run = h.poller.sign_in_changed(now() + seconds(5));
     h.took(run);
     assert_eq!(h.runs.len(), 2);
-    // One at a time.
+    // One at a time: the ask waits for the answer of the poll under way.
     let run = h.poller.sign_in_changed(now() + seconds(6));
     h.took(run);
     assert_eq!(h.runs.len(), 2);
@@ -1291,4 +1291,29 @@ fn a_changed_sign_in_asks_at_once_but_respects_a_wait() {
     let run = h.poller.sign_in_changed(now() + seconds(8));
     h.took(run);
     assert_eq!(h.runs.len(), 2, "a wait is kept");
+}
+
+#[test]
+fn a_sign_in_that_changes_while_a_poll_runs_is_asked_again_with_its_answer() {
+    let mut h = Harness::new();
+    h.start(now());
+    // The poll under way may use the old sign-in.
+    let run = h.poller.sign_in_changed(now() + seconds(1));
+    assert!(run.is_none());
+    h.finish(0, |_, _, _| Ok(ok(now())), now() + seconds(2));
+    assert_eq!(h.runs.len(), 2, "asked again with the answer");
+    // Asked once: the next answer hands out nothing.
+    h.finish(1, |_, _, _| Ok(ok(now())), now() + seconds(3));
+    assert_eq!(h.runs.len(), 2);
+}
+
+#[test]
+fn a_stop_forgets_an_ask_that_waited() {
+    let mut h = Harness::new();
+    h.start(now());
+    let run = h.poller.sign_in_changed(now() + seconds(1));
+    assert!(run.is_none());
+    h.poller.stop();
+    h.finish(0, |_, _, _| Ok(ok(now())), now() + seconds(2));
+    assert_eq!(h.runs.len(), 1);
 }

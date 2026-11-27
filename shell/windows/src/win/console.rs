@@ -1,14 +1,18 @@
 //! A program started in a console window of its own that no one sees, which can be shown later as
-//! it stands, or ended with everything it started: how the menu's Sign in to Claude Code runs
-//! `claude`.
+//! it stands, or ended with everything it started: how the menu's Sign in and Sign out run Claude
+//! Code.
 //!
 //! The process is made suspended, put in a job and only then let run, so nothing it starts is
 //! outside the job. While the console is hidden the job ends it all when it is dropped (Sobreiro
 //! quits, say); once it is shown the job lets it go, so quitting Sobreiro leaves it to the user.
 //! [`HiddenConsole::end`] still ends it, shown or not.
+//!
+//! Showing it is asked from a worker thread, a while after the menu was used, so Windows usually
+//! refuses to bring it to the front; its taskbar button then flashes until the user opens it.
 #![allow(unsafe_code)]
 
 use super::job::Job;
+use std::cell::Cell;
 use std::os::windows::ffi::OsStrExt;
 use std::path::Path;
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND};
@@ -17,8 +21,8 @@ use windows::Win32::System::Threading::{
     ResumeThread, STARTF_USESHOWWINDOW, STARTUPINFOW, TerminateProcess,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowExW, GetWindowTextW, GetWindowThreadProcessId, SW_HIDE, SW_SHOWNORMAL,
-    SetForegroundWindow, ShowWindow,
+    FLASHW_ALL, FLASHW_TIMERNOFG, FLASHWINFO, FindWindowExW, FlashWindowEx, GetWindowTextW,
+    GetWindowThreadProcessId, SW_HIDE, SW_SHOWNORMAL, SetForegroundWindow, ShowWindow,
 };
 use windows::core::{PCWSTR, PWSTR, w};
 
@@ -30,6 +34,8 @@ pub struct HiddenConsole {
     process: HANDLE,
     id: u32,
     job: Job,
+    /// The console's window, once found: it lives as long as the console.
+    window: Cell<Option<HWND>>,
 }
 
 /// The text as Windows takes it: UTF-16, ended by a zero.
@@ -78,6 +84,7 @@ impl HiddenConsole {
             process: info.hProcess,
             id: info.dwProcessId,
             job,
+            window: Cell::new(None),
         };
         let placed = console.job.assign_process(console.process);
         if placed {
@@ -92,28 +99,43 @@ impl HiddenConsole {
         placed.then_some(console)
     }
 
-    /// Whether the program in the console is still running.
-    pub fn is_running(&self) -> bool {
+    /// The program's exit code once it has ended; `None` while it runs, or when Windows cannot
+    /// say.
+    pub fn exit_code(&self) -> Option<u32> {
         let mut code = 0u32;
         // SAFETY: the process handle is open for as long as `self` lives.
         let asked = unsafe { GetExitCodeProcess(self.process, &raw mut code) };
-        asked.is_ok() && code == STILL_ACTIVE
+        (asked.is_ok() && code != STILL_ACTIVE).then_some(code)
     }
 
-    /// Shows the console as it stands and brings it to the front, and gives it to the user:
-    /// dropping this no longer ends it. False when its window was not found: a terminal app that
-    /// Windows handed the console to shows it itself, and it is the user's all the same.
+    /// Whether the program in the console is still running.
+    pub fn is_running(&self) -> bool {
+        self.exit_code().is_none()
+    }
+
+    /// Shows the console as it stands, brings it to the front or flashes it when Windows refuses,
+    /// and gives it to the user: dropping this no longer ends it. False when its window was not
+    /// found: it is still hidden, and still ends with the job.
     pub fn show(&self) -> bool {
-        let _ = self.job.let_go();
         let Some(window) = self.window() else {
             return false;
         };
-        // SAFETY: `window` is a top-level window that was alive a moment ago; a stale handle is
-        // refused by Windows and does nothing.
+        // SAFETY: `window` is the console's top-level window, alive while the console is; the
+        // flash's structure is ours, alive for the call, with its size.
         unsafe {
             let _ = ShowWindow(window, SW_SHOWNORMAL);
-            let _ = SetForegroundWindow(window);
+            if !SetForegroundWindow(window).as_bool() {
+                let flash = FLASHWINFO {
+                    cbSize: size_of::<FLASHWINFO>() as u32,
+                    hwnd: window,
+                    dwFlags: FLASHW_ALL | FLASHW_TIMERNOFG,
+                    uCount: 0,
+                    dwTimeout: 0,
+                };
+                let _ = FlashWindowEx(&raw const flash);
+            }
         }
+        let _ = self.job.let_go();
         true
     }
 
@@ -136,8 +158,17 @@ impl HiddenConsole {
     }
 
     /// The console's window: the console host says a console window belongs to the first
-    /// process attached to it, which is the program started here.
+    /// process attached to it, which is the program started here. Looked for until found once.
     fn window(&self) -> Option<HWND> {
+        if let Some(window) = self.window.get() {
+            return Some(window);
+        }
+        let found = self.find_window();
+        self.window.set(found);
+        found
+    }
+
+    fn find_window(&self) -> Option<HWND> {
         let mut after: Option<HWND> = None;
         // A PC has a few console windows at most; the bound only stops a list that keeps
         // changing under the walk.
