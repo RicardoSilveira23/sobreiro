@@ -1251,3 +1251,44 @@ fn walks_of_calls_answer_as_the_csharp_did() {
         }
     }
 }
+
+#[test]
+fn a_changed_sign_in_asks_at_once_but_respects_a_wait() {
+    let mut h = Harness::new();
+    let run = h.poller.sign_in_changed(now());
+    assert!(run.is_none(), "off: no poll");
+
+    h.start(now());
+    h.finish(
+        0,
+        |_, _, _| {
+            Ok(with_schedule(
+                LiveSchedule::start(now()).after_no_credentials(now()),
+            ))
+        },
+        now(),
+    );
+    // Not due, and fresh enough for an open flyout's ask, but the sign-in is new.
+    h.tick(now() + seconds(5));
+    assert_eq!(h.runs.len(), 1);
+    let run = h.poller.sign_in_changed(now() + seconds(5));
+    h.took(run);
+    assert_eq!(h.runs.len(), 2);
+    // One at a time.
+    let run = h.poller.sign_in_changed(now() + seconds(6));
+    h.took(run);
+    assert_eq!(h.runs.len(), 2);
+
+    h.finish(
+        1,
+        |_, _, _| {
+            Ok(with_schedule(
+                LiveSchedule::start(now()).after_failure(now()),
+            ))
+        },
+        now() + seconds(7),
+    );
+    let run = h.poller.sign_in_changed(now() + seconds(8));
+    h.took(run);
+    assert_eq!(h.runs.len(), 2, "a wait is kept");
+}

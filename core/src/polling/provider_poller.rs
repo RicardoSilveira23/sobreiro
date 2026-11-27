@@ -162,6 +162,18 @@ impl ProviderPoller {
         }
     }
 
+    /// The sign-in changed at `now` (the menu's Sign in saw the file written, or its Sign out
+    /// ran): gives a poll to run at once, unless the service asked to wait.
+    #[must_use = "a poll that is handed out has to be run and handed back"]
+    pub fn sign_in_changed(&mut self, now: DateTime<Utc>) -> Option<PollRun> {
+        match self.schedule {
+            Some(schedule) if !schedule.wait_until.is_some_and(|until| now < until) => {
+                self.poll(schedule, now)
+            }
+            _ => None,
+        }
+    }
+
     /// A new poll, unless one is under way: one at a time.
     fn poll(&mut self, schedule: LiveSchedule, now: DateTime<Utc>) -> Option<PollRun> {
         if self.running.is_some() {

@@ -169,6 +169,11 @@ impl Feed {
         runs(claude, copilot)
     }
 
+    /// The menu's Sign in or Sign out changed Claude Code's sign-in: Claude's poll, at once.
+    pub fn claude_sign_in_changed(&mut self, now: DateTime<Utc>) -> Vec<Run> {
+        runs(self.claude.sign_in_changed(now), None)
+    }
+
     /// The polls that are due at `now`.
     pub fn tick(&mut self, now: DateTime<Utc>) -> Vec<Run> {
         let claude = self.claude.tick(now);

@@ -12,6 +12,8 @@ mod app_host;
 mod auto_start;
 mod born_test;
 mod carried_bridge;
+mod child;
+mod claude_sign_in;
 mod clock;
 mod connect_flow;
 mod diagnostics;

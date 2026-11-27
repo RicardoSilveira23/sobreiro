@@ -1,6 +1,7 @@
 //! Makes Core's two providers for the app, with the places they read and the one sender that
 //! reaches the network. Nothing else in the shell asks the network for anything. Tokens are read
 //! by the providers alone, for one request each, and are in no line this shell writes.
+use crate::child::{self, CREATE_NO_WINDOW};
 use crate::diagnostics::Diagnostics;
 use crate::win::job::Job;
 use crate::win::{credentials, known_folders};
@@ -26,9 +27,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
-
-/// Keeps a console window from opening for `gh`.
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 /// Where Sobreiro's files and Claude Code's are.
 pub struct Locations {
@@ -192,17 +190,9 @@ fn run_gh(exe: &Path) -> Option<(Option<i32>, Vec<u8>)> {
             }
         });
     let deadline = Instant::now() + gh_cli::TIMEOUT;
-    let status = reader.ok().and_then(|_| {
-        loop {
-            match child.try_wait() {
-                Ok(Some(status)) => break Some(status),
-                Ok(None) if Instant::now() < deadline => {
-                    std::thread::sleep(Duration::from_millis(25));
-                }
-                _ => break None,
-            }
-        }
-    });
+    let status = reader
+        .ok()
+        .and_then(|_| child::wait_until(&mut child, deadline, Duration::from_millis(25)));
     let output = status.and_then(|status| {
         let left = deadline.saturating_duration_since(Instant::now());
         receiver

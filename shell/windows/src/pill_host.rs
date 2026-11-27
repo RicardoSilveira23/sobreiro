@@ -15,21 +15,25 @@
 use crate::about;
 use crate::app_host;
 use crate::auto_start;
+use crate::claude_sign_in;
 use crate::connect_flow;
 use crate::diagnostics::Diagnostics;
 use crate::pill_face::face_data;
 use crate::pill_feed::{self, Snapshot};
 use crate::pill_menu::{self, Command, ConfigChange};
+use crate::providers::Locations;
 use crate::tooltip::{self, Hover, Step};
 use crate::tooltip_window::TooltipWindow;
 use crate::ui::Pill;
 use crate::win::probe::Prober;
 use crate::win::taskbar::{self, Broadcast, WinEvent, WinEventHook};
-use crate::win::{born, menu, message_box};
+use crate::win::{born, known_folders, menu, message_box};
 use chrono::TimeDelta;
 use slint::{ComponentHandle, Timer, TimerMode};
 use sobreiro_core::colours::{BarColourOption, TaskbarColours};
 use sobreiro_core::display::pill_model::PillModel;
+use sobreiro_core::live::claude_sign_in::{self as sign_in, ClaudeCommand, Offer};
+use sobreiro_core::polling::ProviderState;
 use sobreiro_core::taskbar::full_screen::is_full_screen;
 use sobreiro_core::taskbar::pill_placement;
 use sobreiro_core::taskbar::pill_show::{self, PillShowStep, ZOrder};
@@ -87,6 +91,8 @@ pub fn start(setup: Setup) -> bool {
     let host = Host {
         started: Instant::now(),
         model: None,
+        account: None,
+        claude_state: ProviderState::Ok,
         colours: initial_colours(),
         diagnostics: setup.diagnostics,
         config_file: setup.config_file,
@@ -304,6 +310,10 @@ struct Host {
     started: Instant,
     /// What the pill shows; none while the settings keep it off.
     model: Option<PillModel>,
+    /// What the menu offers for Claude Code's account, from the last snapshot.
+    account: Option<Offer>,
+    /// Where Live usage stood at the last snapshot: a sign-in from nothing logs in.
+    claude_state: ProviderState,
     colours: TaskbarColours,
     diagnostics: Arc<Diagnostics>,
     /// `config.json`, which the menu reads and saves its choices to.
@@ -388,6 +398,8 @@ impl Host {
         };
         self.colours = snapshot.colours;
         self.model = model;
+        self.account = sign_in::offer(snapshot.claude_state, snapshot.show_claude);
+        self.claude_state = snapshot.claude_state;
         let text_changed = text != self.tooltip_text;
         self.tooltip_text = text;
         if self.model.is_some() && self.pill.is_none() {
@@ -936,7 +948,10 @@ impl Host {
         // Read afresh each time: another run may have changed the value.
         let auto_start = auto_start::is_on_now();
         let state = connect_flow::current_state();
-        MenuRequest::Ready(owner, pill_menu::entries(&config, auto_start, state))
+        MenuRequest::Ready(
+            owner,
+            pill_menu::entries(&config, auto_start, state, self.account),
+        )
     }
 
     /// Does what the menu's choice says.
@@ -944,6 +959,8 @@ impl Host {
         match chosen.and_then(pill_menu::command) {
             Some(Command::Change(change)) => self.change_config(change),
             Some(Command::Connect(connect)) => self.connect(connect),
+            Some(Command::SignIn) => self.account_change(Some(self.claude_state)),
+            Some(Command::SignOut) => self.account_change(None),
             // The error box is a modal loop, so it runs once this tracker is let go.
             Some(Command::ToggleAutoStart) => Timer::single_shot(Duration::ZERO, toggle_auto_start),
             Some(Command::OpenDataFolder) => self.open_data_folder(),
@@ -972,6 +989,30 @@ impl Host {
         if started.is_none() {
             self.diagnostics
                 .say("the connect flow was not started: one is open, or its thread did not start");
+        }
+    }
+
+    /// Runs Claude Code on a thread of its own (`claude_sign_in`): to sign in from `Some(state)`,
+    /// where Live usage stands, or to sign out on `None`. Each time the sign-in changes, the app
+    /// host polls Claude at once.
+    fn account_change(&self, sign_in_from: Option<ProviderState>) {
+        let (Some(places), Some(user_profile)) = (Locations::find(), known_folders::user_profile())
+        else {
+            self.diagnostics
+                .say("sign-in: the folders could not be found, so Claude Code was not started");
+            return;
+        };
+        let places = claude_sign_in::Places {
+            credentials_file: places.claude.credentials_file(),
+            user_profile,
+            diagnostics: self.diagnostics.clone(),
+            changed: Box::new(|| {
+                let _ = slint::invoke_from_event_loop(app_host::claude_sign_in_changed);
+            }),
+        };
+        match sign_in_from {
+            Some(state) => claude_sign_in::sign_in(places, ClaudeCommand::sign_in(state)),
+            None => claude_sign_in::sign_out(places),
         }
     }
 

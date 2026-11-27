@@ -392,6 +392,22 @@ Copilot CLI use, `GET https://api.github.com/copilot_internal/user`, every 5 min
 sign-in the Copilot CLI would use, and falls back on the CLI's cache file. The token is never
 stored, logged or renewed. Copilot Free has no credit budget and isn't shown.
 
+## Signing Claude Code in and out
+
+When Live usage stops because Claude Code's sign-in ran out, was refused or is missing, the
+menu offers Sign in to Claude Code; otherwise, while Claude Code is shown, Sign out of Claude
+Code, which asks, runs `claude auth logout` with no window and polls at once, so another account
+can sign in. Sign in starts `cmd /k claude` (`claude auth login` when there is no sign-in at all)
+in a hidden console, in the user's
+folder, inside a job object, and watches `.credentials.json`'s time of change (never its
+contents) every half second. Claude Code renews its own sign-in as it starts: once the file is
+written, the console is ended with everything in it and Claude's poll runs at once. When nothing
+is written within 20 s (60 s for `claude auth login`, which opens the browser), or `cmd` sets
+the window title that says Claude Code ended, the console is shown as it stands and given to the
+user; it is still closed once the file is written, and the watch
+goes on for 15 minutes. Sobreiro still renews no token itself and makes no new network call;
+Claude Code makes its own.
+
 ## Risks and open points
 
 - **The status line runs only in the CLI.** Neither the VS Code extension nor the desktop app

@@ -33,6 +33,7 @@ mod bridge_runner;
 mod claude_credentials;
 mod claude_paths;
 mod claude_provider;
+mod claude_sign_in;
 mod connect_message;
 mod connection;
 mod contrast;
