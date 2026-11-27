@@ -131,6 +131,16 @@ pub fn flyout_opened() {
     with_host(Host::flyout_opened);
 }
 
+/// The menu's Sign in or Sign out changed Claude Code's sign-in: Claude's poll runs at once.
+/// `signed_out`: the sign-in file is gone.
+pub fn claude_sign_in_changed(signed_out: bool) {
+    with_host(move |host| {
+        let runs = host.feed.claude_sign_in_changed(clock::now(), signed_out);
+        host.spawn(runs);
+        host.redraw();
+    });
+}
+
 /// Runs `step` on the host now, or a turn of the event loop later if it is busy.
 fn with_host(step: impl FnOnce(&mut Host) + 'static) {
     let busy = HOST.try_with(|cell| match cell.try_borrow_mut() {

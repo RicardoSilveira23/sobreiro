@@ -89,3 +89,22 @@ fn a_config_dir_that_starts_with_two_separators_is_taken() {
         Path::new(r"\\server")
     );
 }
+
+#[cfg(windows)]
+#[test]
+fn global_config_file_sits_in_the_overriding_folder_or_else_the_users_folder() {
+    assert_eq!(
+        env(Some(r"D:\cfg\claude")).global_config_file(),
+        Path::new(r"D:\cfg\claude").join(".claude.json")
+    );
+    // Not inside `.claude`.
+    assert_eq!(
+        env(None).global_config_file(),
+        Path::new(r"C:\Users\ana").join(".claude.json")
+    );
+    // A relative override is no override.
+    assert_eq!(
+        env(Some(r"relative\dir")).global_config_file(),
+        Path::new(r"C:\Users\ana").join(".claude.json")
+    );
+}

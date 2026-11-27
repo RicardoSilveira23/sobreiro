@@ -169,6 +169,12 @@ impl Feed {
         runs(claude, copilot)
     }
 
+    /// The menu's Sign in or Sign out changed Claude Code's sign-in: Claude's poll, at once.
+    /// `signed_out`: the sign-in file is gone, so the poll goes even during a wait.
+    pub fn claude_sign_in_changed(&mut self, now: DateTime<Utc>, signed_out: bool) -> Vec<Run> {
+        runs(self.claude.sign_in_changed(now, signed_out), None)
+    }
+
     /// The polls that are due at `now`.
     pub fn tick(&mut self, now: DateTime<Utc>) -> Vec<Run> {
         let claude = self.claude.tick(now);

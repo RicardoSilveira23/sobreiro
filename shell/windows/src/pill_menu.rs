@@ -4,7 +4,9 @@
 //! says why a change was not saved is made here too.
 //!
 //! The first items connect Claude Code's status line to the bridge or disconnect it, by where it
-//! stands now; the connect flow (`connect_flow`) does the work. Open data folder and About
+//! stands now; the connect flow (`connect_flow`) does the work. Above them, while Claude Code is
+//! shown, comes Sign in to Claude Code when Live usage stopped for want of a sign-in, and Sign out
+//! of Claude Code otherwise (`claude_sign_in` runs Claude Code for both). Open data folder and About
 //! Sobreiro follow Start with Windows; `about` does their work.
 use crate::win::menu::{Entry, Item};
 use sobreiro_core::colours::BarColourOption;
@@ -12,6 +14,7 @@ use sobreiro_core::config::{AppConfig, ConfigError, ShowOption};
 use sobreiro_core::connect::connect_message::{self, RECONNECT_TITLE};
 use sobreiro_core::connect::connection::ConnectionState;
 use sobreiro_core::display::{FlyoutStyle, PaceDays};
+use sobreiro_core::live::claude_sign_in::{self, Offer};
 use std::path::Path;
 
 const BARS: u32 = 1;
@@ -30,6 +33,8 @@ const RECONNECT: u32 = 13;
 const DISCONNECT: u32 = 14;
 const OPEN_DATA_FOLDER: u32 = 15;
 const ABOUT: u32 = 16;
+const SIGN_IN: u32 = 17;
+const SIGN_OUT: u32 = 18;
 
 /// The one key of `config.json` a choice in the menu changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +51,10 @@ pub enum Command {
     Change(ConfigChange),
     /// Runs the connect flow: true to connect (or reconnect), false to disconnect.
     Connect(bool),
+    /// Runs Claude Code so it renews its sign-in, and shows it when it needs the user.
+    SignIn,
+    /// Asks, then signs Claude Code out, so another account can sign in.
+    SignOut,
     ToggleAutoStart,
     OpenDataFolder,
     About,
@@ -62,8 +71,14 @@ pub enum ChangeError {
 }
 
 /// The menu, with the current choices checked and Start with Windows checked when it is on. The
-/// first items follow the connection: Connect, Disconnect, or Reconnect above Disconnect.
-pub fn entries(config: &AppConfig, auto_start: bool, state: ConnectionState) -> Vec<Entry> {
+/// first items follow the connection: Connect, Disconnect, or Reconnect above Disconnect; Sign in
+/// to Claude Code or Sign out of Claude Code comes above them, as `account` offers.
+pub fn entries(
+    config: &AppConfig,
+    auto_start: bool,
+    state: ConnectionState,
+    account: Option<Offer>,
+) -> Vec<Entry> {
     let item = |id: u32, text: &str, checked: bool| Item {
         id,
         text: text.to_string(),
@@ -82,7 +97,14 @@ pub fn entries(config: &AppConfig, auto_start: bool, state: ConnectionState) -> 
         ConnectionState::Connected => vec![Entry::Item(disconnect)],
         ConnectionState::Elsewhere => vec![Entry::Item(reconnect), Entry::Item(disconnect)],
     };
-    let mut menu = connection;
+    let mut menu: Vec<Entry> = account
+        .map(|offer| match offer {
+            Offer::SignIn => Entry::Item(item(SIGN_IN, claude_sign_in::SIGN_IN_TITLE, false)),
+            Offer::SignOut => Entry::Item(item(SIGN_OUT, claude_sign_in::SIGN_OUT_TITLE, false)),
+        })
+        .into_iter()
+        .collect();
+    menu.extend(connection);
     menu.extend([
         Entry::Submenu {
             text: "Style".to_string(),
@@ -142,6 +164,8 @@ pub fn command(id: u32) -> Option<Command> {
         TRAY_AND_PILL => change(ConfigChange::Show(ShowOption::TrayAndPill)),
         CONNECT | RECONNECT => Some(Command::Connect(true)),
         DISCONNECT => Some(Command::Connect(false)),
+        SIGN_IN => Some(Command::SignIn),
+        SIGN_OUT => Some(Command::SignOut),
         AUTO_START => Some(Command::ToggleAutoStart),
         OPEN_DATA_FOLDER => Some(Command::OpenDataFolder),
         ABOUT => Some(Command::About),
@@ -229,12 +253,12 @@ mod tests {
 
     /// The menu of a connected status line, whose one first item shifts the rest by one.
     fn connected(config: &AppConfig, auto_start: bool) -> Vec<Entry> {
-        entries(config, auto_start, ConnectionState::Connected)
+        entries(config, auto_start, ConnectionState::Connected, None)
     }
 
     /// The first entries' texts up to Style.
     fn first_texts(state: ConnectionState) -> Vec<String> {
-        let menu = entries(&AppConfig::default(), false, state);
+        let menu = entries(&AppConfig::default(), false, state, None);
         let at = menu
             .iter()
             .position(|entry| matches!(entry, Entry::Submenu { .. }))
@@ -263,16 +287,39 @@ mod tests {
             ["Reconnect to Claude Code", "Disconnect from Claude Code"]
         );
         for state in STATES {
-            let menu = entries(&AppConfig::default(), false, state);
+            let menu = entries(&AppConfig::default(), false, state, None);
             let first = first_texts(state).len();
             assert_eq!(submenu(&menu, first).0, "Style");
         }
     }
 
     #[test]
+    fn the_account_item_comes_first_as_offered() {
+        for state in STATES {
+            let without = entries(&AppConfig::default(), false, state, None);
+            for (offer, text) in [
+                (Offer::SignIn, "Sign in to Claude Code"),
+                (Offer::SignOut, "Sign out of Claude Code"),
+            ] {
+                let with = entries(&AppConfig::default(), false, state, Some(offer));
+                assert_eq!(with.len(), without.len() + 1, "{state:?}");
+                assert_eq!(item(&with, 0).0, text, "{state:?}");
+                assert_eq!(with[1..], without[..], "{state:?}");
+            }
+            assert!(
+                without.iter().all(|entry| !matches!(
+                    entry,
+                    Entry::Item(item) if item.id == SIGN_IN || item.id == SIGN_OUT
+                )),
+                "{state:?}"
+            );
+        }
+    }
+
+    #[test]
     fn the_full_order_holds_in_each_state() {
         for state in STATES {
-            let menu = entries(&AppConfig::default(), false, state);
+            let menu = entries(&AppConfig::default(), false, state, None);
             let names: Vec<&str> = menu
                 .iter()
                 .map(|entry| match entry {
@@ -365,16 +412,27 @@ mod tests {
 
     #[test]
     fn every_id_in_the_menu_is_a_command_and_none_is_zero() {
-        // The Elsewhere menu holds every id there is.
+        // The Elsewhere menu with Sign in, and Sign out from the other, hold every id there is.
         let mut ids = Vec::new();
-        for entry in entries(&AppConfig::default(), false, ConnectionState::Elsewhere) {
+        let [with_sign_in, with_sign_out] = [Offer::SignIn, Offer::SignOut].map(|offer| {
+            entries(
+                &AppConfig::default(),
+                false,
+                ConnectionState::Elsewhere,
+                Some(offer),
+            )
+        });
+        for entry in with_sign_in
+            .into_iter()
+            .chain(with_sign_out.into_iter().take(1))
+        {
             match entry {
                 Entry::Separator => {}
                 Entry::Item(item) => ids.push(item.id),
                 Entry::Submenu { items, .. } => ids.extend(items.iter().map(|item| item.id)),
             }
         }
-        assert_eq!(ids.len(), 15);
+        assert_eq!(ids.len(), 17);
         assert!(ids.iter().all(|id| *id != 0 && command(*id).is_some()));
         let mut unique = ids.clone();
         unique.sort_unstable();
@@ -383,6 +441,8 @@ mod tests {
         assert_eq!(command(CONNECT), Some(Command::Connect(true)));
         assert_eq!(command(RECONNECT), Some(Command::Connect(true)));
         assert_eq!(command(DISCONNECT), Some(Command::Connect(false)));
+        assert_eq!(command(SIGN_IN), Some(Command::SignIn));
+        assert_eq!(command(SIGN_OUT), Some(Command::SignOut));
         assert_eq!(
             command(BATTERY),
             Some(Command::Change(ConfigChange::Style(FlyoutStyle::Battery)))

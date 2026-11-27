@@ -59,7 +59,9 @@ which is worth a look on its own.
 - **Hover** the pill or a tray icon for when each limit resets.
 - **Click** it for the details: each limit, what's used or left, when it resets, and the badge.
 - **Right-click** it for the menu: the style, the bar colour, the pace, what to show and Connect
-  to Claude Code.
+  to Claude Code. When Claude Code's sign-in has expired, was refused or is missing, the menu also
+  offers **Sign in to Claude Code** (Claude Code's window is closed once it has finished writing
+  its files); while it is signed in, **Sign out of Claude Code**, to change accounts.
 
 <table>
   <tr>
@@ -185,6 +187,14 @@ install it.
 - Connect to Claude Code changes one key in Claude Code's `settings.json`, `statusLine`, after
   asking and with a backup next to it; Disconnect puts it back. See
   [Connect](https://sobreiro.ricardosilveira.dev/manual/#connect).
+- Sign in to Claude Code, in the menu only when Claude Code's sign-in has run out, was refused
+  or is missing, runs Claude Code in a console you don't see, in Sobreiro's data folder: `claude`
+  for a sign-in that ran out, so Claude Code renews it, and `claude auth login` otherwise, which
+  opens your browser. Once Claude Code saves the new sign-in, the console closes. If Claude Code
+  needs you (the browser didn't open, a folder to trust, an error) the console is shown as it
+  stands and you go on there; when Windows won't bring it to the front, its taskbar button
+  flashes. Sign out of Claude Code asks first, then runs `claude auth logout`. Sobreiro only
+  watches the sign-in file's time of change; it renews and removes nothing itself.
 - The site loads nothing from other hosts either.
 - Both addresses are undocumented and can change, and Anthropic's terms don't allow third-party
   apps to use Claude sign-ins.

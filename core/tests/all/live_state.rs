@@ -7,15 +7,15 @@ fn each_problem_has_a_sentence() {
     let rows = [
         (
             ProviderState::Expired,
-            "Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.",
+            "Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.",
         ),
         (
             ProviderState::NoSignIn,
-            "Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.",
+            "Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.",
         ),
         (
             ProviderState::Refused,
-            "Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.",
+            "Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.",
         ),
         (
             ProviderState::RateLimited,

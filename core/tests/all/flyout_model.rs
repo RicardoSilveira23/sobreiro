@@ -219,11 +219,11 @@ fn footer_without_limits_with_live_usage_on() {
         (ProviderState::Ok, "No numbers yet."),
         (
             ProviderState::NoSignIn,
-            "No numbers yet. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.",
+            "No numbers yet. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.",
         ),
         (
             ProviderState::Refused,
-            "No numbers yet. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.",
+            "No numbers yet. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.",
         ),
         (
             ProviderState::Offline,
@@ -256,7 +256,7 @@ fn footer_adds_the_refused_sentence_after_the_age() {
     );
     assert_eq!(
         model.footer,
-        "Updated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one."
+        "Updated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code."
     );
 }
 
@@ -271,7 +271,7 @@ fn footer_adds_the_live_sentence() {
     );
     assert_eq!(
         model.footer,
-        "Updated 3 min ago. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it."
+        "Updated 3 min ago. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code."
     );
 }
 
@@ -1576,7 +1576,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[],
@@ -1587,7 +1587,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[],
@@ -1598,7 +1598,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[],
@@ -2273,7 +2273,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe873ecade304d4|Normal|OnTrack:On track|resets in 3h 11m|<none>\nWeekly|Weekly|true|74%|26%|3fe7ae147ae147ae|3ff0000000000000|Warning|Ends:Ends Tue 00:13|resets in 3d 13h|<none>\nSpend|Spend|true|62%|38%|3fe4189374bc6a7f|3fe96e85736d93e3|Normal|OnTrack:On track|resets in 5d|$31.50 of $50.00 this month\nUpdated 3 min ago. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe873ecade304d4|Normal|OnTrack:On track|resets in 3h 11m|<none>\nWeekly|Weekly|true|74%|26%|3fe7ae147ae147ae|3ff0000000000000|Warning|Ends:Ends Tue 00:13|resets in 3d 13h|<none>\nSpend|Spend|true|62%|38%|3fe4189374bc6a7f|3fe96e85736d93e3|Normal|OnTrack:On track|resets in 5d|$31.50 of $50.00 this month\nUpdated 3 min ago. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -2324,7 +2324,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe873ecade304d4|Normal|OnTrack:On track|resets in 3h 11m|<none>\nWeekly|Weekly|true|74%|26%|3fe7ae147ae147ae|3ff0000000000000|Warning|Ends:Ends Tue 00:13|resets in 3d 13h|<none>\nSpend|Spend|true|62%|38%|3fe4189374bc6a7f|3fe96e85736d93e3|Normal|OnTrack:On track|resets in 5d|$31.50 of $50.00 this month\nUpdated 3 min ago. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe873ecade304d4|Normal|OnTrack:On track|resets in 3h 11m|<none>\nWeekly|Weekly|true|74%|26%|3fe7ae147ae147ae|3ff0000000000000|Warning|Ends:Ends Tue 00:13|resets in 3d 13h|<none>\nSpend|Spend|true|62%|38%|3fe4189374bc6a7f|3fe96e85736d93e3|Normal|OnTrack:On track|resets in 5d|$31.50 of $50.00 this month\nUpdated 3 min ago. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -2375,7 +2375,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe873ecade304d4|Normal|OnTrack:On track|resets in 3h 11m|<none>\nWeekly|Weekly|true|74%|26%|3fe7ae147ae147ae|3ff0000000000000|Warning|Ends:Ends Tue 00:13|resets in 3d 13h|<none>\nSpend|Spend|true|62%|38%|3fe4189374bc6a7f|3fe96e85736d93e3|Normal|OnTrack:On track|resets in 5d|$31.50 of $50.00 this month\nUpdated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe873ecade304d4|Normal|OnTrack:On track|resets in 3h 11m|<none>\nWeekly|Weekly|true|74%|26%|3fe7ae147ae147ae|3ff0000000000000|Warning|Ends:Ends Tue 00:13|resets in 3d 13h|<none>\nSpend|Spend|true|62%|38%|3fe4189374bc6a7f|3fe96e85736d93e3|Normal|OnTrack:On track|resets in 5d|$31.50 of $50.00 this month\nUpdated 3 min ago. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -2574,7 +2574,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51eb851eb851f|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51eb851eb851f|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2620,7 +2620,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51ee05ef5b474|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51ee05ef5b474|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2666,7 +2666,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51f307ad1cab1|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51f307ad1cab1|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2712,7 +2712,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51f307ad1ce0d|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51f307ad1ce0d|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2758,7 +2758,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe52020dca4e573|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe52020dca4e573|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2804,7 +2804,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe53b04ffeebfaa|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe53b04ffeebfaa|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2850,7 +2850,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe53b0705f37465|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe53b0705f37465|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2896,7 +2896,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe55a07bcbeeccd|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe55a07bcbeeccd|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2942,7 +2942,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe8227ee14ef609|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe8227ee14ef609|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -2988,7 +2988,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe8231bcb564eff|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe8231bcb564eff|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -3034,7 +3034,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3ff0000000000000|Normal|Ends:Ends Sun 29 Nov 4:49 PM|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3ff0000000000000|Normal|Ends:Ends Sun 29 Nov 4:49 PM|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[(
@@ -3080,7 +3080,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51c5fd57e7712|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|17%|83%|3fc6872b020c49bb|3fe51c5fd57e7712|Normal|OnTrack:On track|resets in 22d|2,644 of 15,000 credits|note=<none>\ntrue",
     ),
     (
         &[
@@ -3182,7 +3182,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         Some("A note."),
         "weekdays",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|true|2%|98%|3f947ae147ae147b|3f9eb851eb851eb8|Normal|OnTrack:On track|resets in 3d 16h|<none>\nSpend|Spend|true|70%|30%|3fe6666666666666|<none>|Warning|<none>|resets in 3d 15h|<none>\nUpdated just now. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|true|2%|98%|3f947ae147ae147b|3f9eb851eb851eb8|Normal|OnTrack:On track|resets in 3d 16h|<none>\nSpend|Spend|true|70%|30%|3fe6666666666666|<none>|Warning|<none>|resets in 3d 15h|<none>\nUpdated just now. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -3220,7 +3220,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|true|100%|0%|3ff0000000000000|<none>|Error|UsedUp:Used up|resets in 5d 14h|<none>\nSpend|Spend|true|27%|73%|3fd147ae147ae148|<none>|Normal|<none>|resets in 4d 9h|$2,323.91 spent\nUpdated just now. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|true|100%|0%|3ff0000000000000|<none>|Error|UsedUp:Used up|resets in 5d 14h|<none>\nSpend|Spend|true|27%|73%|3fd147ae147ae148|<none>|Normal|<none>|resets in 4d 9h|$2,323.91 spent\nUpdated just now. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -3446,7 +3446,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nSpend|Spend|true|50%|50%|3fe028f5c28f5c29|<none>|Normal|<none>|resets in 2d 9h|$753.37 of $1,164.97\nUpdated 59 min ago. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nSpend|Spend|true|50%|50%|3fe028f5c28f5c29|<none>|Normal|<none>|resets in 2d 9h|$753.37 of $1,164.97\nUpdated 59 min ago. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -3624,7 +3624,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         Some("A note."),
         "every",
-        "Claude Code\nSession|Session|true|1%|99%|3f9374bc6a7ef9db|3fa086ec29a7e773|Normal|Resetting:Resetting|resets in under 1m|<none>\nWeekly|Weekly|true|89%|11%|3feccbfb15b573ea|3ff0000000000000|Warning|Ends:Ends 5:34 PM|resets in 5d 4h|<none>\n<none>\nUpdated 2h 5m ago. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|1%|99%|3f9374bc6a7ef9db|3fa086ec29a7e773|Normal|Resetting:Resetting|resets in under 1m|<none>\nWeekly|Weekly|true|89%|11%|3feccbfb15b573ea|3ff0000000000000|Warning|Ends:Ends 5:34 PM|resets in 5d 4h|<none>\n<none>\nUpdated 2h 5m ago. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -3713,7 +3713,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe7adae4df426aa|Normal|OnTrack:On track|resets in 3h 10m|<none>\nWeekly|Weekly|true|50%|50%|3fe028f5c28f5c29|3feb6c4bb6c4bb6c|Normal|OnTrack:On track|resets in 2d 21h|<none>\n<none>\nUpdated just now. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|27%|73%|3fd147ae147ae148|3fe7adae4df426aa|Normal|OnTrack:On track|resets in 3h 10m|<none>\nWeekly|Weekly|true|50%|50%|3fe028f5c28f5c29|3feb6c4bb6c4bb6c|Normal|OnTrack:On track|resets in 2d 21h|<none>\n<none>\nUpdated just now. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -3851,7 +3851,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         Some("A note."),
         "weekdays",
-        "Claude Code\nSession|Session|true|2%|98%|3f947ae147ae147b|3f96b20028584a34|Normal|OnTrack:On track|resets in 28m|<none>\nWeekly|Weekly|true|89%|11%|3feccbfb15b573ea|3fed8a154a889280|Warning|OnTrack:On track|resets in 3h|<none>\nSpend|Spend|true|100%|0%|3ff0000000000000|<none>|Error|UsedUp:Used up|resets in 8d 7h|<none>\nUpdated just now. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\nCredits|AI credits|true|93%|7%|3fee1450efdc9c4e|3ff0000000000000|Error|Ends:Ends 18:28|resets in 16d 13h|14,100 of 15,000 credits|note=A note.\ntrue",
+        "Claude Code\nSession|Session|true|2%|98%|3f947ae147ae147b|3f96b20028584a34|Normal|OnTrack:On track|resets in 28m|<none>\nWeekly|Weekly|true|89%|11%|3feccbfb15b573ea|3fed8a154a889280|Warning|OnTrack:On track|resets in 3h|<none>\nSpend|Spend|true|100%|0%|3ff0000000000000|<none>|Error|UsedUp:Used up|resets in 8d 7h|<none>\nUpdated just now. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|93%|7%|3fee1450efdc9c4e|3ff0000000000000|Error|Ends:Ends 18:28|resets in 16d 13h|14,100 of 15,000 credits|note=A note.\ntrue",
     ),
     (
         &[
@@ -4101,7 +4101,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|1%|99%|3f9374bc6a7ef9db|3fb858d86b11f09f|Normal|NotUsedYet:Not used yet|resets in 3h 59m|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nUpdated 1 min ago. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|1%|99%|3f9374bc6a7ef9db|3fb858d86b11f09f|Normal|NotUsedYet:Not used yet|resets in 3h 59m|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nUpdated 1 min ago. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -4152,7 +4152,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|2%|98%|3f947ae147ae147b|3fa0578512a25feb|Normal|OnTrack:On track|resets in 1h 57m|<none>\nWeekly|Weekly|true|0%|100%|3f747ae147ae147b|3fb3333333333333|Normal|NotUsedYet:Not used yet|resets in 5d 9h|<none>\nSpend|Spend|true|89%|11%|3feccbfb15b573ea|<none>|Warning|TooEarly:Too early|resets in 5d 17h|<none>\nUpdated just now. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|2%|98%|3f947ae147ae147b|3fa0578512a25feb|Normal|OnTrack:On track|resets in 1h 57m|<none>\nWeekly|Weekly|true|0%|100%|3f747ae147ae147b|3fb3333333333333|Normal|NotUsedYet:Not used yet|resets in 5d 9h|<none>\nSpend|Spend|true|89%|11%|3feccbfb15b573ea|<none>|Warning|TooEarly:Too early|resets in 5d 17h|<none>\nUpdated just now. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -4390,7 +4390,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nSpend|Spend|true|70%|30%|3fe6666666666666|<none>|Warning|TooEarly:Too early|resets in 7d 18h|<none>\nUpdated just now. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nSpend|Spend|true|70%|30%|3fe6666666666666|<none>|Warning|TooEarly:Too early|resets in 7d 18h|<none>\nUpdated just now. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -4492,7 +4492,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         Some("A note."),
         "every",
-        "Claude Code\nSession|Session|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|resets in 4h 53m|<none>\nWeekly|Weekly|true|69%|31%|3fe66594af4f0d84|3ff0000000000000|Normal|Ends:Ends Sun 01:26|resets in 3d 3h|<none>\n<none>\nUpdated 59 min ago. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|resets in 4h 53m|<none>\nWeekly|Weekly|true|69%|31%|3fe66594af4f0d84|3ff0000000000000|Normal|Ends:Ends Sun 01:26|resets in 3d 3h|<none>\n<none>\nUpdated 59 min ago. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[(
@@ -4599,7 +4599,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "every",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|true|90%|10%|3feccccccccccccd|3ff0000000000000|Error|Ends:Likely used up|resets in 2d 13h|<none>\nSpend|Spend|true|99%|1%|3fefff2e48e8a71d|3ff0000000000000|Error|Ends:Likely used up|resets in 4d 1h|$2,735.96 of $4,927.48 this month\nUpdated Tue 10:00 post meridiem do dia 🌇. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\n<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|true|90%|10%|3feccccccccccccd|3ff0000000000000|Error|Ends:Likely used up|resets in 2d 13h|<none>\nSpend|Spend|true|99%|1%|3fefff2e48e8a71d|3ff0000000000000|Error|Ends:Likely used up|resets in 4d 1h|$2,735.96 of $4,927.48 this month\nUpdated Tue 10:00 post meridiem do dia 🌇. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[(
@@ -4783,7 +4783,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|0%|100%|0000000000000000|bfa7cba65ec83144|Normal|NotUsedYet:Not used yet|resets in 1h 45m|<none>\nWeekly|Weekly|true|27%|73%|3fd147ae147ae148|3fe3f1e1f5a875a3|Normal|OnTrack:On track|resets in 4d 20h|<none>\nSpend|Spend|true|70%|30%|3fe6666666666666|3ff0000000000000|Warning|Ends:Ends Fri 3:58 ÀÉÎÕÜ ante meridiem do dia|resets in 3d 14h|$1,204.50 spent this week\nUpdated just now. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.\nCredits|AI credits|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|reset at 5:00 post meridiem do dia 🌇|<none>|note=<none>\ntrue",
+        "Claude Code\nSession|Session|true|0%|100%|0000000000000000|bfa7cba65ec83144|Normal|NotUsedYet:Not used yet|resets in 1h 45m|<none>\nWeekly|Weekly|true|27%|73%|3fd147ae147ae148|3fe3f1e1f5a875a3|Normal|OnTrack:On track|resets in 4d 20h|<none>\nSpend|Spend|true|70%|30%|3fe6666666666666|3ff0000000000000|Warning|Ends:Ends Fri 3:58 ÀÉÎÕÜ ante meridiem do dia|resets in 3d 14h|$1,204.50 spent this week\nUpdated just now. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|reset at 5:00 post meridiem do dia 🌇|<none>|note=<none>\ntrue",
     ),
     (
         &[
@@ -4872,7 +4872,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|true|69%|31%|3fe66594af4f0d84|<none>|Normal|TooEarly:Too early|resets in 2h 44m|<none>\nWeekly|Weekly|true|50%|50%|3fe028f5c28f5c29|3ff0000000000000|Normal|Ends:Ends 5:52 AM|resets in 4d 18h|<none>\n<none>\nUpdated 23h 59m ago. Claude Code's sign-in has expired. Use Claude Code in a terminal and it renews it.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|69%|31%|3fe66594af4f0d84|<none>|Normal|TooEarly:Too early|resets in 2h 44m|<none>\nWeekly|Weekly|true|50%|50%|3fe028f5c28f5c29|3ff0000000000000|Normal|Ends:Ends 5:52 AM|resets in 4d 18h|<none>\n<none>\nUpdated 23h 59m ago. Claude Code's sign-in has expired. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -4995,7 +4995,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         Some("A note."),
         "every",
-        "Claude Code\nSession|Session|true|99%|1%|3fefff2e48e8a71d|3ff0000000000000|Error|Ends:Ends 12:49|resets in 1h 11m|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nUpdated just now. Anthropic didn't accept Claude Code's sign-in. Use Claude Code in a terminal so it gets a new one.\n<none>\ntrue",
+        "Claude Code\nSession|Session|true|99%|1%|3fefff2e48e8a71d|3ff0000000000000|Error|Ends:Ends 12:49|resets in 1h 11m|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nUpdated just now. Anthropic didn't accept Claude Code's sign-in. Right-click Sobreiro and choose Sign in to Claude Code.\n<none>\ntrue",
     ),
     (
         &[
@@ -5056,7 +5056,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         None,
         "weekdays",
-        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\nCredits|AI credits|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|reset at 2:00 AM|<none>|note=<none>\ntrue",
+        "Claude Code\nSession|Session|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\nWeekly|Weekly|false|–|–|0000000000000000|<none>|Normal|<none>|No reading yet|<none>\n<none>\nNo numbers yet. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|reset at 2:00 AM|<none>|note=<none>\ntrue",
     ),
     (
         &[
@@ -5107,7 +5107,7 @@ const FLYOUT: &[FlyoutRow] = &[
         true,
         Some("A note."),
         "every",
-        "Claude Code\nSession|Session|true|74%|26%|3fe7ae147ae147ae|<none>|Warning|TooEarly:Too early|resets in 4h 35m|<none>\nWeekly|Weekly|true|27%|73%|3fd147ae147ae148|3fee3d652bd81ce1|Normal|OnTrack:On track|resets in 4d 23h|<none>\n<none>\nUpdated 59 min ago. Claude Code isn't signed in on this PC. Run claude in a terminal and sign in.\nCredits|AI credits|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|reset at Tue 10:00 ÀÉÎÕÜ ante meridiem do dia|<none>|note=A note.\ntrue",
+        "Claude Code\nSession|Session|true|74%|26%|3fe7ae147ae147ae|<none>|Warning|TooEarly:Too early|resets in 4h 35m|<none>\nWeekly|Weekly|true|27%|73%|3fd147ae147ae148|3fee3d652bd81ce1|Normal|OnTrack:On track|resets in 4d 23h|<none>\n<none>\nUpdated 59 min ago. Claude Code isn't signed in on this PC. Right-click Sobreiro and choose Sign in to Claude Code.\nCredits|AI credits|true|0%|100%|0000000000000000|<none>|Normal|NotUsedYet:Not used yet|reset at Tue 10:00 ÀÉÎÕÜ ante meridiem do dia|<none>|note=A note.\ntrue",
     ),
     (
         &[

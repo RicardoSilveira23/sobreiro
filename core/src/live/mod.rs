@@ -1,8 +1,9 @@
 //! Live usage: Claude Code's sign-in, read for one request, the one request made with it, the
-//! poll around the two, when the next poll is due, and Claude Code as a provider.
+//! poll around the two, when the next poll is due, Claude Code as a provider, and the menu's way to sign back in.
 pub mod access_token;
 pub mod claude_credentials;
 pub mod claude_provider;
+pub mod claude_sign_in;
 pub mod live_poll;
 pub mod live_schedule;
 pub mod live_state;

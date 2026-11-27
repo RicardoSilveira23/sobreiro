@@ -1,5 +1,6 @@
 //! The shell's calls into Windows. Every unsafe block of the shell lives in this folder.
 pub mod born;
+pub mod console;
 pub mod credentials;
 pub mod dir_watch;
 pub mod dll_search;

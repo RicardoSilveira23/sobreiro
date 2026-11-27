@@ -392,6 +392,28 @@ Copilot CLI use, `GET https://api.github.com/copilot_internal/user`, every 5 min
 sign-in the Copilot CLI would use, and falls back on the CLI's cache file. The token is never
 stored, logged or renewed. Copilot Free has no credit budget and isn't shown.
 
+## Signing Claude Code in and out
+
+When Live usage stops because Claude Code's sign-in ran out, was refused or is missing, the
+menu offers Sign in to Claude Code; otherwise, while Claude Code is shown, Sign out of Claude
+Code, which asks, runs `claude auth logout` (20 s at most) and polls at once, so another account
+can sign in.
+
+Both run through `cmd` in a hidden console, started suspended inside a job object, in Sobreiro's
+data folder (so a folder Claude Code asks to trust is never the user's profile). Sign in runs
+`claude` for a sign-in that ran out, which renews it as it starts, and `claude auth login` for
+one that is missing or that Anthropic refused (its expiry hasn't passed, so `claude` would see
+no reason to renew it). It watches `.credentials.json`'s time of change, read before Claude Code
+starts, and never its contents, every half second. Once the file is written and Claude Code has
+finished writing its files (Claude Code ended, or 2 s without a change to it or to
+`.claude.json`, at most 10 s), the console is ended with everything in it, shown or not, and Claude's poll runs at once; a poll already under way
+asks again with its answer, as it may have used the old sign-in. When nothing is written within
+20 s (60 s for a login, which opens the browser), or `cmd` sets the window title that says Claude
+Code ended, the console is shown as it stands and given to the user, its taskbar button flashing
+when Windows refuses it the front, and the watch goes on for 15 minutes. A console whose window
+can't be found is ended, never left running unseen. Sobreiro still renews no token itself and
+makes no new network call; Claude Code makes its own.
+
 ## Risks and open points
 
 - **The status line runs only in the CLI.** Neither the VS Code extension nor the desktop app
