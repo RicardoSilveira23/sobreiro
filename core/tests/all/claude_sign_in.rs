@@ -375,3 +375,16 @@ fn the_console_is_not_shown_while_settling_even_past_the_quiet_wait() {
     );
     assert!(!watch.shown());
 }
+
+#[test]
+fn a_look_that_finds_no_sign_in_file_while_settling_is_no_change() {
+    let mut watch = start(Some(0));
+    assert_eq!(watch.step(seen(SECOND, Some(1))), WatchStep::Wait);
+    // The file is not there for a moment: not an end, and not a Show past the quiet wait.
+    assert_eq!(watch.step(seen(2 * SECOND, None)), WatchStep::Wait);
+    assert_eq!(
+        watch.step(seen(QUIET_WAIT + SECOND, None)),
+        WatchStep::Renewed
+    );
+    assert!(!watch.shown());
+}

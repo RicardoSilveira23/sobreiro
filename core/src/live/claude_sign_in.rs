@@ -250,7 +250,8 @@ impl SignInWatch {
 
     /// The next step, from what the shell saw.
     pub fn step(&mut self, seen: Seen) -> WatchStep {
-        if seen.changed_at.is_some() && seen.changed_at != self.before {
+        if self.settling.is_some() || (seen.changed_at.is_some() && seen.changed_at != self.before)
+        {
             return self.settle(seen);
         }
         if !seen.running {
@@ -270,14 +271,18 @@ impl SignInWatch {
     /// Claude Code is done when it ended or the console closed, when neither file changed for
     /// [`SETTLE_QUIET`], or when [`SETTLE_LIMIT`] passed since the first change was seen.
     fn settle(&mut self, seen: Seen) -> WatchStep {
+        // A look that finds no sign-in file counts as no change since the last look.
+        let changed_at = seen
+            .changed_at
+            .or(self.settling.and_then(|s| s.credentials));
         let settling = self.settling.get_or_insert(Settling {
             first: seen.elapsed,
             last_change: seen.elapsed,
-            credentials: seen.changed_at,
+            credentials: changed_at,
             config: seen.config_changed_at,
         });
-        if settling.credentials != seen.changed_at || settling.config != seen.config_changed_at {
-            settling.credentials = seen.changed_at;
+        if settling.credentials != changed_at || settling.config != seen.config_changed_at {
+            settling.credentials = changed_at;
             settling.config = seen.config_changed_at;
             settling.last_change = seen.elapsed;
         }

@@ -83,6 +83,8 @@ struct Running {
     schedule: LiveSchedule,
     started: DateTime<Utc>,
     cancelled: Arc<AtomicBool>,
+    /// The wait this poll was handed out through, for a sign-out: its answer keeps it.
+    held_wait: Option<DateTime<Utc>>,
 }
 
 /// The timing of one provider's polls. It is used from one thread; only [`PollRun::run`]
@@ -179,14 +181,20 @@ impl ProviderPoller {
     pub fn sign_in_changed(&mut self, now: DateTime<Utc>, signed_out: bool) -> Option<PollRun> {
         if self.running.is_some() {
             self.ask_again = self.schedule.is_some();
-            self.ask_again_signed_out |= signed_out && self.ask_again;
+            // The latest ask decides.
+            self.ask_again_signed_out = signed_out && self.ask_again;
             return None;
         }
         match self.schedule {
             Some(schedule)
                 if signed_out || !schedule.wait_until.is_some_and(|until| now < until) =>
             {
-                self.poll(schedule, now)
+                // A sign-out's poll sends no request, so its answer must not clear a wait the
+                // service asked for: the next sign-in still has to respect it.
+                let held_wait = schedule
+                    .wait_until
+                    .filter(|until| signed_out && now < *until);
+                self.start_poll(schedule, now, held_wait)
             }
             _ => None,
         }
@@ -194,6 +202,16 @@ impl ProviderPoller {
 
     /// A new poll, unless one is under way: one at a time.
     fn poll(&mut self, schedule: LiveSchedule, now: DateTime<Utc>) -> Option<PollRun> {
+        self.start_poll(schedule, now, None)
+    }
+
+    /// A new poll, unless one is under way; its answer keeps `held_wait`, when there is one.
+    fn start_poll(
+        &mut self,
+        schedule: LiveSchedule,
+        now: DateTime<Utc>,
+        held_wait: Option<DateTime<Utc>>,
+    ) -> Option<PollRun> {
         if self.running.is_some() {
             return None;
         }
@@ -202,6 +220,7 @@ impl ProviderPoller {
             schedule,
             started: now,
             cancelled: cancelled.clone(),
+            held_wait,
         });
         Some(PollRun {
             provider: self.provider.clone(),
@@ -242,7 +261,12 @@ impl ProviderPoller {
                 keep: None,
             },
         };
-        self.schedule = Some(poll.schedule);
+        let mut schedule = poll.schedule;
+        if let Some(held) = running.held_wait {
+            schedule.wait_until = schedule.wait_until.max(Some(held));
+            schedule.next_due = schedule.next_due.max(held);
+        }
+        self.schedule = Some(schedule);
         self.state = poll.state;
         if let Some(keep) = poll.keep {
             keep(now);

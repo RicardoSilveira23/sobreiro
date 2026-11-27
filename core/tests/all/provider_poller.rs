@@ -1355,3 +1355,63 @@ fn a_stop_forgets_an_ask_that_waited() {
     h.finish(0, |_, _, _| Ok(ok(now())), now() + seconds(2));
     assert_eq!(h.runs.len(), 1);
 }
+
+#[test]
+fn a_sign_out_during_a_wait_leaves_the_wait_for_the_next_sign_in() {
+    let mut h = Harness::new();
+    h.start(now());
+    let waiting = now() + minutes(10);
+    h.finish(
+        0,
+        move |_, _, _| {
+            let mut schedule = LiveSchedule::start(now()).after_failure(now());
+            schedule.wait_until = Some(waiting);
+            schedule.next_due = waiting;
+            Ok(with_schedule(schedule))
+        },
+        now(),
+    );
+    let run = h.poller.sign_in_changed(now() + minutes(1), true);
+    h.took(run);
+    assert_eq!(h.runs.len(), 2, "the sign-out polls at once");
+    h.finish(
+        1,
+        |_, _, _| {
+            Ok(with_schedule(
+                LiveSchedule::start(now()).after_no_credentials(now() + minutes(1)),
+            ))
+        },
+        now() + minutes(1),
+    );
+    let run = h.poller.sign_in_changed(now() + minutes(2), false);
+    h.took(run);
+    assert_eq!(h.runs.len(), 2, "a sign-in respects the wait");
+    h.tick(now() + minutes(9));
+    assert_eq!(h.runs.len(), 2, "no tick inside the wait");
+    h.tick(now() + minutes(10));
+    assert_eq!(h.runs.len(), 3, "a tick at its end");
+}
+
+#[test]
+fn the_latest_ask_that_waited_decides_whether_a_wait_is_ignored() {
+    let mut h = Harness::new();
+    h.start(now());
+    let run = h.poller.sign_in_changed(now() + seconds(1), true);
+    assert!(run.is_none());
+    let run = h.poller.sign_in_changed(now() + seconds(2), false);
+    assert!(run.is_none());
+    h.finish(
+        0,
+        |_, _, _| {
+            Ok(with_schedule(
+                LiveSchedule::start(now()).after_failure(now()),
+            ))
+        },
+        now() + seconds(3),
+    );
+    assert_eq!(
+        h.runs.len(),
+        1,
+        "asked again as a sign-in, which respects the wait"
+    );
+}
