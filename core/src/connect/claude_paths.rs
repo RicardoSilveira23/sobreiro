@@ -15,6 +15,10 @@ pub const USER_PROFILE_VARIABLE: &str = "USERPROFILE";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClaudePaths {
     config_directory: PathBuf,
+    /// Whether [`CONFIG_DIR_VARIABLE`] moved the folder.
+    overridden: bool,
+    /// The user's own folder, as the paths were worked out from it.
+    user_folder: PathBuf,
 }
 
 impl ClaudePaths {
@@ -31,14 +35,19 @@ impl ClaudePaths {
         user_profile: &Path,
     ) -> ClaudePaths {
         let overridden = config_dir.filter(|value| is_full_path(value));
+        let user_folder = user_profile_variable
+            .filter(|variable| !variable.is_empty())
+            .map_or(user_profile, Path::new)
+            .to_path_buf();
         let config_directory = match overridden {
             Some(dir) => PathBuf::from(dir),
-            None => user_profile_variable
-                .filter(|variable| !variable.is_empty())
-                .map_or(user_profile, Path::new)
-                .join(".claude"),
+            None => user_folder.join(".claude"),
         };
-        ClaudePaths { config_directory }
+        ClaudePaths {
+            config_directory,
+            overridden: overridden.is_some(),
+            user_folder,
+        }
     }
 
     pub fn config_directory(&self) -> &Path {
@@ -53,5 +62,16 @@ impl ClaudePaths {
     /// Claude Code's settings, where Connect and Disconnect set the `statusLine` key.
     pub fn settings_file(&self) -> PathBuf {
         self.config_directory.join("settings.json")
+    }
+
+    /// Claude Code's global config, `.claude.json`: inside the overriding folder when
+    /// [`CONFIG_DIR_VARIABLE`] moved it, otherwise in the user's own folder (not in `.claude`).
+    /// Only its time of change is looked at.
+    pub fn global_config_file(&self) -> PathBuf {
+        if self.overridden {
+            self.config_directory.join(".claude.json")
+        } else {
+            self.user_folder.join(".claude.json")
+        }
     }
 }

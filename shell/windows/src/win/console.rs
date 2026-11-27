@@ -115,11 +115,15 @@ impl HiddenConsole {
 
     /// Shows the console as it stands, brings it to the front or flashes it when Windows refuses,
     /// and gives it to the user: dropping this no longer ends it. False when its window was not
-    /// found: it is still hidden, and still ends with the job.
+    /// found or the job would not let go: nothing was shown, and it still ends with the job.
     pub fn show(&self) -> bool {
         let Some(window) = self.window() else {
             return false;
         };
+        // Given to the user before it is shown: a console that could not be let go stays hidden.
+        if !self.job.let_go() {
+            return false;
+        }
         // SAFETY: `window` is the console's top-level window, alive while the console is; the
         // flash's structure is ours, alive for the call, with its size.
         unsafe {
@@ -135,7 +139,6 @@ impl HiddenConsole {
                 let _ = FlashWindowEx(&raw const flash);
             }
         }
-        let _ = self.job.let_go();
         true
     }
 

@@ -1255,7 +1255,7 @@ fn walks_of_calls_answer_as_the_csharp_did() {
 #[test]
 fn a_changed_sign_in_asks_at_once_but_respects_a_wait() {
     let mut h = Harness::new();
-    let run = h.poller.sign_in_changed(now());
+    let run = h.poller.sign_in_changed(now(), false);
     assert!(run.is_none(), "off: no poll");
 
     h.start(now());
@@ -1271,11 +1271,11 @@ fn a_changed_sign_in_asks_at_once_but_respects_a_wait() {
     // Not due, and fresh enough for an open flyout's ask, but the sign-in is new.
     h.tick(now() + seconds(5));
     assert_eq!(h.runs.len(), 1);
-    let run = h.poller.sign_in_changed(now() + seconds(5));
+    let run = h.poller.sign_in_changed(now() + seconds(5), false);
     h.took(run);
     assert_eq!(h.runs.len(), 2);
     // One at a time: the ask waits for the answer of the poll under way.
-    let run = h.poller.sign_in_changed(now() + seconds(6));
+    let run = h.poller.sign_in_changed(now() + seconds(6), false);
     h.took(run);
     assert_eq!(h.runs.len(), 2);
 
@@ -1288,9 +1288,47 @@ fn a_changed_sign_in_asks_at_once_but_respects_a_wait() {
         },
         now() + seconds(7),
     );
-    let run = h.poller.sign_in_changed(now() + seconds(8));
+    let run = h.poller.sign_in_changed(now() + seconds(8), false);
     h.took(run);
-    assert_eq!(h.runs.len(), 2, "a wait is kept");
+    assert_eq!(h.runs.len(), 2, "a wait is kept for a sign-in");
+}
+
+#[test]
+fn a_sign_out_that_removed_the_sign_in_polls_at_once_even_during_a_wait() {
+    let mut h = Harness::new();
+    h.start(now());
+    h.finish(
+        0,
+        |_, _, _| {
+            Ok(with_schedule(
+                LiveSchedule::start(now()).after_failure(now()),
+            ))
+        },
+        now() + seconds(1),
+    );
+    let run = h.poller.sign_in_changed(now() + seconds(2), false);
+    h.took(run);
+    assert_eq!(h.runs.len(), 1, "a sign-in respects the wait");
+    let run = h.poller.sign_in_changed(now() + seconds(2), true);
+    h.took(run);
+    assert_eq!(h.runs.len(), 2, "a sign-out does not");
+}
+
+#[test]
+fn a_dropped_answer_of_a_cancelled_poll_forgets_an_ask_that_waited() {
+    let mut h = Harness::new();
+    h.start(now());
+    h.poller.stop();
+    let run = h.poller.start(now() + seconds(1));
+    h.took(run);
+    let run = h.poller.sign_in_changed(now() + seconds(2), false);
+    assert!(run.is_none());
+    // The cancelled poll's answer is dropped and the restarted provider's first poll goes out.
+    h.finish(0, |_, _, _| Ok(ok(now())), now() + seconds(3));
+    assert_eq!(h.runs.len(), 2);
+    // The ask was forgotten with the dropped answer: the next answer hands out nothing.
+    h.finish(1, |_, _, _| Ok(ok(now())), now() + seconds(4));
+    assert_eq!(h.runs.len(), 2, "no redundant poll");
 }
 
 #[test]
@@ -1298,7 +1336,7 @@ fn a_sign_in_that_changes_while_a_poll_runs_is_asked_again_with_its_answer() {
     let mut h = Harness::new();
     h.start(now());
     // The poll under way may use the old sign-in.
-    let run = h.poller.sign_in_changed(now() + seconds(1));
+    let run = h.poller.sign_in_changed(now() + seconds(1), false);
     assert!(run.is_none());
     h.finish(0, |_, _, _| Ok(ok(now())), now() + seconds(2));
     assert_eq!(h.runs.len(), 2, "asked again with the answer");
@@ -1311,7 +1349,7 @@ fn a_sign_in_that_changes_while_a_poll_runs_is_asked_again_with_its_answer() {
 fn a_stop_forgets_an_ask_that_waited() {
     let mut h = Harness::new();
     h.start(now());
-    let run = h.poller.sign_in_changed(now() + seconds(1));
+    let run = h.poller.sign_in_changed(now() + seconds(1), false);
     assert!(run.is_none());
     h.poller.stop();
     h.finish(0, |_, _, _| Ok(ok(now())), now() + seconds(2));

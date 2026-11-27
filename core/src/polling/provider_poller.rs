@@ -96,6 +96,8 @@ pub struct ProviderPoller {
     /// The sign-in changed while a poll ran: that poll may have used the old one, so another
     /// is handed out with its answer.
     ask_again: bool,
+    /// One of the asks that waited was a sign-out: the poll it brings ignores a wait.
+    ask_again_signed_out: bool,
     state: ProviderState,
 }
 
@@ -106,6 +108,7 @@ impl ProviderPoller {
             schedule: None,
             running: None,
             ask_again: false,
+            ask_again_signed_out: false,
             state: ProviderState::Ok,
         }
     }
@@ -140,6 +143,7 @@ impl ProviderPoller {
     pub fn stop(&mut self) {
         self.schedule = None;
         self.ask_again = false;
+        self.ask_again_signed_out = false;
         self.state = ProviderState::Off;
         if let Some(running) = &self.running {
             running.cancelled.store(true, Ordering::SeqCst);
@@ -168,16 +172,20 @@ impl ProviderPoller {
     }
 
     /// The sign-in changed at `now` (the menu's Sign in saw the file written, or its Sign out
-    /// ran): gives a poll to run at once, unless the service asked to wait. While a poll is under
-    /// way, the ask waits for its answer, and [`Done::next`] holds it.
+    /// ran): gives a poll to run at once, unless the service asked to wait. `signed_out` says the
+    /// sign-in file is gone: such a poll sends no request, so a wait does not hold it. While a
+    /// poll is under way, the ask waits for its answer, and [`Done::next`] holds it.
     #[must_use = "a poll that is handed out has to be run and handed back"]
-    pub fn sign_in_changed(&mut self, now: DateTime<Utc>) -> Option<PollRun> {
+    pub fn sign_in_changed(&mut self, now: DateTime<Utc>, signed_out: bool) -> Option<PollRun> {
         if self.running.is_some() {
             self.ask_again = self.schedule.is_some();
+            self.ask_again_signed_out |= signed_out && self.ask_again;
             return None;
         }
         match self.schedule {
-            Some(schedule) if !schedule.wait_until.is_some_and(|until| now < until) => {
+            Some(schedule)
+                if signed_out || !schedule.wait_until.is_some_and(|until| now < until) =>
+            {
                 self.poll(schedule, now)
             }
             _ => None,
@@ -218,6 +226,8 @@ impl ProviderPoller {
         // Stopped while it ran: the answer is dropped. If the provider was started again
         // meanwhile, its first poll is due now.
         if running.cancelled.load(Ordering::SeqCst) || self.schedule.is_none() {
+            self.ask_again = false;
+            self.ask_again_signed_out = false;
             return Done::dropped(self.tick(now));
         }
 
@@ -237,8 +247,9 @@ impl ProviderPoller {
         if let Some(keep) = poll.keep {
             keep(now);
         }
+        let signed_out = std::mem::take(&mut self.ask_again_signed_out);
         let next = if std::mem::take(&mut self.ask_again) {
-            self.sign_in_changed(now)
+            self.sign_in_changed(now, signed_out)
         } else {
             None
         };

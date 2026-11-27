@@ -59,9 +59,9 @@ which is worth a look on its own.
 - **Hover** the pill or a tray icon for when each limit resets.
 - **Click** it for the details: each limit, what's used or left, when it resets, and the badge.
 - **Right-click** it for the menu: the style, the bar colour, the pace, what to show and Connect
-  to Claude Code. When Claude Code's sign-in has expired or is missing, the menu also offers
-  **Sign in to Claude Code**; while it is signed in, **Sign out of Claude Code**, to change
-  accounts.
+  to Claude Code. When Claude Code's sign-in has expired, was refused or is missing, the menu also
+  offers **Sign in to Claude Code** (Claude Code's window is closed once it has finished writing
+  its files); while it is signed in, **Sign out of Claude Code**, to change accounts.
 
 <table>
   <tr>

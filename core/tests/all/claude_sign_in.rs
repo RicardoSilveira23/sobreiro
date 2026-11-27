@@ -4,8 +4,8 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 use sobreiro_core::live::claude_sign_in::{
-    self, ClaudeCommand, LOGIN_QUIET_WAIT, Offer, QUIET_WAIT, Seen, SignInWatch, WATCH_LIMIT,
-    WatchStep,
+    self, ClaudeCommand, LOGIN_QUIET_WAIT, Offer, QUIET_WAIT, SETTLE_LIMIT, SETTLE_QUIET, Seen,
+    SignInWatch, WATCH_LIMIT, WatchStep,
 };
 use sobreiro_core::polling::ProviderState;
 
@@ -146,8 +146,18 @@ fn seen(elapsed: Duration, changed_at: Option<u64>) -> Seen {
     Seen {
         elapsed,
         changed_at: changed_at.map(at),
+        config_changed_at: None,
         running: true,
         claude_ended: false,
+    }
+}
+
+/// A look `elapsed` in, with the sign-in file changed at `changed_at` and Claude Code's global
+/// config file at `config` seconds.
+fn seen_with_config(elapsed: Duration, changed_at: u64, config: u64) -> Seen {
+    Seen {
+        config_changed_at: Some(at(config)),
+        ..seen(elapsed, Some(changed_at))
     }
 }
 
@@ -159,7 +169,11 @@ fn start(before: Option<u64>) -> SignInWatch {
 fn a_quiet_renewal_closes_the_console_without_showing_it() {
     let mut watch = start(Some(0));
     assert_eq!(watch.step(seen(SECOND, Some(0))), WatchStep::Wait);
-    assert_eq!(watch.step(seen(3 * SECOND, Some(3))), WatchStep::Renewed);
+    assert_eq!(watch.step(seen(3 * SECOND, Some(3))), WatchStep::Wait);
+    assert_eq!(
+        watch.step(seen(3 * SECOND + SETTLE_QUIET, Some(3))),
+        WatchStep::Renewed
+    );
     assert!(!watch.shown());
 }
 
@@ -167,7 +181,8 @@ fn a_quiet_renewal_closes_the_console_without_showing_it() {
 fn a_file_that_appears_is_a_renewal_and_one_that_goes_is_not() {
     let mut appears = start(None);
     assert_eq!(appears.step(seen(SECOND, None)), WatchStep::Wait);
-    assert_eq!(appears.step(seen(2 * SECOND, Some(2))), WatchStep::Renewed);
+    assert_eq!(appears.step(seen(2 * SECOND, Some(2))), WatchStep::Wait);
+    assert_eq!(appears.step(seen(4 * SECOND, Some(2))), WatchStep::Renewed);
 
     let mut goes = start(Some(0));
     assert_eq!(goes.step(seen(SECOND, None)), WatchStep::Wait);
@@ -187,8 +202,9 @@ fn claude_is_shown_once_after_its_quiet_wait_and_closed_when_it_signs_in() {
         WatchStep::Wait
     );
     // Shown or not, a sign-in that is done closes the console.
+    assert_eq!(watch.step(seen(5 * QUIET_WAIT, Some(90))), WatchStep::Wait);
     assert_eq!(
-        watch.step(seen(5 * QUIET_WAIT, Some(90))),
+        watch.step(seen(5 * QUIET_WAIT + SETTLE_QUIET, Some(90))),
         WatchStep::Renewed
     );
 }
@@ -204,6 +220,10 @@ fn a_login_stays_hidden_for_its_longer_wait_while_the_browser_is_used() {
     assert_eq!(watch.step(seen(LOGIN_QUIET_WAIT, None)), WatchStep::Show);
     assert_eq!(
         watch.step(seen(LOGIN_QUIET_WAIT * 2, Some(130))),
+        WatchStep::Wait
+    );
+    assert_eq!(
+        watch.step(seen(LOGIN_QUIET_WAIT * 2 + SETTLE_QUIET, Some(130))),
         WatchStep::Renewed
     );
 }
@@ -211,7 +231,11 @@ fn a_login_stays_hidden_for_its_longer_wait_while_the_browser_is_used() {
 #[test]
 fn a_login_done_in_the_browser_is_never_shown() {
     let mut watch = SignInWatch::new(None, ClaudeCommand::Login);
-    assert_eq!(watch.step(seen(30 * SECOND, Some(30))), WatchStep::Renewed);
+    assert_eq!(watch.step(seen(30 * SECOND, Some(30))), WatchStep::Wait);
+    assert_eq!(
+        watch.step(seen(30 * SECOND + SETTLE_QUIET, Some(30))),
+        WatchStep::Renewed
+    );
     assert!(!watch.shown());
 }
 
@@ -267,4 +291,87 @@ fn a_shown_console_is_watched_until_the_limit() {
         watch.step(seen(WATCH_LIMIT, Some(0))),
         WatchStep::Ended { quiet: false }
     );
+}
+
+#[test]
+fn a_login_is_closed_only_when_claude_ends_after_writing_its_files() {
+    let mut watch = SignInWatch::new(Some(at(0)), ClaudeCommand::Login);
+    // The sign-in file, then the global config three more times, as a login writes them.
+    assert_eq!(
+        watch.step(seen_with_config(30 * SECOND, 30, 0)),
+        WatchStep::Wait
+    );
+    for (millis, config) in [(1_000, 31), (1_250, 32), (1_500, 33)] {
+        let elapsed = 30 * SECOND + Duration::from_millis(millis);
+        assert_eq!(
+            watch.step(seen_with_config(elapsed, 30, config)),
+            WatchStep::Wait,
+            "{millis}"
+        );
+    }
+    let ended = Seen {
+        claude_ended: true,
+        ..seen_with_config(30 * SECOND + Duration::from_millis(1_750), 30, 33)
+    };
+    assert_eq!(watch.step(ended), WatchStep::Renewed);
+    assert!(!watch.shown());
+}
+
+#[test]
+fn a_start_is_closed_after_the_quiet_that_follows_the_global_config() {
+    let mut watch = start(Some(0));
+    let look = |elapsed_millis: u64, config: u64| {
+        seen_with_config(Duration::from_millis(elapsed_millis), 1, config)
+    };
+    assert_eq!(watch.step(look(1_000, 0)), WatchStep::Wait);
+    // The global config changed a moment later, then nothing.
+    assert_eq!(watch.step(look(1_500, 2)), WatchStep::Wait);
+    assert_eq!(watch.step(look(3_000, 2)), WatchStep::Wait);
+    assert_eq!(watch.step(look(3_499, 2)), WatchStep::Wait);
+    assert_eq!(watch.step(look(3_500, 2)), WatchStep::Renewed);
+}
+
+#[test]
+fn settling_is_capped_when_the_global_config_keeps_changing() {
+    let mut watch = start(Some(0));
+    assert_eq!(watch.step(seen_with_config(SECOND, 1, 0)), WatchStep::Wait);
+    for second in 2u32..11 {
+        assert_eq!(
+            watch.step(seen_with_config(second * SECOND, 1, second.into())),
+            WatchStep::Wait,
+            "{second}"
+        );
+    }
+    assert_eq!(
+        watch.step(seen_with_config(SECOND + SETTLE_LIMIT, 1, 11)),
+        WatchStep::Renewed
+    );
+}
+
+#[test]
+fn a_console_that_closes_while_settling_is_a_renewal() {
+    let mut watch = start(Some(0));
+    assert_eq!(watch.step(seen(SECOND, Some(1))), WatchStep::Wait);
+    let closed = Seen {
+        running: false,
+        ..seen(SECOND + Duration::from_millis(500), Some(1))
+    };
+    assert_eq!(watch.step(closed), WatchStep::Renewed);
+}
+
+#[test]
+fn the_console_is_not_shown_while_settling_even_past_the_quiet_wait() {
+    let mut watch = start(Some(0));
+    // The file changed just before the quiet wait ends, and Claude Code has not ended.
+    assert_eq!(
+        watch.step(seen(QUIET_WAIT - SECOND, Some(1))),
+        WatchStep::Wait
+    );
+    assert_eq!(watch.step(seen(QUIET_WAIT, Some(1))), WatchStep::Wait);
+    assert!(!watch.shown());
+    assert_eq!(
+        watch.step(seen(QUIET_WAIT + SETTLE_QUIET, Some(1))),
+        WatchStep::Renewed
+    );
+    assert!(!watch.shown());
 }

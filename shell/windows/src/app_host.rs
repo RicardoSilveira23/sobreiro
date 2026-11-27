@@ -132,9 +132,10 @@ pub fn flyout_opened() {
 }
 
 /// The menu's Sign in or Sign out changed Claude Code's sign-in: Claude's poll runs at once.
-pub fn claude_sign_in_changed() {
-    with_host(|host| {
-        let runs = host.feed.claude_sign_in_changed(clock::now());
+/// `signed_out`: the sign-in file is gone.
+pub fn claude_sign_in_changed(signed_out: bool) {
+    with_host(move |host| {
+        let runs = host.feed.claude_sign_in_changed(clock::now(), signed_out);
         host.spawn(runs);
         host.redraw();
     });
