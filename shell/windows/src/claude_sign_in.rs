@@ -53,15 +53,17 @@ claude auth logout there to see why.";
 const SIGNED_OUT: &str = "Claude Code is signed out on this PC.\n\nChoose Sign in to Claude Code \
 in Sobreiro's menu to sign in, with this account or another.";
 
-/// What a run needs: Claude Code's sign-in file, the user's folder (where Claude Code's installer
+/// What a run needs: Claude Code's sign-in file and global config file (only their times of
+/// change are looked at), the user's folder (where Claude Code's installer
 /// puts it), the folder Claude Code runs in, the log, and what to call, on the run's thread,
-/// each time the sign-in changed.
+/// each time the sign-in changed (told whether the sign-in file is gone).
 pub struct Places {
     pub credentials_file: PathBuf,
+    pub global_config_file: PathBuf,
     pub user_profile: PathBuf,
     pub working_folder: PathBuf,
     pub diagnostics: Arc<Diagnostics>,
-    pub changed: Box<dyn Fn() + Send>,
+    pub changed: Box<dyn Fn(bool) + Send>,
 }
 
 /// Starts a sign-in with `command` (`Start` or `Login`), unless a run is under way.
@@ -160,6 +162,7 @@ fn run_sign_in(places: &Places, command: ClaudeCommand) {
         let step = watch.step(Seen {
             elapsed: started.elapsed(),
             changed_at: changed_at(&places.credentials_file),
+            config_changed_at: changed_at(&places.global_config_file),
             running,
             claude_ended: running && console.title_has(ENDED_TITLE),
         });
@@ -168,7 +171,7 @@ fn run_sign_in(places: &Places, command: ClaudeCommand) {
             WatchStep::Renewed => {
                 console.end();
                 diagnostics.say("sign-in: Claude Code signed in; its console was closed");
-                (places.changed)();
+                (places.changed)(false);
                 return;
             }
             WatchStep::Show => {
@@ -210,8 +213,9 @@ fn run_sign_out(places: &Places) {
     // Ended in every case: one that finished has nothing left, and one that did not answer in
     // time is stopped with everything it started.
     console.end();
-    // Asked either way: whatever Claude Code did to its sign-in shows at once.
-    (places.changed)();
+    // Asked either way: whatever Claude Code did to its sign-in shows at once. With no sign-in
+    // file left, the poll sends no request, so it does not wait for a wait of Anthropic's.
+    (places.changed)(changed_at(&places.credentials_file).is_none());
     if code == Some(0) {
         places.diagnostics.say("sign-out: Claude Code signed out");
         message_box::tell(SIGN_OUT_TITLE, SIGNED_OUT);

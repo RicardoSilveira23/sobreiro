@@ -404,8 +404,9 @@ data folder (so a folder Claude Code asks to trust is never the user's profile).
 `claude` for a sign-in that ran out, which renews it as it starts, and `claude auth login` for
 one that is missing or that Anthropic refused (its expiry hasn't passed, so `claude` would see
 no reason to renew it). It watches `.credentials.json`'s time of change, read before Claude Code
-starts, and never its contents, every half second. Once the file is written the console is ended
-with everything in it, shown or not, and Claude's poll runs at once; a poll already under way
+starts, and never its contents, every half second. Once the file is written and Claude Code has
+finished writing its files (Claude Code ended, or 2 s without a change to it or to
+`.claude.json`, at most 10 s), the console is ended with everything in it, shown or not, and Claude's poll runs at once; a poll already under way
 asks again with its answer, as it may have used the old sign-in. When nothing is written within
 20 s (60 s for a login, which opens the browser), or `cmd` sets the window title that says Claude
 Code ended, the console is shown as it stands and given to the user, its taskbar button flashing

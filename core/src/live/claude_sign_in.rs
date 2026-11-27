@@ -8,8 +8,10 @@
 //! sign-in file's time of change (the file's contents are not read here) and the console's window
 //! title, which `cmd` sets to [`ENDED_TITLE`] when Claude Code has ended.
 //!
-//! When Claude Code writes the file, the console is closed, shown or not, and Live usage asks at
-//! once. The console is shown, as it stands with Claude Code's own words in it, only when Claude
+//! When Claude Code writes the file, the console is closed once Claude Code has finished writing
+//! its files (it settles: [`SETTLE_QUIET`] without a change to the sign-in file or to Claude
+//! Code's global config file, or Claude Code ending, or [`SETTLE_LIMIT`]), shown or not, and
+//! Live usage asks at once. The console is shown, as it stands with Claude Code's own words in it, only when Claude
 //! Code needs the user: it ended without signing in (it says why), or it has not signed in within
 //! its quiet wait ([`QUIET_WAIT`] for `claude`, which may ask whether a folder is trusted;
 //! [`LOGIN_QUIET_WAIT`] for a login, whose browser may not have opened, or which may want a code).
@@ -51,6 +53,13 @@ pub const ENDED_TITLE: &str = "Sobreiro - Claude Code has ended";
 /// How long a shown console is watched for the user to finish signing in. After that Sobreiro
 /// stops watching and leaves the console to the user; the next poll sees what came of it.
 pub const WATCH_LIMIT: Duration = Duration::from_secs(15 * 60);
+
+/// How long the sign-in file and Claude Code's global config file must both stay unchanged, after
+/// the sign-in file changed, before the console is closed.
+pub const SETTLE_QUIET: Duration = Duration::from_secs(2);
+
+/// The most the console is kept for Claude Code to finish writing, from the first change seen.
+pub const SETTLE_LIMIT: Duration = Duration::from_secs(10);
 
 /// How often the sign-in file's time of change is looked at.
 pub const CHECK_EVERY: Duration = Duration::from_millis(500);
@@ -170,8 +179,8 @@ pub fn cmd_arguments(claude: &Path, command: ClaudeCommand) -> Option<String> {
 pub enum WatchStep {
     /// Nothing yet: look again after [`CHECK_EVERY`].
     Wait,
-    /// Claude Code wrote its sign-in file: the console is closed with everything in it, shown or
-    /// not, and Live usage asks at once.
+    /// Claude Code wrote its sign-in file and has finished writing its files: the console is
+    /// closed with everything in it, shown or not, and Live usage asks at once.
     Renewed,
     /// Show the console: Claude Code needs the user.
     Show,
@@ -187,6 +196,8 @@ pub struct Seen {
     pub elapsed: Duration,
     /// The sign-in file's time of change, `None` when there is no file.
     pub changed_at: Option<SystemTime>,
+    /// Claude Code's global config file's time of change, `None` when there is no file.
+    pub config_changed_at: Option<SystemTime>,
     /// The console is still open.
     pub running: bool,
     /// Claude Code has ended in it (its title is [`ENDED_TITLE`]).
@@ -200,6 +211,20 @@ pub struct SignInWatch {
     /// How long the console stays hidden while Claude Code is still at work.
     quiet_wait: Duration,
     shown: bool,
+    /// Set once the sign-in file has changed, while Claude Code finishes writing.
+    settling: Option<Settling>,
+}
+
+/// What is known while the watch waits for Claude Code to finish writing its files.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Settling {
+    /// When the sign-in file's change was first seen.
+    first: Duration,
+    /// When a change to either file was last seen.
+    last_change: Duration,
+    /// The two files' times of change at the last look.
+    credentials: Option<SystemTime>,
+    config: Option<SystemTime>,
 }
 
 impl SignInWatch {
@@ -214,6 +239,7 @@ impl SignInWatch {
                 QUIET_WAIT
             },
             shown: false,
+            settling: None,
         }
     }
 
@@ -224,8 +250,9 @@ impl SignInWatch {
 
     /// The next step, from what the shell saw.
     pub fn step(&mut self, seen: Seen) -> WatchStep {
-        if seen.changed_at.is_some() && seen.changed_at != self.before {
-            return WatchStep::Renewed;
+        if self.settling.is_some() || (seen.changed_at.is_some() && seen.changed_at != self.before)
+        {
+            return self.settle(seen);
         }
         if !seen.running {
             return WatchStep::Ended { quiet: !self.shown };
@@ -238,5 +265,35 @@ impl SignInWatch {
             return WatchStep::Ended { quiet: false };
         }
         WatchStep::Wait
+    }
+
+    /// The sign-in file has changed: `Renewed` once Claude Code has finished writing, else `Wait`.
+    /// Claude Code is done when it ended or the console closed, when neither file changed for
+    /// [`SETTLE_QUIET`], or when [`SETTLE_LIMIT`] passed since the first change was seen.
+    fn settle(&mut self, seen: Seen) -> WatchStep {
+        // A look that finds no sign-in file counts as no change since the last look.
+        let changed_at = seen
+            .changed_at
+            .or(self.settling.and_then(|s| s.credentials));
+        let settling = self.settling.get_or_insert(Settling {
+            first: seen.elapsed,
+            last_change: seen.elapsed,
+            credentials: changed_at,
+            config: seen.config_changed_at,
+        });
+        if settling.credentials != changed_at || settling.config != seen.config_changed_at {
+            settling.credentials = changed_at;
+            settling.config = seen.config_changed_at;
+            settling.last_change = seen.elapsed;
+        }
+        let done = seen.claude_ended
+            || !seen.running
+            || seen.elapsed.saturating_sub(settling.last_change) >= SETTLE_QUIET
+            || seen.elapsed.saturating_sub(settling.first) >= SETTLE_LIMIT;
+        if done {
+            WatchStep::Renewed
+        } else {
+            WatchStep::Wait
+        }
     }
 }
